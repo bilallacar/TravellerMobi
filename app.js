@@ -3,6 +3,55 @@
 import { isConfigured, config, saveConfig, savePreferences } from './config.js';
 import * as db from './db.js';
 
+// Global error logging for diagnostics
+let globalErrors = [];
+window.onerror = function(message, source, lineno, colno, error) {
+    const errorStr = `Error: ${message} at ${source}:${lineno}:${colno}`;
+    console.error(errorStr);
+    globalErrors.push(errorStr);
+    updateDiagnosticsUI();
+    return false;
+};
+window.onunhandledrejection = function(event) {
+    const errorStr = `Unhandled Promise Rejection: ${event.reason}`;
+    console.error(errorStr);
+    globalErrors.push(errorStr);
+    updateDiagnosticsUI();
+};
+
+function updateDiagnosticsUI() {
+    const diagLog = document.getElementById('diagnostics-log');
+    if (!diagLog) return;
+    
+    let logs = [];
+    logs.push(`Uygulama Durumu (App State):`);
+    logs.push(`- Çevrimiçi mi? (isOnline): ${db.isOnline()}`);
+    logs.push(`- Giriş Yapan Kullanıcı: ${activeUser ? activeUser.email : 'Giriş yapılmamış'}`);
+    logs.push(`- Kullanıcı ID: ${activeUser ? activeUser.id : 'null'}`);
+    logs.push(`- Yönetici mi? (isAdmin): ${isAdmin}`);
+    logs.push(`- Aktif Seyahat ID: ${activeTripId}`);
+    logs.push(`- Seyahat Sayısı: ${tripsList.length}`);
+    logs.push(`- Toplam Harcama Sayısı: ${expensesList.length}`);
+    logs.push(`- Toplam Anı Sayısı: ${memoriesList.length}`);
+    
+    if (tripsList.length > 0) {
+        logs.push(`- Seyahatler: ${tripsList.map(t => `${t.name} (ID: ${t.id.substring(0,6)}...)`).join(', ')}`);
+    }
+    
+    if (expensesList.length > 0) {
+        logs.push(`- Son 3 Harcama: ${expensesList.slice(0, 3).map(e => `${e.title} (${e.amount} ${e.currency}, Seyahat ID: ${e.trip_id.substring(0,6)}...)`).join(', ')}`);
+    }
+
+    if (globalErrors.length > 0) {
+        logs.push(`\nYakalanan Hatalar (Errors Caught):`);
+        globalErrors.forEach(err => logs.push(`⚠️ ${err}`));
+    } else {
+        logs.push(`\nYakalanan Hata Yok.`);
+    }
+
+    diagLog.textContent = logs.join('\n');
+}
+
 // Application State
 let activeUser = null;
 let userProfile = null;
@@ -537,6 +586,8 @@ function renderDashboard() {
 
     document.getElementById('dash-memories-count').textContent = `${globalMemoriesCount} Anı`;
     document.getElementById('dash-photos-count').textContent = `${globalPhotosCount} Fotoğraf yüklendi`;
+
+    updateDiagnosticsUI();
 
     if (window.lucide) window.lucide.createIcons();
 }
