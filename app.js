@@ -5,6 +5,8 @@ import * as db from './db.js';
 
 // Application State
 let activeUser = null;
+let userProfile = null;
+let isAdmin = false;
 let tripsList = [];
 let expensesList = [];
 let memoriesList = [];
@@ -91,7 +93,9 @@ const views = {
     trips: document.getElementById('view-trips'),
     expenses: document.getElementById('view-expenses'),
     journal: document.getElementById('view-journal'),
-    settings: document.getElementById('view-settings')
+    settings: document.getElementById('view-settings'),
+    admin: document.getElementById('view-admin'),
+    'approval-pending': document.getElementById('view-approval-pending')
 };
 
 function initNavigation() {
@@ -149,6 +153,48 @@ async function handleRouting() {
         return;
     }
 
+    userProfile = null;
+    isAdmin = false;
+    if (activeUser) {
+        userProfile = await db.getUserProfile(activeUser.id);
+        if (!userProfile) {
+            userProfile = await db.createUserProfile(activeUser.id, activeUser.email);
+        }
+        isAdmin = !!(userProfile && userProfile.is_admin);
+    }
+
+    // Toggle Admin Panel card visibility in Settings
+    const adminCard = document.getElementById('settings-admin-card');
+    if (adminCard) {
+        if (isAdmin) adminCard.classList.remove('hidden');
+        else adminCard.classList.add('hidden');
+    }
+
+    // Route Guard - Check user approval status
+    if (activeUser && userProfile && userProfile.status !== 'approved') {
+        showView('approval-pending');
+        
+        document.getElementById('pending-email').textContent = activeUser.email;
+        const pendingMsgEl = document.getElementById('pending-message');
+        const pendingIconEl = document.getElementById('pending-status-icon');
+        
+        if (userProfile.status === 'rejected') {
+            if (pendingMsgEl) pendingMsgEl.textContent = 'Üyelik talebiniz yönetici tarafından reddedildi.';
+            if (pendingIconEl) pendingIconEl.innerHTML = '<i data-lucide="x-circle" style="color:var(--color-danger); width:64px; height:64px;"></i>';
+        } else {
+            if (pendingMsgEl) pendingMsgEl.textContent = 'Üyeliğiniz onay sürecindedir. Yönetici onay verdiğinde uygulamaya erişebileceksiniz.';
+            if (pendingIconEl) pendingIconEl.innerHTML = '<i data-lucide="clock" style="color:var(--color-warning); width:64px; height:64px;"></i>';
+        }
+        
+        if (window.lucide) window.lucide.createIcons();
+
+        const layout = document.getElementById('layout-container');
+        const mobileNav = document.querySelector('.mobile-nav');
+        if (layout) layout.classList.add('no-sidebar');
+        if (mobileNav) mobileNav.classList.add('hidden');
+        return;
+    }
+
     // Hide layouts elements if on Auth or Setup screen
     const layout = document.getElementById('layout-container');
     const mobileNav = document.querySelector('.mobile-nav');
@@ -182,6 +228,14 @@ async function handleRouting() {
         case '#settings':
             showView('settings');
             loadSettingsForm();
+            break;
+        case '#admin':
+            if (isAdmin) {
+                showView('admin');
+                await loadAdminData();
+            } else {
+                window.location.hash = '#dashboard';
+            }
             break;
         case '#auth':
             if (activeUser) {
@@ -773,6 +827,94 @@ function loadSettingsForm() {
     document.getElementById('btn-theme-light').className = !isDark ? 'btn btn-primary' : 'btn btn-secondary';
 }
 
+async function loadAdminData() {
+    try {
+        const profiles = await db.getAllProfiles();
+        renderAdminUsers(profiles);
+    } catch (err) {
+        showToast('Üye listesi yüklenemedi: ' + err.message, 'danger');
+    }
+}
+
+function renderAdminUsers(profiles) {
+    const listEl = document.getElementById('admin-users-list');
+    if (!listEl) return;
+
+    if (profiles.length === 0) {
+        listEl.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Kayıtlı üye bulunmamaktadır.</td></tr>`;
+        return;
+    }
+
+    listEl.innerHTML = profiles.map(profile => {
+        let statusBadge = '';
+        if (profile.status === 'approved') {
+            statusBadge = '<span class="badge badge-activity">Onaylı</span>';
+        } else if (profile.status === 'rejected') {
+            statusBadge = '<span class="badge badge-food">Reddedildi</span>';
+        } else {
+            statusBadge = '<span class="badge" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b;">Bekliyor</span>';
+        }
+
+        const isSelf = profile.id === activeUser.id;
+
+        return `
+            <tr>
+                <td>
+                    <strong>${escapeHTML(profile.email)}</strong>
+                    ${profile.is_admin ? ' <span class="badge badge-lodge" style="font-size:8px; padding:2px 4px;">Yönetici</span>' : ''}
+                </td>
+                <td>${formatDate(profile.created_at)}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    ${isSelf ? '<span class="text-muted">Aktif Oturum</span>' : `
+                        <div style="display:flex; gap:8px;">
+                            ${profile.status !== 'approved' ? `
+                                <button class="btn btn-secondary btn-sm btn-approve-user" data-id="${profile.id}" style="background-color: var(--color-success-light); color: var(--color-success); padding: 6px 12px;">
+                                    <i data-lucide="check" style="width:12px; height:12px; display:inline-block; vertical-align:middle;"></i> Onayla
+                                </button>
+                            ` : ''}
+                            ${profile.status !== 'rejected' ? `
+                                <button class="btn btn-secondary btn-sm btn-reject-user" data-id="${profile.id}" style="background-color: var(--color-danger-light); color: var(--color-danger); padding: 6px 12px;">
+                                    <i data-lucide="x" style="width:12px; height:12px; display:inline-block; vertical-align:middle;"></i> Reddet
+                                </button>
+                            ` : ''}
+                        </div>
+                    `}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Bind click handlers
+    document.querySelectorAll('.btn-approve-user').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            try {
+                await db.updateProfileStatus(id, 'approved');
+                showToast('Kullanıcı onaylandı', 'success');
+                await loadAdminData();
+            } catch (err) {
+                showToast('Hata oluştu: ' + err.message, 'danger');
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-reject-user').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            try {
+                await db.updateProfileStatus(id, 'rejected');
+                showToast('Kullanıcı reddedildi', 'warning');
+                await loadAdminData();
+            } catch (err) {
+                showToast('Hata oluştu: ' + err.message, 'danger');
+            }
+        });
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
 /* ==========================================================================
    EVENT LISTENERS AND FORMS HANDLERS
    ========================================================================== */
@@ -903,13 +1045,16 @@ function initEventHandlers() {
 
     // Logout button click
     const logoutBtn = document.getElementById('btn-logout');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            await db.signOut();
-            showToast('Çıkış yapıldı', 'info');
-            window.location.hash = '#auth';
-        });
-    }
+    const pendingLogoutBtn = document.getElementById('btn-pending-logout');
+    
+    const handleLogout = async () => {
+        await db.signOut();
+        showToast('Çıkış yapıldı', 'info');
+        window.location.hash = '#auth';
+    };
+
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+    if (pendingLogoutBtn) pendingLogoutBtn.addEventListener('click', handleLogout);
 
     // 3. Trip Selectors filter listeners
     const dashTripSelector = document.getElementById('dash-trip-selector');

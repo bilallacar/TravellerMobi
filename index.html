@@ -86,6 +86,10 @@
                             <p>Anılarınızı ve masraflarınızı bulutta saklayın</p>
                         </div>
 
+                        <div class="auth-tabs">
+                            <button type="button" class="auth-tab active" id="tab-login">Giriş Yap</button>
+                            <button type="button" class="auth-tab" id="tab-register">Kayıt Ol</button>
+                        </div>
 
                         <form id="auth-form" class="auth-form">
                             <div class="form-group">
@@ -272,7 +276,6 @@
                     <div class="section-title-row">
                         <div>
                             <h1>🗺️ Seyahatlerim</h1>
-                            <p class="subtitle">Rotalarınızı, tarihlerinizi ve bütçelerinizi buradan yönetin.</p>
                         </div>
                         <button id="btn-add-trip" class="btn btn-primary"><i data-lucide="plus"></i> Yeni Seyahat Ekle</button>
                     </div>
@@ -331,7 +334,6 @@
                     <div class="section-title-row">
                         <div>
                             <h1>💸 Seyahat Masrafları</h1>
-                            <p class="subtitle">Harcamalarınızı kategorilere göre girin ve döviz dönüşümleriyle izleyin.</p>
                         </div>
                         <div class="action-buttons-group">
                             <select id="expense-trip-filter" class="select-input compact-select">
@@ -452,7 +454,6 @@
                     <div class="section-title-row">
                         <div>
                             <h1>📸 Seyahat Anılarım & Fotoğraflarım</h1>
-                            <p class="subtitle">Gezdiğiniz yerleri, hislerinizi ve çektiğiniz fotoğrafları saklayın.</p>
                         </div>
                         <div class="action-buttons-group">
                             <select id="journal-trip-filter" class="select-input compact-select">
@@ -536,7 +537,6 @@
                 <!-- 7. SETTINGS VIEW -->
                 <section id="view-settings" class="app-view hidden">
                     <h1>⚙️ Ayarlar & Sistem Bilgileri</h1>
-                    <p class="subtitle">Bulut bağlantısı, tercih edilen para birimi ve yerel verileri yönetin.</p>
 
                     <div class="settings-grid">
                         <!-- API Configurations -->
@@ -580,15 +580,31 @@
                             </form>
                         </div>
 
+                        <!-- Admin Panel Card -->
+                        <div class="card glass double-span nav-admin-only hidden" id="settings-admin-card">
+                            <h3>👥 Üye Yönetim Paneli</h3>
+                            <p class="text-muted" style="margin-top: 8px; margin-bottom: 16px;">Yeni kayıt olan arkadaşlarınızın üyeliklerini onaylayın ve sistem erişimlerini yönetin.</p>
+                            <a href="#admin" class="btn btn-primary"><i data-lucide="users"></i> Üyeleri Yönet</a>
+                        </div>
+
                         <!-- Database Script / Help -->
                         <div class="card glass double-span">
                             <h3>🛠️ Supabase SQL Şeması</h3>
-                            <p>Supabase projenizde <strong>SQL Editor</strong> alanına girerek aşağıdaki kodu yapıştırıp <strong>RUN</strong> tuşuna basmanız gerekmektedir. Bu işlem tablolarınızı ve güvenlik filtrelerinizi (RLS) anında oluşturur.</p>
+                            <p>Supabase projenizde <strong>SQL Editor</strong> alanına girerek sorgu ekranına aşağıdaki kodun tamamını yapıştırıp <strong>RUN</strong> tuşuna basın. Bu kod, gerekli tabloları, otomatik üye onay mekanizmasını ve güvenlik filtrelerini (RLS) kurar.</p>
                             <pre class="sql-code-block" id="sql-code-block">
 -- 1. UUID Eklentisini aktif et
 create extension if not exists "uuid-ossp";
 
--- 2. Seyahatler Tablosu
+-- 2. Üye Profilleri ve Onay Tablosu
+create table if not exists public.profiles (
+  id uuid references auth.users on delete cascade primary key,
+  email text not null,
+  status text default 'pending' not null,
+  is_admin boolean default false not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 3. Seyahatler Tablosu
 create table if not exists trips (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -600,7 +616,7 @@ create table if not exists trips (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. Masraflar Tablosu
+-- 4. Masraflar Tablosu
 create table if not exists expenses (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -613,7 +629,7 @@ create table if not exists expenses (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. Anılar / Günlük Tablosu
+-- 5. Anılar / Günlük Tablosu
 create table if not exists memories (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -626,29 +642,134 @@ create table if not exists memories (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. Row Level Security (RLS) Aktifleştirme
+-- 6. Row Level Security (RLS) Aktifleştirme
+alter table public.profiles enable row level security;
 alter table trips enable row level security;
 alter table expenses enable row level security;
 alter table memories enable row level security;
 
--- 6. Güvenlik Politikaları (Kullanıcılar sadece kendi verilerini okuyabilir/yazabilir)
+-- 7. Onay Kontrol Fonksiyonu
+create or replace function public.is_approved_user(user_uuid uuid)
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.profiles
+    where id = user_uuid and status = 'approved'
+  );
+end;
+$$ language plpgsql security definer;
+
+-- 8. Güvenlik Politikaları (Kullanıcılar onaylı ise kendi verilerini okuyabilir/yazabilir)
 drop policy if exists "Users can perform all actions on their own trips" on trips;
 create policy "Users can perform all actions on their own trips" on trips
-  for all using (auth.uid() = user_id);
+  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
 
 drop policy if exists "Users can perform all actions on their own expenses" on expenses;
 create policy "Users can perform all actions on their own expenses" on expenses
-  for all using (auth.uid() = user_id);
+  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
 
 drop policy if exists "Users can perform all actions on their own memories" on memories;
 create policy "Users can perform all actions on their own memories" on memories
-  for all using (auth.uid() = user_id);
+  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
+
+-- 9. Profil Güvenlik Politikaları
+drop policy if exists "Users can read their own profile" on public.profiles;
+create policy "Users can read their own profile" on public.profiles
+  for select using (auth.uid() = id);
+
+drop policy if exists "Admins can perform all actions on all profiles" on public.profiles;
+create policy "Admins can perform all actions on all profiles" on public.profiles
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where public.profiles.id = auth.uid() and public.profiles.is_admin = true
+    )
+  );
+
+-- 10. Yeni Kayıtlarda Otomatik Profil Oluşturma Tetikleyicisi
+create or replace function public.handle_new_user()
+returns trigger as $$
+declare
+  is_first bool;
+begin
+  -- İlk kayıt olan kullanıcıyı otomatik onaylı ve admin yap
+  select not exists (select 1 from public.profiles) into is_first;
+  insert into public.profiles (id, email, status, is_admin)
+  values (
+    new.id, 
+    new.email, 
+    case when is_first then 'approved' else 'pending' end, 
+    is_first
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- 11. Mevcut Kullanıcıları Profile Senkronize Etme ve İlkini Admin Yapma
+insert into public.profiles (id, email, status, is_admin)
+select id, email, 'approved', true from auth.users
+on conflict (id) do nothing;
+
+update public.profiles
+set is_admin = true, status = 'approved'
+where id in (select id from public.profiles order by created_at asc limit 1);
                             </pre>
                             <button id="btn-copy-sql" class="btn btn-secondary btn-sm"><i data-lucide="copy"></i> Kodu Kopyala</button>
 
                             <h3 class="margin-top-30">📁 Supabase Storage (Fotoğraf Saklama) Kurulumu</h3>
                             <p>Fotoğraflarınızı bulutta saklamak için Supabase panelinizden <strong>Storage</strong> kısmına girin. <strong>New bucket</strong> diyerek adı tam olarak <code>traveller-photos</code> olan <strong>Public</strong> (açık erişimli) bir klasör oluşturun. Başka hiçbir şey yapmanıza gerek yoktur!</p>
                         </div>
+                </section>
+
+                <!-- 8. ADMIN USER MANAGEMENT VIEW -->
+                <section id="view-admin" class="app-view hidden">
+                    <div class="section-title-row">
+                        <div>
+                            <h1>👥 Üye Yönetim Paneli</h1>
+                        </div>
+                        <a href="#settings" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Ayarlara Dön</a>
+                    </div>
+                    
+                    <div class="card glass">
+                        <div class="table-responsive">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>E-posta</th>
+                                        <th>Kayıt Tarihi</th>
+                                        <th>Durum</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-list">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. APPROVAL PENDING VIEW -->
+                <section id="view-approval-pending" class="app-view hidden">
+                    <div class="auth-card text-center" style="max-width: 450px;">
+                        <div id="pending-status-icon" class="margin-bottom-20">
+                            <i data-lucide="clock" style="width: 64px; height: 64px;"></i>
+                        </div>
+                        <h2>Üyelik Onayı Bekleniyor</h2>
+                        <p id="pending-message" class="text-muted margin-bottom-20" style="margin-top: 12px; line-height: 1.6;">
+                            Üyeliğiniz onay sürecindedir. Yönetici onay verdiğinde uygulamaya erişebileceksiniz.
+                        </p>
+                        <div class="info-alert" style="margin-bottom: 24px;">
+                            <strong>Kayıtlı E-posta:</strong> <span id="pending-email">-</span>
+                        </div>
+                        <button id="btn-pending-logout" class="btn btn-secondary btn-block">
+                            <i data-lucide="log-out"></i> Çıkış Yap
+                        </button>
                     </div>
                 </section>
             </main>

@@ -786,3 +786,62 @@ window.addEventListener('online', () => {
     console.log("Network online detected. Triggering queue sync.");
     syncOfflineQueue();
 });
+
+/* ==========================================================================
+   USER PROFILES / ADMIN API
+   ========================================================================== */
+
+export async function getUserProfile(userId) {
+    const client = await getSupabase();
+    if (!client) return null;
+    const { data, error } = await client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+    if (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+    }
+    return data;
+}
+
+export async function createUserProfile(userId, email) {
+    const client = await getSupabase();
+    if (!client) return null;
+    const payload = { id: userId, email, status: 'pending', is_admin: false };
+    const { data, error } = await client
+        .from('profiles')
+        .upsert([payload])
+        .select()
+        .maybeSingle();
+    if (error) {
+        console.error("Error creating user profile:", error);
+        return null;
+    }
+    return data;
+}
+
+export async function getAllProfiles() {
+    const client = await getSupabase();
+    if (!client) return [];
+    const { data, error } = await client
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+}
+
+export async function updateProfileStatus(profileId, status) {
+    const client = await getSupabase();
+    if (!client) return null;
+    const { data, error } = await client
+        .from('profiles')
+        .update({ status })
+        .eq('id', profileId)
+        .select()
+        .maybeSingle();
+    if (error) throw error;
+    return data;
+}

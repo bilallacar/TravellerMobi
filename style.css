@@ -1446,6 +1446,38 @@ select:-webkit-autofill:focus {
     font-size: 14px;
 }
 
+.auth-tabs {
+    display: flex;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    border-bottom: 2px solid transparent;
+}
+
+.auth-tab:hover {
+    color: var(--text-primary);
+}
+
+.auth-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.margin-bottom-20 { margin-bottom: 20px; }
+.margin-bottom-24 { margin-bottom: 24px; }
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
     .expenses-layout {
