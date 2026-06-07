@@ -1,11 +1,12 @@
 // config.js - Configuration state for Supabase API and user settings
 
 export const config = {
-    supabaseUrl: localStorage.getItem('supabase_url') || '',
-    supabaseKey: localStorage.getItem('supabase_key') || '',
+    supabaseUrl: localStorage.getItem('supabase_url') || 'https://pbfriozhmtyspfzgnkkq.supabase.co',
+    supabaseKey: localStorage.getItem('supabase_key') || 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM',
     defaultCurrency: localStorage.getItem('default_currency') || 'TRY',
     theme: localStorage.getItem('theme') || 'dark'
 };
+
 
 /**
  * Save Supabase connection details to localStorage
