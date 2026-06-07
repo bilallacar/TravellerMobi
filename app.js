@@ -605,10 +605,14 @@ function renderTrips() {
             e.stopPropagation();
             const id = btn.getAttribute('data-id');
             if (confirm('Bu seyahati sildiğinizde, bu seyahate ait tüm harcamalar ve anılar da silinecektir. Emin misiniz?')) {
-                await db.deleteTrip(id);
-                showToast('Seyahat silindi', 'success');
-                if (activeTripId === id) activeTripId = null;
-                await loadTripsData();
+                try {
+                    await db.deleteTrip(id);
+                    showToast('Seyahat silindi', 'success');
+                    if (activeTripId === id) activeTripId = null;
+                    await loadTripsData();
+                } catch (err) {
+                    showToast('Silme hatası: ' + err.message, 'danger');
+                }
             }
         });
     });
@@ -698,9 +702,13 @@ function renderExpenses() {
         btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             if (confirm('Bu harcamayı silmek istediğinize emin misiniz?')) {
-                await db.deleteExpense(id);
-                showToast('Harcama silindi', 'success');
-                await loadExpensesData();
+                try {
+                    await db.deleteExpense(id);
+                    showToast('Harcama silindi', 'success');
+                    await loadExpensesData();
+                } catch (err) {
+                    showToast('Silme hatası: ' + err.message, 'danger');
+                }
             }
         });
     });
@@ -791,6 +799,9 @@ function renderJournal() {
         container.innerHTML = photosOnly.map(mem => {
             return `
                 <div class="photo-grid-item" data-id="${mem.id}">
+                    <button class="btn-delete-memory btn-delete-photo-grid" data-id="${mem.id}" title="Anıyı Sil" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.85); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                    </button>
                     <img src="${getDisplayPhotoUrl(mem.photo_url)}" alt="${escapeHTML(mem.title)}">
                     <div class="photo-caption-overlay">
                         <strong>${escapeHTML(mem.title)}</strong><br>
@@ -842,55 +853,60 @@ function renderJournal() {
                 </div>
             `;
         }).join('');
+    }
 
-        // Bind actions
-        document.querySelectorAll('.btn-edit-memory').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = btn.getAttribute('data-id');
-                const mem = memoriesList.find(m => m.id === id);
-                if (mem) {
-                    document.getElementById('memory-id').value = mem.id;
-                    document.getElementById('memory-trip-id').value = mem.trip_id;
-                    document.getElementById('memory-title').value = mem.title;
-                    document.getElementById('memory-desc').value = mem.description || '';
-                    document.getElementById('memory-location').value = mem.location || '';
-                    document.getElementById('memory-date').value = mem.date;
-                    
-                    const previewImg = document.getElementById('photo-preview');
-                    const previewContainer = document.getElementById('photo-preview-container');
-                    const photoPlaceholder = document.getElementById('photo-upload-placeholder');
-                    
-                    if (mem.photo_url) {
-                        previewImg.src = getDisplayPhotoUrl(mem.photo_url);
-                        previewContainer.classList.remove('hidden');
-                        photoPlaceholder.classList.add('hidden');
-                    } else {
-                        previewImg.src = '';
-                        previewContainer.classList.add('hidden');
-                        photoPlaceholder.classList.remove('hidden');
-                    }
-                    
-                    document.getElementById('memory-modal-title').textContent = 'Anıyı Düzenle';
-                    document.getElementById('memory-modal').classList.remove('hidden');
-                    
-                    // Reset chosen file upload
-                    selectedPhotoFile = null;
-                    document.getElementById('memory-photo').value = '';
+    // Bind actions for all views
+    document.querySelectorAll('.btn-edit-memory').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const mem = memoriesList.find(m => m.id === id);
+            if (mem) {
+                document.getElementById('memory-id').value = mem.id;
+                document.getElementById('memory-trip-id').value = mem.trip_id;
+                document.getElementById('memory-title').value = mem.title;
+                document.getElementById('memory-desc').value = mem.description || '';
+                document.getElementById('memory-location').value = mem.location || '';
+                document.getElementById('memory-date').value = mem.date;
+                
+                const previewImg = document.getElementById('photo-preview');
+                const previewContainer = document.getElementById('photo-preview-container');
+                const photoPlaceholder = document.getElementById('photo-upload-placeholder');
+                
+                if (mem.photo_url) {
+                    previewImg.src = getDisplayPhotoUrl(mem.photo_url);
+                    previewContainer.classList.remove('hidden');
+                    photoPlaceholder.classList.add('hidden');
+                } else {
+                    previewImg.src = '';
+                    previewContainer.classList.add('hidden');
+                    photoPlaceholder.classList.remove('hidden');
                 }
-            });
+                
+                document.getElementById('memory-modal-title').textContent = 'Anıyı Düzenle';
+                document.getElementById('memory-modal').classList.remove('hidden');
+                
+                // Reset chosen file upload
+                selectedPhotoFile = null;
+                document.getElementById('memory-photo').value = '';
+            }
         });
+    });
 
-        document.querySelectorAll('.btn-delete-memory').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.getAttribute('data-id');
-                if (confirm('Bu anıyı silmek istediğinizden emin misiniz?')) {
+    document.querySelectorAll('.btn-delete-memory').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Prevent trigger parent card/grid-item click zoom
+            const id = btn.getAttribute('data-id');
+            if (confirm('Bu anıyı silmek istediğinizden emin misiniz?')) {
+                try {
                     await db.deleteMemory(id);
                     showToast('Anı silindi', 'success');
                     await loadJournalData();
+                } catch (err) {
+                    showToast('Silme hatası: ' + err.message, 'danger');
                 }
-            });
+            }
         });
-    }
+    });
 
     if (window.lucide) window.lucide.createIcons();
 }

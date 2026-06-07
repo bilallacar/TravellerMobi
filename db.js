@@ -426,9 +426,15 @@ export async function deleteTrip(tripId) {
         if (error) throw error;
         return { success: true };
     } catch (err) {
-        console.warn("DB offline or error, queued trip deletion:", err);
-        addToSyncQueue('delete_trip', { id: tripId });
-        return { success: true };
+        console.error("DB error on delete trip:", err);
+        // If it is a network error, queue it
+        if (err.message && (err.message.includes('fetch') || err.message.includes('Network') || err.status === 0)) {
+            addToSyncQueue('delete_trip', { id: tripId });
+            return { success: true };
+        }
+        // Restore local cache
+        await getTrips();
+        throw err;
     }
 }
 
@@ -563,9 +569,15 @@ export async function deleteExpense(expenseId) {
         if (error) throw error;
         return { success: true };
     } catch (err) {
-        console.warn("DB offline or error, queued expense deletion:", err);
-        addToSyncQueue('delete_expense', { id: expenseId });
-        return { success: true };
+        console.error("DB error on delete expense:", err);
+        // If it is a network error, queue it
+        if (err.message && (err.message.includes('fetch') || err.message.includes('Network') || err.status === 0)) {
+            addToSyncQueue('delete_expense', { id: expenseId });
+            return { success: true };
+        }
+        // Restore local cache
+        await getExpenses();
+        throw err;
     }
 }
 
@@ -750,9 +762,15 @@ export async function deleteMemory(memoryId) {
         if (error) throw error;
         return { success: true };
     } catch (err) {
-        console.warn("DB offline or error, queued memory deletion:", err);
-        addToSyncQueue('delete_memory', { id: memoryId });
-        return { success: true };
+        console.error("DB error on delete memory:", err);
+        // If it is a network error, queue it
+        if (err.message && (err.message.includes('fetch') || err.message.includes('Network') || err.status === 0)) {
+            addToSyncQueue('delete_memory', { id: memoryId });
+            return { success: true };
+        }
+        // Restore local cache
+        await getMemories();
+        throw err;
     }
 }
 
