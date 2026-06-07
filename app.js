@@ -276,6 +276,11 @@ async function loadDashboardData() {
     expensesList = await db.getExpenses();
     memoriesList = await db.getMemories();
 
+    // Fallback if no active trip ID is set but trips exist
+    if (!activeTripId && tripsList.length > 0) {
+        activeTripId = tripsList[0].id;
+    }
+
     // Populate trip selector dropdowns in dashboard
     const selector = document.getElementById('dash-trip-selector');
     if (selector) {
@@ -293,6 +298,11 @@ async function loadTripsData() {
 
 async function loadExpensesData() {
     tripsList = await db.getTrips();
+    
+    // Fallback if no active trip ID is set but trips exist
+    if (!activeTripId && tripsList.length > 0) {
+        activeTripId = tripsList[0].id;
+    }
     
     // Fill Trip filter selects
     const filterSelect = document.getElementById('expense-trip-filter');
@@ -315,6 +325,11 @@ async function loadExpensesData() {
 
 async function loadJournalData() {
     tripsList = await db.getTrips();
+    
+    // Fallback if no active trip ID is set but trips exist
+    if (!activeTripId && tripsList.length > 0) {
+        activeTripId = tripsList[0].id;
+    }
     
     const filterSelect = document.getElementById('journal-trip-filter');
     const modalSelect = document.getElementById('memory-trip-id');
@@ -391,8 +406,10 @@ function renderDashboard() {
 
     if (activeTripId) {
         activeTrip = tripsList.find(t => t.id === activeTripId);
-    } else if (tripsList.length > 0) {
-        // Default to first trip
+    }
+    
+    // Fallback if activeTrip is not found but trips exist
+    if (!activeTrip && tripsList.length > 0) {
         activeTrip = tripsList[0];
         activeTripId = activeTrip.id;
         
