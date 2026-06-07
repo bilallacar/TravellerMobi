@@ -1410,6 +1410,39 @@ select:-webkit-autofill:focus {
 .progress-bar-bg.compact { height: 6px; }
 .progress-bar.duration { transition: width 0.1s linear; }
 
+/* Auth Screen Styling */
+.auth-card {
+    background-color: var(--bg-glass);
+    backdrop-filter: var(--backdrop-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 40px;
+    max-width: 420px;
+    width: 100%;
+    margin: 80px auto;
+    box-shadow: var(--shadow-premium);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #a5b4fc, #6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.auth-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
     .expenses-layout {
@@ -1423,7 +1456,7 @@ select:-webkit-autofill:focus {
     }
     
     .sidebar {
-        display: none; /* Hide sidebar on mobile */
+        display: none !important; /* Hide sidebar on mobile */
     }
     
     .mobile-header {
@@ -1435,12 +1468,17 @@ select:-webkit-autofill:focus {
     }
     
     .app-content {
-        padding: 20px;
-        padding-bottom: 90px; /* Space for bottom nav */
+        padding: 16px;
+        padding-bottom: calc(85px + env(safe-area-inset-bottom, 0px)); /* Safe padding for bottom nav */
     }
     
     .dashboard-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .trips-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
     
     .settings-grid {
@@ -1465,10 +1503,68 @@ select:-webkit-autofill:focus {
     
     .journal-card {
         grid-template-columns: 1fr;
+        padding: 16px;
     }
     
     .journal-image-col {
-        height: 250px;
+        height: 200px;
         order: -1; /* Image at top on mobile */
     }
+
+    .custom-table th, .custom-table td {
+        padding: 12px 10px;
+        font-size: 13px;
+    }
 }
+
+@media (max-width: 480px) {
+    .welcome-title {
+        font-size: 22px;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .metric-card {
+        padding: 16px;
+    }
+    
+    .card {
+        padding: 16px;
+    }
+    
+    .modal-content {
+        padding: 24px 16px;
+        border-radius: var(--border-radius-md);
+        margin: 10px;
+    }
+
+    .custom-table th, .custom-table td {
+        padding: 10px 6px;
+        font-size: 11px;
+    }
+
+    .badge {
+        padding: 2px 6px;
+        font-size: 9px;
+    }
+
+    .exchange-rate-widget {
+        padding: 12px;
+    }
+
+    .auth-card {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        padding: 20px 10px;
+        margin: 20px auto;
+    }
+
+    .auth-header h1 {
+        font-size: 28px;
+    }
+}
+
