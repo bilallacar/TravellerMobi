@@ -11,6 +11,7 @@ let memoriesList = [];
 let activeTripId = null;
 let currentGalleryTab = 'all'; // 'all' or 'photos'
 let exchangeRates = {};
+let selectedPhotoFile = null;
 
 // Fallback rates if exchange rate API fails or offline
 const fallbackRates = {
@@ -416,6 +417,9 @@ function renderTrips() {
                     <div class="trip-card-header">
                         <span class="trip-title">${escapeHTML(trip.name)}</span>
                         <div class="trip-actions">
+                            <button class="btn-icon-only btn-edit-trip" data-id="${trip.id}" title="Seyahati Düzenle">
+                                <i data-lucide="edit-3" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                            </button>
                             <button class="btn-icon-only btn-delete-trip" data-id="${trip.id}" title="Seyahati Sil">
                                 <i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--color-danger);"></i>
                             </button>
@@ -440,6 +444,25 @@ function renderTrips() {
     }).join('');
 
     // Bind event handlers
+    document.querySelectorAll('.btn-edit-trip').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            const trip = tripsList.find(t => t.id === id);
+            if (trip) {
+                document.getElementById('trip-id').value = trip.id;
+                document.getElementById('trip-name').value = trip.name;
+                document.getElementById('trip-start').value = trip.start_date;
+                document.getElementById('trip-end').value = trip.end_date;
+                document.getElementById('trip-budget').value = trip.budget;
+                document.getElementById('trip-currency').value = trip.currency;
+                
+                document.getElementById('trip-modal-title').textContent = 'Seyahati Düzenle';
+                document.getElementById('trip-modal').classList.remove('hidden');
+            }
+        });
+    });
+
     document.querySelectorAll('.btn-delete-trip').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -501,15 +524,39 @@ function renderExpenses() {
                 <td>${exp.amount.toFixed(2)} ${exp.currency}</td>
                 <td>${amtInBase.toFixed(2)} ${baseCur}</td>
                 <td>
-                    <button class="btn btn-secondary btn-sm btn-delete-expense" data-id="${exp.id}" title="Sil">
-                        <i data-lucide="trash-2" style="width: 14px; height: 14px; color: var(--color-danger);"></i>
-                    </button>
+                    <div class="table-actions" style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary btn-sm btn-edit-expense" data-id="${exp.id}" title="Düzenle">
+                            <i data-lucide="edit-3" style="width: 14px; height: 14px; color: var(--color-primary);"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-sm btn-delete-expense" data-id="${exp.id}" title="Sil">
+                            <i data-lucide="trash-2" style="width: 14px; height: 14px; color: var(--color-danger);"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
 
     // Attach listeners
+    document.querySelectorAll('.btn-edit-expense').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const exp = expensesList.find(x => x.id === id);
+            if (exp) {
+                document.getElementById('expense-id').value = exp.id;
+                document.getElementById('expense-trip-id').value = exp.trip_id;
+                document.getElementById('expense-title').value = exp.title;
+                document.getElementById('expense-amount').value = exp.amount;
+                document.getElementById('expense-currency').value = exp.currency;
+                document.getElementById('expense-category').value = exp.category;
+                document.getElementById('expense-date').value = exp.date;
+                
+                document.getElementById('expense-modal-title').textContent = 'Masrafı Düzenle';
+                document.getElementById('expense-modal').classList.remove('hidden');
+            }
+        });
+    });
+
     document.querySelectorAll('.btn-delete-expense').forEach(btn => {
         btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
@@ -641,7 +688,10 @@ function renderJournal() {
                         <div class="journal-body">
                             <p>${escapeHTML(mem.description || '').replace(/\n/g, '<br>')}</p>
                         </div>
-                        <div class="journal-actions">
+                        <div class="journal-actions" style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm btn-edit-memory" data-id="${mem.id}">
+                                <i data-lucide="edit-3" style="width: 14px; height: 14px; color: var(--color-primary);"></i> Düzenle
+                            </button>
                             <button class="btn btn-secondary btn-sm btn-delete-memory" data-id="${mem.id}">
                                 <i data-lucide="trash-2" style="width: 14px; height: 14px; color: var(--color-danger);"></i> Sil
                             </button>
@@ -657,6 +707,42 @@ function renderJournal() {
         }).join('');
 
         // Bind actions
+        document.querySelectorAll('.btn-edit-memory').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                const mem = memoriesList.find(m => m.id === id);
+                if (mem) {
+                    document.getElementById('memory-id').value = mem.id;
+                    document.getElementById('memory-trip-id').value = mem.trip_id;
+                    document.getElementById('memory-title').value = mem.title;
+                    document.getElementById('memory-desc').value = mem.description || '';
+                    document.getElementById('memory-location').value = mem.location || '';
+                    document.getElementById('memory-date').value = mem.date;
+                    
+                    const previewImg = document.getElementById('photo-preview');
+                    const previewContainer = document.getElementById('photo-preview-container');
+                    const photoPlaceholder = document.getElementById('photo-upload-placeholder');
+                    
+                    if (mem.photo_url) {
+                        previewImg.src = mem.photo_url;
+                        previewContainer.classList.remove('hidden');
+                        photoPlaceholder.classList.add('hidden');
+                    } else {
+                        previewImg.src = '';
+                        previewContainer.classList.add('hidden');
+                        photoPlaceholder.classList.remove('hidden');
+                    }
+                    
+                    document.getElementById('memory-modal-title').textContent = 'Anıyı Düzenle';
+                    document.getElementById('memory-modal').classList.remove('hidden');
+                    
+                    // Reset chosen file upload
+                    selectedPhotoFile = null;
+                    document.getElementById('memory-photo').value = '';
+                }
+            });
+        });
+
         document.querySelectorAll('.btn-delete-memory').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
@@ -860,6 +946,7 @@ function initEventHandlers() {
     if (tripForm) {
         tripForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const tripId = document.getElementById('trip-id').value;
             const name = document.getElementById('trip-name').value;
             const start = document.getElementById('trip-start').value;
             const end = document.getElementById('trip-end').value;
@@ -867,13 +954,19 @@ function initEventHandlers() {
             const currency = document.getElementById('trip-currency').value;
 
             try {
-                const newTrip = await db.createTrip({ name, start_date: start, end_date: end, budget, currency });
-                showToast(`Seyahat oluşturuldu: ${newTrip.name}`, 'success');
-                activeTripId = newTrip.id;
+                if (tripId) {
+                    await db.updateTrip(tripId, { name, start_date: start, end_date: end, budget, currency });
+                    showToast(`Seyahat güncellendi: ${name}`, 'success');
+                } else {
+                    const newTrip = await db.createTrip({ name, start_date: start, end_date: end, budget, currency });
+                    showToast(`Seyahat oluşturuldu: ${newTrip.name}`, 'success');
+                    activeTripId = newTrip.id;
+                }
                 
                 // Hide modal and reset
                 document.getElementById('trip-modal').classList.add('hidden');
                 tripForm.reset();
+                document.getElementById('trip-id').value = '';
                 
                 await loadTripsData();
             } catch (err) {
@@ -887,6 +980,7 @@ function initEventHandlers() {
     if (expenseForm) {
         expenseForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const expenseId = document.getElementById('expense-id').value;
             const tripId = document.getElementById('expense-trip-id').value;
             const title = document.getElementById('expense-title').value;
             const amount = document.getElementById('expense-amount').value;
@@ -895,11 +989,17 @@ function initEventHandlers() {
             const date = document.getElementById('expense-date').value;
 
             try {
-                await db.createExpense({ trip_id: tripId, title, amount, currency, category, date });
-                showToast('Harcama kaydedildi', 'success');
+                if (expenseId) {
+                    await db.updateExpense(expenseId, { trip_id: tripId, title, amount, currency, category, date });
+                    showToast('Harcama güncellendi', 'success');
+                } else {
+                    await db.createExpense({ trip_id: tripId, title, amount, currency, category, date });
+                    showToast('Harcama kaydedildi', 'success');
+                }
                 
                 document.getElementById('expense-modal').classList.add('hidden');
                 expenseForm.reset();
+                document.getElementById('expense-id').value = '';
                 
                 activeTripId = tripId;
                 await loadExpensesData();
@@ -916,7 +1016,6 @@ function initEventHandlers() {
     const previewContainer = document.getElementById('photo-preview-container');
     const previewImg = document.getElementById('photo-preview');
     const removePhotoBtn = document.getElementById('btn-remove-photo');
-    let selectedPhotoFile = null;
 
     if (fileInput && photoPlaceholder && previewContainer && previewImg) {
         fileInput.addEventListener('change', (e) => {
@@ -928,6 +1027,18 @@ function initEventHandlers() {
                     previewImg.src = event.target.result;
                     previewContainer.classList.remove('hidden');
                     photoPlaceholder.classList.add('hidden');
+                    
+                    // Programmatically scroll the modal content and wrapper to bottom so the save button is visible
+                    setTimeout(() => {
+                        const modalContent = document.querySelector('#memory-modal .modal-content');
+                        if (modalContent) {
+                            modalContent.scrollTop = modalContent.scrollHeight;
+                        }
+                        const modalContainer = document.getElementById('memory-modal');
+                        if (modalContainer) {
+                            modalContainer.scrollTop = modalContainer.scrollHeight;
+                        }
+                    }, 100);
                 };
                 reader.readAsDataURL(file);
             }
@@ -945,6 +1056,7 @@ function initEventHandlers() {
     if (memoryForm) {
         memoryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const memoryId = document.getElementById('memory-id').value;
             const tripId = document.getElementById('memory-trip-id').value;
             const title = document.getElementById('memory-title').value;
             const description = document.getElementById('memory-desc').value;
@@ -958,6 +1070,9 @@ function initEventHandlers() {
             const progressBarContainer = document.getElementById('upload-progress-container');
             const progressBar = document.getElementById('upload-progress-bar');
             const progressText = document.getElementById('upload-progress-text');
+
+            const hasExistingPhoto = !previewContainer.classList.contains('hidden') && previewImg.src.startsWith('http');
+            const existingPhotoUrl = hasExistingPhoto ? previewImg.src : null;
 
             if (selectedPhotoFile && progressBarContainer && progressBar && progressText) {
                 progressBarContainer.classList.remove('hidden');
@@ -973,14 +1088,18 @@ function initEventHandlers() {
                 }, 100);
 
                 try {
-                    await db.createMemory({ trip_id: tripId, title, description, location, date }, selectedPhotoFile);
+                    if (memoryId) {
+                        await db.updateMemory(memoryId, { trip_id: tripId, title, description, location, date, photo_url: null }, selectedPhotoFile);
+                    } else {
+                        await db.createMemory({ trip_id: tripId, title, description, location, date }, selectedPhotoFile);
+                    }
                     clearInterval(progressInterval);
                     
                     progressBar.style.width = '100%';
                     progressText.textContent = 'Fotoğraf başarıyla yüklendi! %100';
                     
                     setTimeout(() => {
-                        showToast('Seyahat anısı ve fotoğraf başarıyla kaydedildi!', 'success');
+                        showToast(memoryId ? 'Seyahat anısı güncellendi!' : 'Seyahat anısı ve fotoğraf başarıyla kaydedildi!', 'success');
                         closeModal();
                     }, 500);
 
@@ -991,10 +1110,15 @@ function initEventHandlers() {
                     submitBtn.textContent = 'Kaydet';
                 }
             } else {
-                // Text only memory saving
+                // Text only or keeping existing photo memory saving
                 try {
-                    await db.createMemory({ trip_id: tripId, title, description, location, date }, null);
-                    showToast('Seyahat anısı başarıyla kaydedildi!', 'success');
+                    if (memoryId) {
+                        await db.updateMemory(memoryId, { trip_id: tripId, title, description, location, date, photo_url: existingPhotoUrl }, null);
+                        showToast('Seyahat anısı güncellendi!', 'success');
+                    } else {
+                        await db.createMemory({ trip_id: tripId, title, description, location, date }, null);
+                        showToast('Seyahat anısı başarıyla kaydedildi!', 'success');
+                    }
                     closeModal();
                 } catch (err) {
                     showToast('Hata oluştu: ' + err.message, 'danger');
@@ -1004,11 +1128,14 @@ function initEventHandlers() {
             }
 
             async function closeModal() {
-                progressBarContainer.classList.add('hidden');
-                progressBar.style.width = '0%';
+                if (progressBarContainer) {
+                    progressBarContainer.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                }
                 
                 document.getElementById('memory-modal').classList.add('hidden');
                 memoryForm.reset();
+                document.getElementById('memory-id').value = '';
                 
                 selectedPhotoFile = null;
                 previewContainer.classList.add('hidden');
@@ -1147,10 +1274,49 @@ function setupModal(triggerId, modalId, closeId) {
         trigger.addEventListener('click', () => {
             modal.classList.remove('hidden');
             
+            // Reset form on addition trigger
+            const form = modal.querySelector('form');
+            if (form) {
+                form.reset();
+                const idInput = form.querySelector('input[type="hidden"]');
+                if (idInput) idInput.value = '';
+            }
+
+            // Reset modal title
+            const titleEl = modal.querySelector('h2');
+            if (titleEl) {
+                if (modalId === 'trip-modal') titleEl.textContent = 'Yeni Seyahat Ekle';
+                else if (modalId === 'expense-modal') titleEl.textContent = 'Yeni Masraf Ekle';
+                else if (modalId === 'memory-modal') titleEl.textContent = 'Yeni Anı Kaydet';
+            }
+
+            // Memory specific reset
+            if (modalId === 'memory-modal') {
+                const previewImg = document.getElementById('photo-preview');
+                const previewContainer = document.getElementById('photo-preview-container');
+                const photoPlaceholder = document.getElementById('photo-upload-placeholder');
+                if (previewImg && previewContainer && photoPlaceholder) {
+                    previewImg.src = '';
+                    previewContainer.classList.add('hidden');
+                    photoPlaceholder.classList.remove('hidden');
+                }
+                selectedPhotoFile = null;
+            }
+
             // Auto prefill current date for forms
             const dateInput = modal.querySelector('input[type="date"]');
             if (dateInput) {
                 dateInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            // Pre-select active trip if available
+            if (modalId === 'expense-modal' && activeTripId) {
+                const select = document.getElementById('expense-trip-id');
+                if (select) select.value = activeTripId;
+            }
+            if (modalId === 'memory-modal' && activeTripId) {
+                const select = document.getElementById('memory-trip-id');
+                if (select) select.value = activeTripId;
             }
         });
 

@@ -177,12 +177,20 @@ export async function syncOfflineQueue(onProgress) {
                 const { error } = await supabase.from('trips').insert([payload]);
                 if (error) throw error;
             } 
+            else if (item.action === 'update_trip') {
+                const { error } = await supabase.from('trips').update(payload).eq('id', item.data.id);
+                if (error) throw error;
+            }
             else if (item.action === 'delete_trip') {
                 const { error } = await supabase.from('trips').delete().eq('id', item.data.id);
                 if (error) throw error;
             }
             else if (item.action === 'create_expense') {
                 const { error } = await supabase.from('expenses').insert([payload]);
+                if (error) throw error;
+            }
+            else if (item.action === 'update_expense') {
+                const { error } = await supabase.from('expenses').update(payload).eq('id', item.data.id);
                 if (error) throw error;
             }
             else if (item.action === 'delete_expense') {
@@ -208,10 +216,24 @@ export async function syncOfflineQueue(onProgress) {
                 const { error } = await supabase.from('memories').insert([payload]);
                 if (error) throw error;
             }
+            else if (item.action === 'update_memory') {
+                if (item.data.photo_base64 && item.data.photo_name) {
+                    const fileBlob = base64ToBlob(item.data.photo_base64);
+                    const fileType = item.data.photo_base64.split(';')[0].split(':')[1];
+                    const file = new File([fileBlob], item.data.photo_name, { type: fileType });
+                    const publicUrl = await uploadPhotoToStorage(file);
+                    payload.photo_url = publicUrl;
+                }
+                delete payload.photo_base64;
+                delete payload.photo_name;
+                const { error } = await supabase.from('memories').update(payload).eq('id', item.data.id);
+                if (error) throw error;
+            }
             else if (item.action === 'delete_memory') {
                 const { error } = await supabase.from('memories').delete().eq('id', item.data.id);
                 if (error) throw error;
             }
+
 
             // Remove item from remaining list after success
             const index = remainingQueue.findIndex(q => q.id === item.id);
@@ -321,6 +343,46 @@ export async function createTrip(tripData) {
     }
 }
 
+export async function updateTrip(tripId, tripData) {
+    const payload = {
+        id: tripId,
+        name: tripData.name,
+        start_date: tripData.start_date,
+        end_date: tripData.end_date,
+        budget: parseFloat(tripData.budget) || 0,
+        currency: tripData.currency || 'TRY'
+    };
+
+    // Optimistic Update Cache
+    const trips = getLocalCache(CACHE_KEYS.TRIPS);
+    const index = trips.findIndex(t => t.id === tripId);
+    if (index > -1) {
+        trips[index] = { ...trips[index], ...payload };
+        setLocalCache(CACHE_KEYS.TRIPS, trips);
+    }
+
+    if (!isOnline()) {
+        addToSyncQueue('update_trip', payload);
+        return payload;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('trips')
+            .update(payload)
+            .eq('id', tripId)
+            .select();
+        
+        if (error) throw error;
+        return data[0];
+    } catch (err) {
+        console.warn("DB offline or error, queued trip update:", err);
+        addToSyncQueue('update_trip', payload);
+        return payload;
+    }
+}
+
+
 export async function deleteTrip(tripId) {
     // Optimistic Update Cache
     const trips = getLocalCache(CACHE_KEYS.TRIPS).filter(t => t.id !== tripId);
@@ -422,6 +484,47 @@ export async function createExpense(expenseData) {
         return payload;
     }
 }
+
+export async function updateExpense(expenseId, expenseData) {
+    const payload = {
+        id: expenseId,
+        trip_id: expenseData.trip_id,
+        title: expenseData.title,
+        amount: parseFloat(expenseData.amount),
+        currency: expenseData.currency,
+        category: expenseData.category,
+        date: expenseData.date
+    };
+
+    // Optimistic Update Cache
+    const expenses = getLocalCache(CACHE_KEYS.EXPENSES);
+    const index = expenses.findIndex(e => e.id === expenseId);
+    if (index > -1) {
+        expenses[index] = { ...expenses[index], ...payload };
+        setLocalCache(CACHE_KEYS.EXPENSES, expenses);
+    }
+
+    if (!isOnline()) {
+        addToSyncQueue('update_expense', payload);
+        return payload;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('expenses')
+            .update(payload)
+            .eq('id', expenseId)
+            .select();
+
+        if (error) throw error;
+        return data[0];
+    } catch (err) {
+        console.warn("DB offline or error, queued expense update:", err);
+        addToSyncQueue('update_expense', payload);
+        return payload;
+    }
+}
+
 
 export async function deleteExpense(expenseId) {
     // Optimistic Update Cache
@@ -544,6 +647,71 @@ export async function createMemory(memoryData, photoFile = null) {
         return payload;
     }
 }
+
+export async function updateMemory(memoryId, memoryData, photoFile = null) {
+    const payload = {
+        id: memoryId,
+        trip_id: memoryData.trip_id,
+        title: memoryData.title,
+        description: memoryData.description,
+        location: memoryData.location,
+        date: memoryData.date,
+        photo_url: memoryData.photo_url || null
+    };
+
+    if (photoFile) {
+        if (isOnline()) {
+            try {
+                const publicUrl = await uploadPhotoToStorage(photoFile);
+                payload.photo_url = publicUrl;
+            } catch (uploadErr) {
+                console.error("Photo upload failed, keeping old URL if any.", uploadErr);
+            }
+        } else {
+            try {
+                const base64Data = await fileToBase64(photoFile);
+                payload.photo_base64 = base64Data;
+                payload.photo_name = `${generateUUID()}_${photoFile.name}`;
+                payload.photo_url = base64Data; // Temporary URL for optimistic render
+            } catch (fileErr) {
+                console.error("Could not convert image to base64 for offline cache:", fileErr);
+            }
+        }
+    }
+
+    // Optimistic Update Cache
+    const memories = getLocalCache(CACHE_KEYS.MEMORIES);
+    const index = memories.findIndex(m => m.id === memoryId);
+    if (index > -1) {
+        memories[index] = { ...memories[index], ...payload };
+        setLocalCache(CACHE_KEYS.MEMORIES, memories);
+    }
+
+    if (!isOnline()) {
+        addToSyncQueue('update_memory', payload);
+        return payload;
+    }
+
+    try {
+        const dbPayload = { ...payload };
+        delete dbPayload.photo_base64;
+        delete dbPayload.photo_name;
+
+        const { data, error } = await supabase
+            .from('memories')
+            .update(dbPayload)
+            .eq('id', memoryId)
+            .select();
+
+        if (error) throw error;
+        return data[0];
+    } catch (err) {
+        console.warn("DB offline or error, queued memory update:", err);
+        addToSyncQueue('update_memory', payload);
+        return payload;
+    }
+}
+
 
 export async function deleteMemory(memoryId) {
     // Optimistic Update Cache
