@@ -15,6 +15,10 @@ let currentGalleryTab = 'all'; // 'all' or 'photos'
 let exchangeRates = {};
 let selectedPhotoFile = null;
 
+// Memory cache for private photos downloaded as local Object URLs
+const photoBlobUrls = {};
+const pendingPhotoLoads = new Set();
+
 // Fallback rates if exchange rate API fails or offline
 const fallbackRates = {
     TRY: 32.50,
@@ -33,12 +37,20 @@ function showToast(message, type = 'info') {
     toast.className = `toast ${type}`;
     
     // Choose icon based on type
-    let icon = 'info';
-    if (type === 'success') icon = 'check-circle';
-    if (type === 'warning') icon = 'alert-triangle';
-    if (type === 'danger') icon = 'x-circle';
+    let iconName = 'info';
+    if (type === 'success') iconName = 'check-circle';
+    if (type === 'warning') iconName = 'alert-triangle';
+    if (type === 'danger') iconName = 'x-circle';
 
-    toast.innerHTML = `<i data-lucide="${icon}"></i> <span>${message}</span>`;
+    // Safely build the elements to prevent XSS
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', iconName);
+    
+    const span = document.createElement('span');
+    span.textContent = message;
+
+    toast.appendChild(icon);
+    toast.appendChild(span);
     container.appendChild(toast);
     
     // Trigger Lucide icon parsing for this new toast
@@ -52,6 +64,55 @@ function showToast(message, type = 'info') {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
     }, 4000);
+}
+
+function getDisplayPhotoUrl(url) {
+    if (!url) return '';
+    // If it's already a local base64 preview or a blob URL, return it directly
+    if (url.startsWith('data:') || url.startsWith('blob:')) {
+        return url;
+    }
+    
+    // If already downloaded and cached as Object URL
+    if (photoBlobUrls[url]) {
+        return photoBlobUrls[url];
+    }
+    
+    // Determine the file path in private storage:
+    // If it is a full Supabase URL, extract the filePath part. Otherwise it's a relative path.
+    let filePath = url;
+    if (url.startsWith('http')) {
+        filePath = url.split('/traveller-photos/').pop();
+    }
+    
+    // If not currently loading, trigger async fetch
+    if (!pendingPhotoLoads.has(url)) {
+        pendingPhotoLoads.add(url);
+        
+        db.downloadPhoto(filePath)
+            .then(blob => {
+                if (blob) {
+                    const objectUrl = URL.createObjectURL(blob);
+                    photoBlobUrls[url] = objectUrl;
+                    
+                    // Re-render views that display photos
+                    const hash = window.location.hash || '#dashboard';
+                    if (hash === '#journal') {
+                        renderJournal();
+                    } else if (hash === '#dashboard') {
+                        renderDashboard();
+                    }
+                }
+                pendingPhotoLoads.delete(url);
+            })
+            .catch(err => {
+                console.error("Error loading secure image:", err);
+                pendingPhotoLoads.delete(url);
+            });
+    }
+    
+    // Return a completely static safe SVG loading placeholder
+    return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23222"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-family="sans-serif" font-size="8">Yukleniyor...</text></svg>';
 }
 
 // Convert currencies dynamically using API rates
@@ -156,11 +217,16 @@ async function handleRouting() {
     userProfile = null;
     isAdmin = false;
     if (activeUser) {
-        userProfile = await db.getUserProfile(activeUser.id);
-        if (!userProfile) {
-            userProfile = await db.createUserProfile(activeUser.id, activeUser.email);
+        try {
+            userProfile = await db.getUserProfile(activeUser.id);
+            if (!userProfile) {
+                userProfile = await db.createUserProfile(activeUser.id, activeUser.email);
+            }
+            isAdmin = !!(userProfile && userProfile.is_admin);
+        } catch (profileErr) {
+            console.error("Profile resolution failed:", profileErr);
+            showToast("Profil doğrulanamadı. SQL şemasını çalıştırdığınızdan emin olun.", "danger");
         }
-        isAdmin = !!(userProfile && userProfile.is_admin);
     }
 
     // Toggle Admin Panel card visibility in Settings
@@ -285,7 +351,7 @@ async function loadDashboardData() {
     const selector = document.getElementById('dash-trip-selector');
     if (selector) {
         selector.innerHTML = '<option value="">Seyahat Seçin...</option>' + 
-            tripsList.map(t => `<option value="${t.id}" ${t.id === activeTripId ? 'selected' : ''}>${t.name}</option>`).join('');
+            tripsList.map(t => `<option value="${t.id}" ${t.id === activeTripId ? 'selected' : ''}>${escapeHTML(t.name)}</option>`).join('');
     }
 
     renderDashboard();
@@ -308,7 +374,7 @@ async function loadExpensesData() {
     const filterSelect = document.getElementById('expense-trip-filter');
     const modalSelect = document.getElementById('expense-trip-id');
     
-    const tripOptions = tripsList.map(t => `<option value="${t.id}" ${t.id === activeTripId ? 'selected' : ''}>${t.name}</option>`).join('');
+    const tripOptions = tripsList.map(t => `<option value="${t.id}" ${t.id === activeTripId ? 'selected' : ''}>${escapeHTML(t.name)}</option>`).join('');
     
     if (filterSelect) filterSelect.innerHTML = '<option value="">Seyahat Seçin...</option>' + tripOptions;
     if (modalSelect) modalSelect.innerHTML = tripOptions;
@@ -334,7 +400,7 @@ async function loadJournalData() {
     const filterSelect = document.getElementById('journal-trip-filter');
     const modalSelect = document.getElementById('memory-trip-id');
     
-    const tripOptions = tripsList.map(t => `<option value="${t.id}" ${t.id === activeTripId ? 'selected' : ''}>${t.name}</option>`).join('');
+    const tripOptions = tripsList.map(t => `<option value="${t.id}" ${t.id === activeTripId ? 'selected' : ''}>${escapeHTML(t.name)}</option>`).join('');
     
     if (filterSelect) filterSelect.innerHTML = '<option value="">Seyahat Seçin...</option>' + tripOptions;
     if (modalSelect) modalSelect.innerHTML = tripOptions;
@@ -725,7 +791,7 @@ function renderJournal() {
         container.innerHTML = photosOnly.map(mem => {
             return `
                 <div class="photo-grid-item" data-id="${mem.id}">
-                    <img src="${mem.photo_url}" alt="${escapeHTML(mem.title)}">
+                    <img src="${getDisplayPhotoUrl(mem.photo_url)}" alt="${escapeHTML(mem.title)}">
                     <div class="photo-caption-overlay">
                         <strong>${escapeHTML(mem.title)}</strong><br>
                         ${formatDate(mem.date)} - ${escapeHTML(mem.location || '')}
@@ -770,7 +836,7 @@ function renderJournal() {
                     </div>
                     ${hasImage ? `
                         <div class="journal-image-col">
-                            <img src="${mem.photo_url}" class="journal-img" alt="${escapeHTML(mem.title)}" onclick="window.open('${mem.photo_url}', '_blank')">
+                            <img src="${getDisplayPhotoUrl(mem.photo_url)}" class="journal-img" alt="${escapeHTML(mem.title)}" onclick="window.open(this.src, '_blank')">
                         </div>
                     ` : ''}
                 </div>
@@ -795,7 +861,7 @@ function renderJournal() {
                     const photoPlaceholder = document.getElementById('photo-upload-placeholder');
                     
                     if (mem.photo_url) {
-                        previewImg.src = mem.photo_url;
+                        previewImg.src = getDisplayPhotoUrl(mem.photo_url);
                         previewContainer.classList.remove('hidden');
                         photoPlaceholder.classList.add('hidden');
                     } else {

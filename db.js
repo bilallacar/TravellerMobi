@@ -18,6 +18,7 @@ function generateUUID() {
 }
 
 let supabaseReadyPromise = null;
+let currentCachedUserId = null;
 
 /**
  * Initialize Supabase Client if keys are configured.
@@ -78,6 +79,11 @@ export async function getCurrentUser() {
         const client = await getSupabase();
         if (!client) return null;
         const { data: { user } } = await client.auth.getUser();
+        if (user) {
+            currentCachedUserId = user.id;
+        } else {
+            currentCachedUserId = null;
+        }
         return user;
     } catch (err) {
         console.error("Error in getCurrentUser:", err);
@@ -90,6 +96,9 @@ export async function signIn(email, password) {
     if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
     const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    if (data.user) {
+        currentCachedUserId = data.user.id;
+    }
     return data.user;
 }
 
@@ -98,6 +107,9 @@ export async function signUp(email, password) {
     if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
     const { data, error } = await client.auth.signUp({ email, password });
     if (error) throw error;
+    if (data.user) {
+        currentCachedUserId = data.user.id;
+    }
     return data.user;
 }
 
@@ -105,6 +117,7 @@ export async function signOut() {
     const client = await getSupabase();
     if (!client) return;
     await client.auth.signOut();
+    currentCachedUserId = null;
 }
 
 
@@ -120,12 +133,21 @@ const CACHE_KEYS = {
     QUEUE: 'offline_sync_queue'
 };
 
-function getLocalCache(key) {
+function getCacheKey(baseKey) {
+    if (!currentCachedUserId) {
+        return `${baseKey}_guest`;
+    }
+    return `${baseKey}_${currentCachedUserId}`;
+}
+
+function getLocalCache(baseKey) {
+    const key = getCacheKey(baseKey);
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : [];
 }
 
-function setLocalCache(key, data) {
+function setLocalCache(baseKey, data) {
+    const key = getCacheKey(baseKey);
     localStorage.setItem(key, JSON.stringify(data));
 }
 
@@ -740,13 +762,15 @@ export async function deleteMemory(memoryId) {
 
 async function uploadPhotoToStorage(file) {
     if (!supabase) throw new Error("Supabase connection is unconfigured.");
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Kullanıcı oturumu bulunamadı.");
     
     // Bucket name
     const BUCKET_NAME = 'traveller-photos';
     // Generate unique name path inside bucket
     const fileExtension = file.name.split('.').pop();
     const fileName = `${generateUUID()}.${fileExtension}`;
-    const filePath = `${fileName}`;
+    const filePath = `${user.id}/${fileName}`;
 
     // Upload payload
     const { data, error } = await supabase.storage
@@ -758,12 +782,19 @@ async function uploadPhotoToStorage(file) {
 
     if (error) throw error;
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(filePath);
+    // Return the relative storage path (e.g., user_id/filename.ext)
+    return filePath;
+}
 
-    return publicUrl;
+export async function downloadPhoto(filePath) {
+    const client = await getSupabase();
+    if (!client) return null;
+    const BUCKET_NAME = 'traveller-photos';
+    const { data, error } = await client.storage
+        .from(BUCKET_NAME)
+        .download(filePath);
+    if (error) throw error;
+    return data; // returns a Blob
 }
 
 // Convert File Object to Base64 String
@@ -844,4 +875,9 @@ export async function updateProfileStatus(profileId, status) {
         .maybeSingle();
     if (error) throw error;
     return data;
+}
+
+// Initialize active user on load if config is present
+if (config.supabaseUrl && config.supabaseKey) {
+    getCurrentUser().catch(() => {});
 }
