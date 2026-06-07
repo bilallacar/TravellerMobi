@@ -488,7 +488,7 @@ function renderDashboard() {
     if (mobileIndicator) {
         const icon = mobileIndicator.querySelector('.sync-icon');
         if (icon) {
-            icon.className = `sync-icon ${onlineStatus ? 'online' : 'offline'}`;
+            icon.setAttribute('class', `sync-icon ${onlineStatus ? 'online' : 'offline'}`);
             icon.setAttribute('data-lucide', onlineStatus ? 'cloud' : 'cloud-lightning');
         }
     }
