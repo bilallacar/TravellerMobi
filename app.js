@@ -465,9 +465,18 @@ function renderDashboard() {
         }
     }
 
-    // Calculate active trip metrics
+    // Calculate global metrics
     const baseCur = config.defaultCurrency;
-    let totalExpenseInBase = 0;
+    let globalTotalExpense = 0;
+    expensesList.forEach(e => {
+        globalTotalExpense += convertCurrency(e.amount, e.currency, baseCur);
+    });
+
+    const globalMemoriesCount = memoriesList.length;
+    const globalPhotosCount = memoriesList.filter(m => m.photo_url).length;
+
+    // Calculate active trip metrics
+    let activeTripExpenseInBase = 0;
     let activeTrip = null;
 
     if (activeTripId) {
@@ -488,7 +497,7 @@ function renderDashboard() {
         const tripExpenses = expensesList.filter(e => e.trip_id === activeTrip.id);
         
         tripExpenses.forEach(e => {
-            totalExpenseInBase += convertCurrency(e.amount, e.currency, baseCur);
+            activeTripExpenseInBase += convertCurrency(e.amount, e.currency, baseCur);
         });
 
         document.getElementById('dash-active-trip').textContent = activeTrip.name;
@@ -497,13 +506,13 @@ function renderDashboard() {
         // Progress bar for budget
         const budgetLimit = activeTrip.budget;
         const limitInBase = convertCurrency(budgetLimit, activeTrip.currency, baseCur);
-        const percent = limitInBase > 0 ? Math.min((totalExpenseInBase / limitInBase) * 100, 100) : 0;
+        const percent = limitInBase > 0 ? Math.min((activeTripExpenseInBase / limitInBase) * 100, 100) : 0;
         
         const textProgress = document.getElementById('dash-budget-progress-text');
         const barProgress = document.getElementById('dash-budget-progress-bar');
         
         if (textProgress && barProgress) {
-            textProgress.textContent = `${totalExpenseInBase.toFixed(2)} / ${limitInBase.toFixed(2)} ${baseCur}`;
+            textProgress.textContent = `${activeTripExpenseInBase.toFixed(2)} / ${limitInBase.toFixed(2)} ${baseCur}`;
             barProgress.style.width = `${percent}%`;
             
             // Color thresholds
@@ -519,13 +528,15 @@ function renderDashboard() {
     }
 
     // Global Metrics counters
-    document.getElementById('dash-total-expense').textContent = `${totalExpenseInBase.toFixed(2)} ${baseCur}`;
-    document.getElementById('dash-memories-count').textContent = `${memoriesList.filter(m => !activeTripId || m.trip_id === activeTripId).length} Anı`;
+    document.getElementById('dash-total-expense').textContent = `${globalTotalExpense.toFixed(2)} ${baseCur}`;
     
-    const photosCount = memoriesList
-        .filter(m => !activeTripId || m.trip_id === activeTripId)
-        .filter(m => m.photo_url).length;
-    document.getElementById('dash-photos-count').textContent = `${photosCount} Fotoğraf yüklendi`;
+    const expenseSubEl = document.getElementById('dash-expense-converted');
+    if (expenseSubEl) {
+        expenseSubEl.textContent = "Tüm rotaların genel toplamı";
+    }
+
+    document.getElementById('dash-memories-count').textContent = `${globalMemoriesCount} Anı`;
+    document.getElementById('dash-photos-count').textContent = `${globalPhotosCount} Fotoğraf yüklendi`;
 
     if (window.lucide) window.lucide.createIcons();
 }
