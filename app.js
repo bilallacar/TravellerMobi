@@ -1211,8 +1211,11 @@ function initEventHandlers() {
             } else {
                 if (result.reason === 'offline') {
                     showToast('Eşitleme başarısız: Cihaz çevrimdışı.', 'warning');
+                } else if (result.reason === 'unauthorized') {
+                    showToast('Eşitleme başarısız: Giriş yapmadınız veya oturumunuz süresi dolmuş. Lütfen önce giriş yapın.', 'warning');
                 } else {
-                    showToast('Eşitleme sırasında bazı hatalar oluştu.', 'danger');
+                    const errMsg = result.error && result.error.message ? `: ${result.error.message}` : '';
+                    showToast(`Eşitleme sırasında hata oluştu${errMsg}`, 'danger');
                 }
             }
             
