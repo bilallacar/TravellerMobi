@@ -287,11 +287,22 @@ async function handleRouting() {
         }
     }
 
-    // Toggle Admin Panel card visibility in Settings
+    // Toggle Admin-only card visibility in Settings
     const adminCard = document.getElementById('settings-admin-card');
+    const apiCard = document.getElementById('settings-api-card');
+    const sqlCard = document.getElementById('settings-sql-card');
+    
     if (adminCard) {
         if (isAdmin) adminCard.classList.remove('hidden');
         else adminCard.classList.add('hidden');
+    }
+    if (apiCard) {
+        if (isAdmin) apiCard.classList.remove('hidden');
+        else apiCard.classList.add('hidden');
+    }
+    if (sqlCard) {
+        if (isAdmin) sqlCard.classList.remove('hidden');
+        else sqlCard.classList.add('hidden');
     }
 
     // Route Guard - Check user approval status

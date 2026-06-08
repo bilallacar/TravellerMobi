@@ -544,7 +544,7 @@
 
                     <div class="settings-grid">
                         <!-- API Configurations -->
-                        <div class="card glass">
+                        <div class="card glass hidden" id="settings-api-card">
                             <h3>🔌 Bulut Supabase Bağlantısı</h3>
                             <form id="settings-api-form" class="settings-form">
                                 <div class="form-group">
@@ -592,7 +592,7 @@
                         </div>
 
                         <!-- Database Script / Help -->
-                        <div class="card glass double-span">
+                        <div class="card glass double-span hidden" id="settings-sql-card">
                             <h3>🛠️ Supabase SQL Şeması</h3>
                             <p>Supabase projenizde <strong>SQL Editor</strong> alanına girerek sorgu ekranına aşağıdaki kodun tamamını yapıştırıp <strong>RUN</strong> tuşuna basın. Bu kod, gerekli tabloları, otomatik üye onay mekanizmasını ve güvenlik filtrelerini (RLS) kurar.</p>
                             <pre class="sql-code-block" id="sql-code-block">
