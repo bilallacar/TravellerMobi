@@ -55,7 +55,7 @@
                         <p class="user-email" id="user-email">misafir@traveller.mobi</p>
                     </div>
                 </div>
-                <button id="btn-logout" class="btn btn-logout-icon">
+                <button id="btn-logout" type="button" class="btn btn-logout-icon">
                     <i data-lucide="log-out"></i> Çıkış Yap
                 </button>
             </div>
@@ -69,8 +69,13 @@
                     <span class="logo-icon">🌍</span>
                     <span class="logo-text">TravellerMobi</span>
                 </div>
-                <div class="mobile-sync-status" id="mobile-sync-indicator" title="Eşitleme Durumu">
-                    <i data-lucide="cloud-lightning" class="sync-icon offline"></i>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="mobile-sync-status" id="mobile-sync-indicator" title="Eşitleme Durumu">
+                        <i data-lucide="cloud-lightning" class="sync-icon offline"></i>
+                    </div>
+                    <button id="btn-mobile-logout" type="button" class="btn btn-logout-icon" style="padding: 6px; border-radius: 8px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;" title="Çıkış Yap">
+                        <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </div>
             </header>
 

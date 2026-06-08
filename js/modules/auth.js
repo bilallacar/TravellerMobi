@@ -72,15 +72,23 @@ export function initAuthEvents() {
     }
 
     const logoutBtn = document.getElementById('btn-logout');
+    const mobileLogoutBtn = document.getElementById('btn-mobile-logout');
     const pendingLogoutBtn = document.getElementById('btn-pending-logout');
     
-    const handleLogout = async () => {
-        await db.signOut();
-        showToast('Çıkış yapıldı', 'info');
-        window.location.hash = '#auth';
+    const handleLogout = async (e) => {
+        if (e) e.preventDefault();
+        try {
+            await db.signOut();
+            showToast('Çıkış yapıldı', 'info');
+            window.location.hash = '#auth';
+        } catch (err) {
+            console.error("Logout failed:", err);
+            showToast('Çıkış yapılamadı: ' + err.message, 'danger');
+        }
     };
 
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+    if (mobileLogoutBtn) mobileLogoutBtn.addEventListener('click', handleLogout);
     if (pendingLogoutBtn) pendingLogoutBtn.addEventListener('click', handleLogout);
 }
 

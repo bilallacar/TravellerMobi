@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import * as db from '../../db.js';
-import { showToast } from '../utils.js';
+import { showToast, compressImage } from '../utils.js';
 
 export async function loadJournalData() {
     state.tripsList = await db.getTrips();
@@ -225,17 +225,18 @@ export function initJournalEvents() {
     const removePhotoBtn = document.getElementById('btn-remove-photo');
 
     if (fileInput && photoPlaceholder && previewContainer && previewImg) {
-        fileInput.addEventListener('change', (e) => {
+        fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
-                state.selectedPhotoFile = file;
+                const compressed = await compressImage(file);
+                state.selectedPhotoFile = compressed;
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     previewImg.src = event.target.result;
                     previewContainer.classList.remove('hidden');
                     photoPlaceholder.classList.add('hidden');
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(compressed);
             }
         });
 

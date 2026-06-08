@@ -97,6 +97,7 @@ a:hover {
     display: flex;
     min-height: 100vh;
     width: 100%;
+    overflow-x: hidden; /* Prevent horizontal layout scroll */
 }
 
 .main-wrapper {
@@ -105,6 +106,7 @@ a:hover {
     flex-direction: column;
     width: 100%;
     min-width: 0; /* Prevents flex items from overflowing */
+    overflow-x: hidden; /* Prevent horizontal layout scroll */
 }
 
 /* Sidebar and Header hiding rules when not authenticated */
@@ -239,15 +241,18 @@ a:hover {
 /* Mobile Header (Hidden on Desktop) */
 .mobile-header {
     display: none;
-    height: 64px;
+    height: calc(64px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
     background-color: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding-left: 20px;
+    padding-right: 20px;
     position: sticky;
     top: 0;
     z-index: 90;
+    box-sizing: border-box;
 }
 
 .mobile-logo {
@@ -280,14 +285,15 @@ a:hover {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 64px;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
     background-color: var(--bg-glass);
     backdrop-filter: var(--backdrop-blur);
     border-top: 1px solid var(--border-color);
     z-index: 100;
     justify-content: space-around;
     align-items: center;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
 }
 
 .mobile-nav-item {
@@ -318,6 +324,7 @@ a:hover {
     padding: 24px;
     box-shadow: var(--shadow-sm);
     transition: transform 0.2s, box-shadow 0.2s, background-color var(--transition-speed);
+    min-width: 0; /* Prevents overflow in CSS grid layouts */
 }
 
 .card.glass {
@@ -1372,6 +1379,8 @@ select:-webkit-autofill:focus {
     max-height: 250px;
     margin: 12px 0;
     white-space: pre;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .light-theme .sql-code-block {
@@ -1592,14 +1601,44 @@ select:-webkit-autofill:focus {
     }
     
     .exchange-grid {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         gap: 12px;
+        align-items: stretch;
     }
     
-    .rate-box.icon-box {
-        justify-content: center;
-        align-items: center;
-        padding: 8px 0;
+    .exchange-grid .rate-box {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .exchange-grid .rate-box.icon-box {
+        align-self: center;
+        padding: 4px 0;
+        margin: 0;
+    }
+    
+    .exchange-grid .rate-box.icon-box button {
+        transform: rotate(90deg); /* Rotate swap arrow icon to match vertical direction */
+    }
+
+    #admin-category-form {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    #admin-category-form input,
+    #admin-category-form select,
+    #admin-category-form button {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        box-sizing: border-box;
+    }
+
+    #admin-category-form #new-cat-color {
+        height: 44px !important;
     }
     
     .journal-card {

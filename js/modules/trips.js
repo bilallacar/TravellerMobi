@@ -15,7 +15,7 @@ export function renderTrips() {
 
     if (state.tripsList.length === 0) {
         listEl.innerHTML = `
-            <div class="card glass text-center" style="grid-column: 1/-1; padding: 50px;">
+            <div class="card glass text-center" style="grid-column: 1/-1; padding: 40px 16px;">
                 <i data-lucide="compass" style="width: 48px; height: 48px; margin-bottom: 16px; color: var(--text-muted);"></i>
                 <h3>Henüz Kayıtlı Seyahat Yok</h3>
                 <p class="text-muted" style="margin-top: 8px;">İlk rotanızı oluşturarak seyahat planlamanıza ve masraf takibinize başlayın!</p>
