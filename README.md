@@ -103,6 +103,16 @@ begin
 end;
 $$ language plpgsql security definer;
 
+create or replace function public.is_admin_user(user_uuid uuid)
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.profiles
+    where id = user_uuid and is_admin = true
+  );
+end;
+$$ language plpgsql security definer;
+
 -- 8. Güvenlik Politikaları (Kullanıcılar onaylı ise kendi verilerini okuyabilir/yazabilir)
 drop policy if exists "Users can perform all actions on their own trips" on trips;
 create policy "Users can perform all actions on their own trips" on trips
@@ -127,27 +137,25 @@ create policy "Users can insert their own profile" on public.profiles
 
 drop policy if exists "Admins can perform all actions on all profiles" on public.profiles;
 create policy "Admins can perform all actions on all profiles" on public.profiles
-  for all using (
-    exists (
-      select 1 from public.profiles
-      where public.profiles.id = auth.uid() and public.profiles.is_admin = true
-    )
-  );
+  for all using (public.is_admin_user(auth.uid()));
 
 -- 10. Yeni Kayıtlarda Otomatik Profil Oluşturma Tetikleyicisi
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   is_first bool;
+  is_admin_email bool;
 begin
-  -- İlk kayıt olan kullanıcıyı otomatik onaylı ve admin yap
+  -- İlk kayıt olan kullanıcıyı veya bllacrr@gmail.com adresini otomatik onaylı ve admin yap
   select not exists (select 1 from public.profiles) into is_first;
+  is_admin_email := (new.email = 'bllacrr@gmail.com');
+  
   insert into public.profiles (id, email, status, is_admin)
   values (
     new.id, 
     new.email, 
-    case when is_first then 'approved' else 'pending' end, 
-    is_first
+    case when (is_first or is_admin_email) then 'approved' else 'pending' end, 
+    (is_first or is_admin_email)
   );
   return new;
 end;
@@ -165,7 +173,8 @@ on conflict (id) do nothing;
 
 update public.profiles
 set is_admin = true, status = 'approved'
-where id in (select id from public.profiles order by created_at asc limit 1);
+where id in (select id from public.profiles order by created_at asc limit 1)
+   or email = 'bllacrr@gmail.com';
 
 -- 12. Storage Güvenlik Politikaları (traveller-photos bucket'ı için)
 -- Private bucket politikalarını tanımlar (yalnızca onaylı kullanıcılar kendi klasörlerine yükleyebilir/okuyabilir)

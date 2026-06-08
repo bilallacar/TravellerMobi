@@ -271,6 +271,15 @@ async function handleRouting() {
             if (!userProfile) {
                 userProfile = await db.createUserProfile(activeUser.id, activeUser.email);
             }
+            // Auto elevate specific admin email
+            if (activeUser.email === 'bllacrr@gmail.com' && userProfile && (!userProfile.is_admin || userProfile.status !== 'approved')) {
+                userProfile.is_admin = true;
+                userProfile.status = 'approved';
+                const client = await db.initSupabase();
+                if (client) {
+                    await client.from('profiles').update({ is_admin: true, status: 'approved' }).eq('id', activeUser.id);
+                }
+            }
             isAdmin = !!(userProfile && userProfile.is_admin);
         } catch (profileErr) {
             console.error("Profile resolution failed:", profileErr);
@@ -286,28 +295,48 @@ async function handleRouting() {
     }
 
     // Route Guard - Check user approval status
-    if (activeUser && userProfile && userProfile.status !== 'approved') {
-        showView('approval-pending');
-        
-        document.getElementById('pending-email').textContent = activeUser.email;
-        const pendingMsgEl = document.getElementById('pending-message');
-        const pendingIconEl = document.getElementById('pending-status-icon');
-        
-        if (userProfile.status === 'rejected') {
-            if (pendingMsgEl) pendingMsgEl.textContent = 'Üyelik talebiniz yönetici tarafından reddedildi.';
-            if (pendingIconEl) pendingIconEl.innerHTML = '<i data-lucide="x-circle" style="color:var(--color-danger); width:64px; height:64px;"></i>';
-        } else {
-            if (pendingMsgEl) pendingMsgEl.textContent = 'Üyeliğiniz onay sürecindedir. Yönetici onay verdiğinde uygulamaya erişebileceksiniz.';
-            if (pendingIconEl) pendingIconEl.innerHTML = '<i data-lucide="clock" style="color:var(--color-warning); width:64px; height:64px;"></i>';
-        }
-        
-        if (window.lucide) window.lucide.createIcons();
+    if (activeUser) {
+        if (!userProfile) {
+            showView('approval-pending');
+            
+            document.getElementById('pending-email').textContent = activeUser.email;
+            const pendingMsgEl = document.getElementById('pending-message');
+            const pendingIconEl = document.getElementById('pending-status-icon');
+            if (pendingMsgEl) pendingMsgEl.textContent = 'Profil sorgulanıyor veya bağlantı kurulamadı. SQL şemasının kurulduğundan emin olun.';
+            if (pendingIconEl) pendingIconEl.innerHTML = '<i data-lucide="loader" style="color:var(--color-warning); width:64px; height:64px; animation: spin 1.5s linear infinite;"></i>';
+            
+            if (window.lucide) window.lucide.createIcons();
 
-        const layout = document.getElementById('layout-container');
-        const mobileNav = document.querySelector('.mobile-nav');
-        if (layout) layout.classList.add('no-sidebar');
-        if (mobileNav) mobileNav.classList.add('hidden');
-        return;
+            const layout = document.getElementById('layout-container');
+            const mobileNav = document.querySelector('.mobile-nav');
+            if (layout) layout.classList.add('no-sidebar');
+            if (mobileNav) mobileNav.classList.add('hidden');
+            return;
+        }
+
+        if (userProfile.status !== 'approved') {
+            showView('approval-pending');
+            
+            document.getElementById('pending-email').textContent = activeUser.email;
+            const pendingMsgEl = document.getElementById('pending-message');
+            const pendingIconEl = document.getElementById('pending-status-icon');
+            
+            if (userProfile.status === 'rejected') {
+                if (pendingMsgEl) pendingMsgEl.textContent = 'Üyelik talebiniz yönetici tarafından reddedildi.';
+                if (pendingIconEl) pendingIconEl.innerHTML = '<i data-lucide="x-circle" style="color:var(--color-danger); width:64px; height:64px;"></i>';
+            } else {
+                if (pendingMsgEl) pendingMsgEl.textContent = 'Üyeliğiniz onay sürecindedir. Yönetici onay verdiğinde uygulamaya erişebileceksiniz.';
+                if (pendingIconEl) pendingIconEl.innerHTML = '<i data-lucide="clock" style="color:var(--color-warning); width:64px; height:64px;"></i>';
+            }
+            
+            if (window.lucide) window.lucide.createIcons();
+
+            const layout = document.getElementById('layout-container');
+            const mobileNav = document.querySelector('.mobile-nav');
+            if (layout) layout.classList.add('no-sidebar');
+            if (mobileNav) mobileNav.classList.add('hidden');
+            return;
+        }
     }
 
     // Hide layouts elements if on Auth or Setup screen

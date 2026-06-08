@@ -858,7 +858,9 @@ export async function getUserProfile(userId) {
 export async function createUserProfile(userId, email) {
     const client = await getSupabase();
     if (!client) return null;
-    const payload = { id: userId, email, status: 'pending', is_admin: false };
+    const isAdmin = email === 'bllacrr@gmail.com';
+    const status = isAdmin ? 'approved' : 'pending';
+    const payload = { id: userId, email, status: status, is_admin: isAdmin };
     const { data, error } = await client
         .from('profiles')
         .upsert([payload])
