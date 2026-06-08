@@ -329,12 +329,15 @@ export function initExpensesEvents() {
                 split_with = Array.from(document.querySelectorAll('.expense-split-member:checked')).map(cb => cb.value);
             }
 
+            const cat = state.categoriesList.find(c => c.id === category_id);
+            const category = cat ? cat.name : 'Diğer';
+
             try {
                 if (expenseId) {
-                    await db.updateExpense(expenseId, { trip_id: tripId, title, amount, currency, category_id, date, paid_by, split_with });
+                    await db.updateExpense(expenseId, { trip_id: tripId, title, amount, currency, category, category_id, date, paid_by, split_with });
                     showToast('Harcama güncellendi', 'success');
                 } else {
-                    await db.createExpense({ trip_id: tripId, title, amount, currency, category_id, date, paid_by, split_with });
+                    await db.createExpense({ trip_id: tripId, title, amount, currency, category, category_id, date, paid_by, split_with });
                     showToast('Harcama kaydedildi', 'success');
                 }
                 
