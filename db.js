@@ -337,7 +337,8 @@ export async function createTrip(tripData) {
         end_date: tripData.end_date,
         budget: parseFloat(tripData.budget) || 0,
         currency: tripData.currency || 'TRY',
-        user_id: user ? user.id : 'offline-user'
+        user_id: user ? user.id : 'offline-user',
+        participants: tripData.participants || []
     };
 
     // Optimistic Update Cache
@@ -372,7 +373,8 @@ export async function updateTrip(tripId, tripData) {
         start_date: tripData.start_date,
         end_date: tripData.end_date,
         budget: parseFloat(tripData.budget) || 0,
-        currency: tripData.currency || 'TRY'
+        currency: tripData.currency || 'TRY',
+        participants: tripData.participants || []
     };
 
     // Optimistic Update Cache
@@ -485,7 +487,9 @@ export async function createExpense(expenseData) {
         currency: expenseData.currency,
         category: expenseData.category,
         date: expenseData.date,
-        user_id: user ? user.id : 'offline-user'
+        user_id: user ? user.id : 'offline-user',
+        paid_by: expenseData.paid_by || null,
+        split_with: expenseData.split_with || []
     };
 
     // Optimistic Update Cache
@@ -521,7 +525,9 @@ export async function updateExpense(expenseId, expenseData) {
         amount: parseFloat(expenseData.amount),
         currency: expenseData.currency,
         category: expenseData.category,
-        date: expenseData.date
+        date: expenseData.date,
+        paid_by: expenseData.paid_by || null,
+        split_with: expenseData.split_with || []
     };
 
     // Optimistic Update Cache
@@ -845,7 +851,7 @@ export async function getUserProfile(userId) {
     if (!client) return null;
     const { data, error } = await client
         .from('profiles')
-        .select('*')
+        .select('*, role:roles(name)')
         .eq('id', userId)
         .maybeSingle();
     if (error) {
@@ -858,13 +864,26 @@ export async function getUserProfile(userId) {
 export async function createUserProfile(userId, email) {
     const client = await getSupabase();
     if (!client) return null;
+    
+    // Auto-resolve role ID for admin vs member
     const isAdmin = email === 'bllacrr@gmail.com';
     const status = isAdmin ? 'approved' : 'pending';
-    const payload = { id: userId, email, status: status, is_admin: isAdmin };
+    
+    let roleName = isAdmin ? 'admin' : 'member';
+    let roleId = null;
+    
+    try {
+        const { data: roleData } = await client.from('roles').select('id').eq('name', roleName).maybeSingle();
+        if (roleData) roleId = roleData.id;
+    } catch(e) {
+        console.error("Failed to query role ID", e);
+    }
+    
+    const payload = { id: userId, email, status: status, role_id: roleId };
     const { data, error } = await client
         .from('profiles')
         .upsert([payload])
-        .select()
+        .select('*, role:roles(name)')
         .maybeSingle();
     if (error) {
         console.error("Error creating user profile:", error);
@@ -878,7 +897,7 @@ export async function getAllProfiles() {
     if (!client) return [];
     const { data, error } = await client
         .from('profiles')
-        .select('*')
+        .select('*, role:roles(name)')
         .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
@@ -891,10 +910,77 @@ export async function updateProfileStatus(profileId, status) {
         .from('profiles')
         .update({ status })
         .eq('id', profileId)
-        .select()
+        .select('*, role:roles(name)')
         .maybeSingle();
     if (error) throw error;
     return data;
+}
+
+/* ==========================================================================
+   DYNAMIC CATEGORIES API
+   ========================================================================== */
+
+export async function getCategories() {
+    if (!isOnline()) {
+        const local = localStorage.getItem('cached_categories');
+        return local ? JSON.parse(local) : [];
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) return [];
+        const { data, error } = await client
+            .from('categories')
+            .select('*')
+            .order('name', { ascending: true });
+        if (error) throw error;
+
+        localStorage.setItem('cached_categories', JSON.stringify(data));
+        return data;
+    } catch (err) {
+        console.warn("Error fetching categories, falling back to local cache", err);
+        const local = localStorage.getItem('cached_categories');
+        return local ? JSON.parse(local) : [];
+    }
+}
+
+export async function createCategory(name, icon, color) {
+    const client = await getSupabase();
+    if (!client) throw new Error("Çevrimdışı iken kategori oluşturulamaz.");
+    
+    const payload = { name, icon, color };
+    const { data, error } = await client
+        .from('categories')
+        .insert([payload])
+        .select();
+    if (error) throw error;
+    return data[0];
+}
+
+export async function updateCategory(id, name, icon, color) {
+    const client = await getSupabase();
+    if (!client) throw new Error("Çevrimdışı iken kategori güncellenemez.");
+    
+    const payload = { name, icon, color };
+    const { data, error } = await client
+        .from('categories')
+        .update(payload)
+        .eq('id', id)
+        .select();
+    if (error) throw error;
+    return data[0];
+}
+
+export async function deleteCategory(id) {
+    const client = await getSupabase();
+    if (!client) throw new Error("Çevrimdışı iken kategori silinemez.");
+    
+    const { error } = await client
+        .from('categories')
+        .delete()
+        .eq('id', id);
+    if (error) throw error;
+    return { success: true };
 }
 
 // Initialize active user on load if config is present

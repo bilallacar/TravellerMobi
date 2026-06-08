@@ -36,19 +36,48 @@ Uygulamanın çalışabilmesi için ücretsiz bir bulut sunucu (Supabase) oluşt
 3. Aşağıdaki SQL kodunun tamamını yapıştırın ve **Run** tuşuna basın. Bu kod, gerekli tabloları, otomatik üye onay tetikleyicisini, güvenlik filtrelerini (RLS) ve storage izinlerini kurar:
 
 ```sql
+```sql
 -- 1. UUID Eklentisini aktif et
 create extension if not exists "uuid-ossp";
 
--- 2. Üye Profilleri ve Onay Tablosu
+-- 2. Roller Tablosu
+create table if not exists public.roles (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null unique
+);
+
+-- Default rolleri ekle
+insert into public.roles (name) values ('admin'), ('member') on conflict (name) do nothing;
+
+-- 3. Üye Profilleri ve Onay Tablosu
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text not null,
   status text default 'pending' not null,
-  is_admin boolean default false not null,
+  role_id uuid references public.roles,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. Seyahatler Tablosu
+-- 4. Kategoriler Tablosu
+create table if not exists public.categories (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null unique,
+  icon text default 'tag' not null,
+  color text default 'var(--color-primary)' not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Varsayılan kategorileri ekle
+insert into public.categories (name, icon, color) values 
+  ('Yemek', 'utensils', '#ef4444'),
+  ('Konaklama', 'home', '#3b82f6'),
+  ('Ulaşım', 'plane', '#10b981'),
+  ('Aktivite', 'ticket', '#f59e0b'),
+  ('Alışveriş', 'shopping-bag', '#8b5cf6'),
+  ('Diğer', 'archive', '#6b7280')
+  on conflict (name) do nothing;
+
+-- 5. Seyahatler Tablosu
 create table if not exists trips (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -57,10 +86,11 @@ create table if not exists trips (
   end_date date,
   budget numeric default 0,
   currency text default 'TRY',
+  participants text[] default '{}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. Masraflar Tablosu
+-- 6. Masraflar Tablosu
 create table if not exists expenses (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -68,12 +98,15 @@ create table if not exists expenses (
   title text not null,
   amount numeric not null,
   currency text default 'TRY',
-  category text not null,
+  category text, -- Eski alan (Geriye dönük uyumluluk)
+  category_id uuid references public.categories,
   date date default current_date not null,
+  paid_by text,
+  split_with text[] default '{}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. Anılar / Günlük Tablosu
+-- 7. Anılar / Günlük Tablosu
 create table if not exists memories (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -86,13 +119,14 @@ create table if not exists memories (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 6. Row Level Security (RLS) Aktifleştirme
+-- 8. Row Level Security (RLS) Aktifleştirme
 alter table public.profiles enable row level security;
 alter table trips enable row level security;
 alter table expenses enable row level security;
 alter table memories enable row level security;
+alter table public.categories enable row level security;
 
--- 7. Onay Kontrol Fonksiyonu
+-- 9. Onay Kontrol Fonksiyonu
 create or replace function public.is_approved_user(user_uuid uuid)
 returns boolean as $$
 begin
@@ -107,13 +141,14 @@ create or replace function public.is_admin_user(user_uuid uuid)
 returns boolean as $$
 begin
   return exists (
-    select 1 from public.profiles
-    where id = user_uuid and is_admin = true
+    select 1 from public.profiles p
+    join public.roles r on p.role_id = r.id
+    where p.id = user_uuid and r.name = 'admin'
   );
 end;
 $$ language plpgsql security definer;
 
--- 8. Güvenlik Politikaları (Kullanıcılar onaylı ise kendi verilerini okuyabilir/yazabilir)
+-- 10. Güvenlik Politikaları
 drop policy if exists "Users can perform all actions on their own trips" on trips;
 create policy "Users can perform all actions on their own trips" on trips
   for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
@@ -126,36 +161,52 @@ drop policy if exists "Users can perform all actions on their own memories" on m
 create policy "Users can perform all actions on their own memories" on memories
   for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
 
--- 9. Profil Güvenlik Politikaları
+-- Kategoriler RLS
+drop policy if exists "Approved users can read categories" on public.categories;
+create policy "Approved users can read categories" on public.categories
+  for select using (public.is_approved_user(auth.uid()));
+
+drop policy if exists "Only admins can manage categories" on public.categories;
+create policy "Only admins can manage categories" on public.categories
+  for all using (public.is_admin_user(auth.uid()));
+
+-- 11. Profil Güvenlik Politikaları
 drop policy if exists "Users can read their own profile" on public.profiles;
 create policy "Users can read their own profile" on public.profiles
   for select using (auth.uid() = id);
 
 drop policy if exists "Users can insert their own profile" on public.profiles;
 create policy "Users can insert their own profile" on public.profiles
-  for insert with check (auth.uid() = id and status = 'pending' and is_admin = false);
+  for insert with check (auth.uid() = id and status = 'pending');
 
 drop policy if exists "Admins can perform all actions on all profiles" on public.profiles;
 create policy "Admins can perform all actions on all profiles" on public.profiles
   for all using (public.is_admin_user(auth.uid()));
 
--- 10. Yeni Kayıtlarda Otomatik Profil Oluşturma Tetikleyicisi
+-- 12. Yeni Kayıtlarda Otomatik Profil Oluşturma Tetikleyicisi
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   is_first bool;
   is_admin_email bool;
+  role_id_var uuid;
 begin
-  -- İlk kayıt olan kullanıcıyı veya bllacrr@gmail.com adresini otomatik onaylı ve admin yap
   select not exists (select 1 from public.profiles) into is_first;
   is_admin_email := (new.email = 'bllacrr@gmail.com');
   
-  insert into public.profiles (id, email, status, is_admin)
+  -- Rol belirleme
+  if (is_first or is_admin_email) then
+    select id into role_id_var from public.roles where name = 'admin' limit 1;
+  else
+    select id into role_id_var from public.roles where name = 'member' limit 1;
+  end if;
+  
+  insert into public.profiles (id, email, status, role_id)
   values (
     new.id, 
     new.email, 
     case when (is_first or is_admin_email) then 'approved' else 'pending' end, 
-    (is_first or is_admin_email)
+    role_id_var
   );
   return new;
 end;
@@ -166,18 +217,19 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- 11. Mevcut Kullanıcıları Profile Senkronize Etme ve İlkini Admin Yapma
-insert into public.profiles (id, email, status, is_admin)
-select id, email, 'approved', true from auth.users
+-- 13. Mevcut Kullanıcıları Profile Senkronize Etme ve İlkini Admin Yapma
+insert into public.profiles (id, email, status, role_id)
+select id, email, 'approved', (select id from public.roles where name = 'admin' limit 1) 
+from auth.users
 on conflict (id) do nothing;
 
 update public.profiles
-set is_admin = true, status = 'approved'
+set status = 'approved',
+    role_id = (select id from public.roles where name = 'admin' limit 1)
 where id in (select id from public.profiles order by created_at asc limit 1)
    or email = 'bllacrr@gmail.com';
 
--- 12. Storage Güvenlik Politikaları (traveller-photos bucket'ı için)
--- Private bucket politikalarını tanımlar (yalnızca onaylı kullanıcılar kendi klasörlerine yükleyebilir/okuyabilir)
+-- 14. Storage Güvenlik Politikaları
 insert into storage.buckets (id, name, public)
 values ('traveller-photos', 'traveller-photos', false)
 on conflict (id) do nothing;

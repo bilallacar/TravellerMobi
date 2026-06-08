@@ -1346,9 +1346,13 @@ select:-webkit-autofill:focus {
 /* Settings Forms & Layouts */
 .settings-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 24px;
     margin-top: 24px;
+}
+
+.settings-grid .double-span {
+    grid-column: 1 / -1;
 }
 
 .theme-switch-group {

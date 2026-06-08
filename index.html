@@ -300,22 +300,22 @@
                                 <input type="hidden" id="trip-id">
                                 <div class="form-group">
                                     <label for="trip-name">Seyahat/Rota Adı</label>
-                                    <input type="text" id="trip-name" required placeholder="Örn: İtalya Macerası 2026">
+                                    <input type="text" id="trip-name" required placeholder="Örn: İtalya Macerası 2026" class="text-input">
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="trip-start">Başlangıç Tarihi</label>
-                                        <input type="date" id="trip-start" required>
+                                        <input type="date" id="trip-start" required class="text-input">
                                     </div>
                                     <div class="form-group">
                                         <label for="trip-end">Bitiş Tarihi</label>
-                                        <input type="date" id="trip-end" required>
+                                        <input type="date" id="trip-end" required class="text-input">
                                     </div>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="trip-budget">Bütçe</label>
-                                        <input type="number" id="trip-budget" required min="0" placeholder="1000">
+                                        <input type="number" id="trip-budget" required min="0" placeholder="1000" class="text-input">
                                     </div>
                                     <div class="form-group">
                                         <label for="trip-currency">Bütçe Para Birimi</label>
@@ -325,6 +325,16 @@
                                             <option value="EUR">EUR (€)</option>
                                             <option value="GBP">GBP (£)</option>
                                         </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Katılımcılar</label>
+                                    <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                                        <input type="text" id="trip-participant-input" placeholder="Katılımcı ismi girin" class="text-input" style="flex:1;">
+                                        <button type="button" id="btn-add-participant" class="btn btn-secondary" style="padding: 12px 18px;"><i data-lucide="plus"></i> Ekle</button>
+                                    </div>
+                                    <div id="trip-participants-tags" style="display:flex; flex-wrap:wrap; gap:8px; padding: 10px; border: 1px solid rgba(255,255,255,0.08); border-radius:12px; background:rgba(0,0,0,0.1); min-height: 48px; align-items:center;">
+                                        <span class="text-sm text-muted">Henüz katılımcı eklenmedi.</span>
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-block">Kaydet</button>
@@ -347,20 +357,21 @@
                         </div>
                     </div>
 
-                    <div class="expenses-layout">
+                    <!-- Expense View Tabs -->
+                    <div class="gallery-tabs margin-bottom-20">
+                        <button class="gallery-tab active" id="tab-expense-list">💸 Harcama Listesi</button>
+                        <button class="gallery-tab" id="tab-expense-balance">📊 Rota Bilançosu (Borç Bölüşümü)</button>
+                        <button class="gallery-tab" id="tab-expense-analysis">📈 Harcama Alışkanlıkları Analizi</button>
+                    </div>
+
+                    <div class="expenses-layout" id="expenses-list-container">
                         <!-- Expenses Table/List Card -->
                         <div class="card glass list-card">
                             <div class="card-header">
                                 <h3>Harcama Detayları</h3>
                                 <div class="filter-controls">
                                     <select id="expense-category-filter" class="select-input compact-select">
-                                        <option value="">Tüm Kategoriler</option>
-                                        <option value="Yemek">🍔 Yemek & Restoran</option>
-                                        <option value="Konaklama">🏨 Konaklama</option>
-                                        <option value="Ulaşım">✈️ Ulaşım & Uçak</option>
-                                        <option value="Aktivite">🎟️ Müze & Aktivite</option>
-                                        <option value="Alışveriş">🛍️ Hediyelik & Alışveriş</option>
-                                        <option value="Diğer">📦 Diğer</option>
+                                        <!-- Dinamik doldurulacak -->
                                     </select>
                                 </div>
                             </div>
@@ -395,6 +406,63 @@
                         </div>
                     </div>
 
+                    <!-- Expenses Balance Sheet Container -->
+                    <div class="expenses-layout hidden" id="expenses-balance-container">
+                        <!-- Balance Status Card -->
+                        <div class="card glass double-span" style="grid-column: 1 / -1;">
+                            <h3>👥 Katılımcı Durumları</h3>
+                            <p class="text-muted" style="margin-top: 5px;">Kişi bazlı toplam ödenen tutarlar ve net alacak/borç dengesi.</p>
+                            <div id="balance-members-list" class="balance-members-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px; margin-top:15px;">
+                                <!-- Rendered dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Debt Settlement Card -->
+                        <div class="card glass double-span" style="grid-column: 1 / -1; margin-top: 20px;">
+                            <h3>🔄 Ödeme Planı (Hesap Kapatma)</h3>
+                            <p class="text-muted" style="margin-top: 5px;">Seyahat sonrasında borçların kapatılması için yapılması önerilen transferler.</p>
+                            <div id="balance-settlements-list" class="settlements-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+                                <!-- Rendered dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expenses Analysis Container -->
+                    <div class="expenses-layout hidden" id="expenses-analysis-container" style="grid-template-columns: 1fr;">
+                        <!-- Summary Cards -->
+                        <div class="metrics-grid" id="analysis-summary-grid" style="margin-bottom: 20px;">
+                            <!-- Rendered dynamically -->
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px;">
+                            <!-- Participant Shares & Habits -->
+                            <div class="card glass">
+                                <h3>👥 Katılımcı Harcama Payları & Alışkanlıkları</h3>
+                                <p class="text-muted" style="margin-top:5px; margin-bottom:15px;">Kim hangi oranda ödeme yaptı ve en çok hangi kategoride harcadı.</p>
+                                <div id="analysis-participants-list" style="display:flex; flex-direction:column; gap:20px;">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Category Detailed Habits -->
+                            <div class="card glass">
+                                <h3>🏷️ Kategori Bazlı Alışkanlık Analizi</h3>
+                                <p class="text-muted" style="margin-top:5px; margin-bottom:15px;">Kategorilere göre harcama sıklığı, tutarı ve bütçe içindeki payı.</p>
+                                <div id="analysis-categories-list" style="display:flex; flex-direction:column; gap:16px;">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Smart Insights Card -->
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h3>💡 Akıllı Seyahat Tavsiyeleri & İçgörüler</h3>
+                            <div id="analysis-insights-content" style="margin-top: 15px; display:flex; flex-direction:column; gap:12px;">
+                                <!-- Rendered dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Add/Edit Expense Modal -->
                     <div id="expense-modal" class="modal hidden">
                         <div class="modal-content glass">
@@ -412,12 +480,12 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="expense-title">Harcama Açıklaması</label>
-                                    <input type="text" id="expense-title" required placeholder="Örn: Akşam Yemeği - Roma">
+                                    <input type="text" id="expense-title" required placeholder="Örn: Akşam Yemeği - Roma" class="text-input">
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="expense-amount">Harcama Tutarı</label>
-                                        <input type="number" step="0.01" id="expense-amount" required placeholder="25.50">
+                                        <input type="number" step="0.01" id="expense-amount" required placeholder="25.50" class="text-input">
                                     </div>
                                     <div class="form-group">
                                         <label for="expense-currency">Para Birimi</label>
@@ -431,20 +499,36 @@
                                     </div>
                                 </div>
                                 <div class="form-row">
+                                     <div class="form-group">
+                                         <label for="expense-category-id">Kategori</label>
+                                         <select id="expense-category-id" class="select-input" required>
+                                             <!-- Dinamik doldurulacak -->
+                                         </select>
+                                     </div>
                                     <div class="form-group">
-                                        <label for="expense-category">Kategori</label>
-                                        <select id="expense-category" class="select-input" required>
-                                            <option value="Yemek">🍔 Yemek & Restoran</option>
-                                            <option value="Konaklama">🏨 Konaklama</option>
-                                            <option value="Ulaşım">✈️ Ulaşım & Uçak</option>
-                                            <option value="Aktivite">🎟️ Müze & Aktivite</option>
-                                            <option value="Alışveriş">🛍️ Hediyelik & Alışveriş</option>
-                                            <option value="Diğer">📦 Diğer</option>
+                                        <label for="expense-date">Tarih</label>
+                                        <input type="date" id="expense-date" required class="text-input">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="expense-paid-by">Ödeyen Kişi</label>
+                                        <select id="expense-paid-by" class="select-input">
+                                            <!-- Dinamik yuklenecek -->
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="expense-date">Tarih</label>
-                                        <input type="date" id="expense-date" required>
+                                        <label for="expense-split-type">Bölüşüm Türü</label>
+                                        <select id="expense-split-type" class="select-input">
+                                            <option value="equal">Eşit Bölüş</option>
+                                            <option value="custom">Özel Bölüş (Miktarlı)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ortaklar (Bölüşecek Kişiler)</label>
+                                    <div id="expense-split-container" style="display:flex; flex-direction:column; gap:10px; padding: 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(0,0,0,0.2); min-height: 42px;">
+                                        <!-- Dinamik checkbox'lar veya miktarlı inputlar -->
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-block">Kaydet</button>
@@ -496,20 +580,20 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="memory-title">Anı Başlığı / Konum</label>
-                                    <input type="text" id="memory-title" required placeholder="Örn: Trevi Çeşmesi Ziyareti">
+                                    <input type="text" id="memory-title" required placeholder="Örn: Trevi Çeşmesi Ziyareti" class="text-input">
                                 </div>
                                 <div class="form-group">
                                     <label for="memory-desc">Neler Yaşandı? (Günlük)</label>
-                                    <textarea id="memory-desc" rows="4" placeholder="Buraya o güne dair hislerinizi, yaşadıklarınızı yazın..."></textarea>
+                                    <textarea id="memory-desc" rows="4" placeholder="Buraya o güne dair hislerinizi, yaşadıklarınızı yazın..." class="text-input"></textarea>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="memory-location">Konum (Şehir/Ülke)</label>
-                                        <input type="text" id="memory-location" placeholder="Örn: Roma, İtalya">
+                                        <input type="text" id="memory-location" placeholder="Örn: Roma, İtalya" class="text-input">
                                     </div>
                                     <div class="form-group">
                                         <label for="memory-date">Tarih</label>
-                                        <input type="date" id="memory-date" required>
+                                        <input type="date" id="memory-date" required class="text-input">
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -584,6 +668,44 @@
                             </form>
                         </div>
 
+                         <!-- Category Management Panel Card -->
+                         <div class="card glass double-span hidden" id="settings-categories-card" style="grid-column: 1 / -1;">
+                             <h3>🏷️ Harcama Kategorileri Yönetimi</h3>
+                             <p class="text-muted" style="margin-top: 5px; margin-bottom: 15px;">Uygulama genelinde kullanılacak harcama kategorilerini ekleyin veya silin.</p>
+                             
+                             <form id="admin-category-form" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom: 20px;">
+                                 <input type="hidden" id="edit-cat-id">
+                                 <input type="text" id="new-cat-name" placeholder="Kategori Adı (Örn: Yakıt)" class="text-input" style="flex:1; min-width:150px; margin:0;" required>
+                                 <select id="new-cat-icon" class="select-input" style="width:140px; margin:0;">
+                                     <option value="tag">🔖 Etiket</option>
+                                     <option value="utensils">🍔 Yemek</option>
+                                     <option value="home">🏨 Konaklama</option>
+                                     <option value="plane">✈️ Ulaşım</option>
+                                     <option value="ticket">🎟️ Aktivite</option>
+                                     <option value="shopping-bag">🛍️ Alışveriş</option>
+                                     <option value="archive">📦 Diğer</option>
+                                 </select>
+                                 <input type="color" id="new-cat-color" class="text-input" style="width:50px; height:42px; padding:2px; margin:0; cursor:pointer;" value="#6366f1">
+                                 <button type="submit" id="btn-submit-category" class="btn btn-primary" style="margin:0;"><i data-lucide="plus"></i> Kategori Ekle</button>
+                                 <button type="button" id="btn-cancel-edit-category" class="btn btn-secondary hidden" style="margin:0;">İptal</button>
+                             </form>
+
+                             <div class="table-responsive">
+                                 <table class="custom-table">
+                                     <thead>
+                                         <tr>
+                                             <th>Renk/Simge</th>
+                                             <th>Kategori Adı</th>
+                                             <th>İşlem</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody id="settings-categories-list">
+                                         <!-- Dinamik render -->
+                                     </tbody>
+                                 </table>
+                             </div>
+                         </div>
+
                         <!-- Admin Panel Card -->
                         <div class="card glass double-span nav-admin-only hidden" id="settings-admin-card">
                             <h3>👥 Üye Yönetim Paneli</h3>
@@ -599,16 +721,44 @@
 -- 1. UUID Eklentisini aktif et
 create extension if not exists "uuid-ossp";
 
--- 2. Üye Profilleri ve Onay Tablosu
+-- 2. Roller Tablosu
+create table if not exists public.roles (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null unique
+);
+
+-- Default rolleri ekle
+insert into public.roles (name) values ('admin'), ('member') on conflict (name) do nothing;
+
+-- 3. Üye Profilleri ve Onay Tablosu
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text not null,
   status text default 'pending' not null,
-  is_admin boolean default false not null,
+  role_id uuid references public.roles,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. Seyahatler Tablosu
+-- 4. Kategoriler Tablosu
+create table if not exists public.categories (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null unique,
+  icon text default 'tag' not null,
+  color text default 'var(--color-primary)' not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Varsayılan kategorileri ekle
+insert into public.categories (name, icon, color) values 
+  ('Yemek', 'utensils', '#ef4444'),
+  ('Konaklama', 'home', '#3b82f6'),
+  ('Ulaşım', 'plane', '#10b981'),
+  ('Aktivite', 'ticket', '#f59e0b'),
+  ('Alışveriş', 'shopping-bag', '#8b5cf6'),
+  ('Diğer', 'archive', '#6b7280')
+  on conflict (name) do nothing;
+
+-- 5. Seyahatler Tablosu
 create table if not exists trips (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -617,10 +767,11 @@ create table if not exists trips (
   end_date date,
   budget numeric default 0,
   currency text default 'TRY',
+  participants text[] default '{}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. Masraflar Tablosu
+-- 6. Masraflar Tablosu
 create table if not exists expenses (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -628,12 +779,15 @@ create table if not exists expenses (
   title text not null,
   amount numeric not null,
   currency text default 'TRY',
-  category text not null,
+  category text, -- Eski alan (Geriye dönük uyumluluk)
+  category_id uuid references public.categories,
   date date default current_date not null,
+  paid_by text,
+  split_with text[] default '{}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. Anılar / Günlük Tablosu
+-- 7. Anılar / Günlük Tablosu
 create table if not exists memories (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
@@ -646,13 +800,14 @@ create table if not exists memories (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 6. Row Level Security (RLS) Aktifleştirme
+-- 8. Row Level Security (RLS) Aktifleştirme
 alter table public.profiles enable row level security;
 alter table trips enable row level security;
 alter table expenses enable row level security;
 alter table memories enable row level security;
+alter table public.categories enable row level security;
 
--- 7. Onay Kontrol Fonksiyonu
+-- 9. Onay Kontrol Fonksiyonu
 create or replace function public.is_approved_user(user_uuid uuid)
 returns boolean as $$
 begin
@@ -667,13 +822,14 @@ create or replace function public.is_admin_user(user_uuid uuid)
 returns boolean as $$
 begin
   return exists (
-    select 1 from public.profiles
-    where id = user_uuid and is_admin = true
+    select 1 from public.profiles p
+    join public.roles r on p.role_id = r.id
+    where p.id = user_uuid and r.name = 'admin'
   );
 end;
 $$ language plpgsql security definer;
 
--- 8. Güvenlik Politikaları (Kullanıcılar onaylı ise kendi verilerini okuyabilir/yazabilir)
+-- 10. Güvenlik Politikaları
 drop policy if exists "Users can perform all actions on their own trips" on trips;
 create policy "Users can perform all actions on their own trips" on trips
   for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
@@ -686,36 +842,52 @@ drop policy if exists "Users can perform all actions on their own memories" on m
 create policy "Users can perform all actions on their own memories" on memories
   for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
 
--- 9. Profil Güvenlik Politikaları
+-- Kategoriler RLS
+drop policy if exists "Approved users can read categories" on public.categories;
+create policy "Approved users can read categories" on public.categories
+  for select using (public.is_approved_user(auth.uid()));
+
+drop policy if exists "Only admins can manage categories" on public.categories;
+create policy "Only admins can manage categories" on public.categories
+  for all using (public.is_admin_user(auth.uid()));
+
+-- 11. Profil Güvenlik Politikaları
 drop policy if exists "Users can read their own profile" on public.profiles;
 create policy "Users can read their own profile" on public.profiles
   for select using (auth.uid() = id);
 
 drop policy if exists "Users can insert their own profile" on public.profiles;
 create policy "Users can insert their own profile" on public.profiles
-  for insert with check (auth.uid() = id and status = 'pending' and is_admin = false);
+  for insert with check (auth.uid() = id and status = 'pending');
 
 drop policy if exists "Admins can perform all actions on all profiles" on public.profiles;
 create policy "Admins can perform all actions on all profiles" on public.profiles
   for all using (public.is_admin_user(auth.uid()));
 
--- 10. Yeni Kayıtlarda Otomatik Profil Oluşturma Tetikleyicisi
+-- 12. Yeni Kayıtlarda Otomatik Profil Oluşturma Tetikleyicisi
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   is_first bool;
   is_admin_email bool;
+  role_id_var uuid;
 begin
-  -- İlk kayıt olan kullanıcıyı veya bllacrr@gmail.com adresini otomatik onaylı ve admin yap
   select not exists (select 1 from public.profiles) into is_first;
   is_admin_email := (new.email = 'bllacrr@gmail.com');
   
-  insert into public.profiles (id, email, status, is_admin)
+  -- Rol belirleme
+  if (is_first or is_admin_email) then
+    select id into role_id_var from public.roles where name = 'admin' limit 1;
+  else
+    select id into role_id_var from public.roles where name = 'member' limit 1;
+  end if;
+  
+  insert into public.profiles (id, email, status, role_id)
   values (
     new.id, 
     new.email, 
     case when (is_first or is_admin_email) then 'approved' else 'pending' end, 
-    (is_first or is_admin_email)
+    role_id_var
   );
   return new;
 end;
@@ -726,18 +898,19 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- 11. Mevcut Kullanıcıları Profile Senkronize Etme ve İlkini Admin Yapma
-insert into public.profiles (id, email, status, is_admin)
-select id, email, 'approved', true from auth.users
+-- 13. Mevcut Kullanıcıları Profile Senkronize Etme ve İlkini Admin Yapma
+insert into public.profiles (id, email, status, role_id)
+select id, email, 'approved', (select id from public.roles where name = 'admin' limit 1) 
+from auth.users
 on conflict (id) do nothing;
 
 update public.profiles
-set is_admin = true, status = 'approved'
+set status = 'approved',
+    role_id = (select id from public.roles where name = 'admin' limit 1)
 where id in (select id from public.profiles order by created_at asc limit 1)
    or email = 'bllacrr@gmail.com';
 
--- 12. Storage Güvenlik Politikaları (traveller-photos bucket'ı için)
--- Private bucket politikalarını tanımlar (yalnızca onaylı kullanıcılar kendi klasörlerine yükleyebilir/okuyabilir)
+-- 14. Storage Güvenlik Politikaları
 insert into storage.buckets (id, name, public)
 values ('traveller-photos', 'traveller-photos', false)
 on conflict (id) do nothing;
@@ -838,6 +1011,6 @@ create policy "Users can delete their own photos" on storage.objects
     <!-- Application Script Engine Modules -->
     <script type="module" src="config.js"></script>
     <script type="module" src="db.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
