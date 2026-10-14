@@ -2,8 +2,7 @@
 
 import { state } from '../state.js';
 import * as db from '../../db.js';
-import { showToast } from '../utils.js';
-import { openShareModal } from './share.js';
+import { showToast, escapeHtml } from '../utils.js';
 
 let mapInstance = null;
 let markersLayer = null;
@@ -34,10 +33,13 @@ export function initPlacesEvents() {
         btnAdd.addEventListener('click', () => openPlaceModal());
     }
 
-    // Share Route Button
+    // Share Route Button (dynamic import to avoid circular dependencies)
     const btnShareRoute = document.getElementById('btn-share-places-route');
     if (btnShareRoute) {
-        btnShareRoute.addEventListener('click', () => openShareModal());
+        btnShareRoute.addEventListener('click', async () => {
+            const { openShareModal } = await import('./share.js');
+            openShareModal();
+        });
     }
 
     // Modal Close and Cancel
@@ -1019,16 +1021,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }
 
 function renderEmptyState() {

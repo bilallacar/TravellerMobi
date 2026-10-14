@@ -96,3 +96,16 @@ export function compressImage(file, maxWidth = 1000, quality = 0.7) {
         reader.readAsDataURL(file);
     });
 }
+
+/**
+ * Escapes unsafe HTML characters to prevent XSS
+ */
+export function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
