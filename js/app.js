@@ -13,6 +13,7 @@ import { initExpensesEvents, loadExpensesData, updateExpenseFormParticipants } f
 import { initJournalEvents, loadJournalData } from './modules/journal.js';
 import { initDashboardEvents, loadDashboardData, renderDashboard } from './modules/dashboard.js';
 import { loadAdminData } from './modules/admin.js';
+import { initPlacesEvents, loadPlacesData } from './modules/places.js';
 
 // Global error logging for diagnostics
 let globalErrors = [];
@@ -74,6 +75,7 @@ const views = {
     dashboard: document.getElementById('view-dashboard'),
     trips: document.getElementById('view-trips'),
     expenses: document.getElementById('view-expenses'),
+    places: document.getElementById('view-places'),
     journal: document.getElementById('view-journal'),
     settings: document.getElementById('view-settings'),
     admin: document.getElementById('view-admin'),
@@ -94,6 +96,7 @@ function initNavigation() {
         const mapping = {
             '#dashboard': ['nav-dash', 'm-nav-dash'],
             '#trips': ['nav-trips', 'm-nav-trips'],
+            '#places': ['nav-places', 'm-nav-places'],
             '#expenses': ['nav-expenses', 'm-nav-expenses'],
             '#journal': ['nav-journal', 'm-nav-journal'],
             '#settings': ['nav-settings', 'm-nav-settings']
@@ -187,6 +190,10 @@ async function handleRouting() {
         case '#trips':
             showView('trips');
             await loadTripsData();
+            break;
+        case '#places':
+            showView('places');
+            await loadPlacesData();
             break;
         case '#expenses':
             showView('expenses');
@@ -328,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSettingsEvents();
     initTripsEvents();
     initExpensesEvents();
+    initPlacesEvents();
     initJournalEvents();
     initDashboardEvents();
 
@@ -341,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentHash = window.location.hash;
         if (currentHash === '#dashboard') await loadDashboardData();
         else if (currentHash === '#trips') await loadTripsData();
+        else if (currentHash === '#places') await loadPlacesData();
         else if (currentHash === '#expenses') await loadExpensesData();
         else if (currentHash === '#journal') await loadJournalData();
     });

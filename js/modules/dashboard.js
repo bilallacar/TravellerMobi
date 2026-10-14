@@ -14,6 +14,12 @@ export async function loadDashboardData() {
         state.activeTripId = state.tripsList[0].id;
     }
 
+    if (state.activeTripId) {
+        state.placesList = await db.getPlaces(state.activeTripId);
+    } else {
+        state.placesList = [];
+    }
+
     const selector = document.getElementById('dash-trip-selector');
     if (selector) {
         selector.innerHTML = '<option value="">Seyahat Seçin...</option>' + 
@@ -131,6 +137,108 @@ export function renderDashboard() {
 
     document.getElementById('dash-memories-count').textContent = `${globalMemoriesCount} Anı`;
     document.getElementById('dash-photos-count').textContent = `${globalPhotosCount} Fotoğraf yüklendi`;
+
+    // Render Places / Route Preview on Dashboard
+    const placesSummaryEl = document.getElementById('dash-places-summary');
+    if (placesSummaryEl) {
+        if (!activeTrip || state.placesList.length === 0) {
+            placesSummaryEl.innerHTML = `
+                <div class="dash-empty-places" style="padding:20px; text-align:center; background:rgba(255,255,255,0.02); border-radius:10px; border:1px dashed var(--border-color);">
+                    <p class="text-muted" style="margin:0 0 10px 0; font-size:13px;">Bu seyahat için henüz gezilecek yer veya otel eklenmedi.</p>
+                    <a href="#places" class="btn btn-secondary btn-sm">+ Haritaya Yer Ekle</a>
+                </div>
+            `;
+        } else {
+            const hotel = state.placesList.find(p => p.category === 'hotel');
+            const plannedPlaces = state.placesList.filter(p => p.status === 'planned');
+            const visitedCount = state.placesList.filter(p => p.status === 'visited').length;
+
+            const placesToShow = plannedPlaces.slice(0, 3);
+            
+            let html = '';
+            if (hotel) {
+                html += `
+                    <div class="dash-place-mini-item hotel-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:10px; margin-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:18px;">🏨</span>
+                            <div>
+                                <strong style="font-size:14px; color:var(--text-primary);">${escapeHTML(hotel.name)}</strong>
+                                <span class="text-xs text-muted" style="display:block;">${escapeHTML(hotel.address || 'Ana Konaklama')}</span>
+                            </div>
+                        </div>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=${hotel.latitude},${hotel.longitude}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="padding:6px 10px; font-size:11px;">
+                            🗺️ Yol Tarifi
+                        </a>
+                    </div>
+                `;
+            }
+
+            if (placesToShow.length === 0 && hotel) {
+                html += `<p class="text-sm text-muted" style="margin-top:6px;">Tüm gezi noktaları ziyaret edilmiş! (${visitedCount} yer gezildi)</p>`;
+            } else if (placesToShow.length === 0) {
+                html += `<p class="text-sm text-muted" style="margin-top:6px;">Tüm yerler tamamlandı! (${visitedCount} yer gezildi)</p>`;
+            } else {
+                placesToShow.forEach(p => {
+                    const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`;
+                    html += `
+                        <div class="dash-place-mini-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:10px; margin-bottom:8px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:16px;">🟢</span>
+                                <div>
+                                    <strong style="font-size:13px; color:var(--text-primary);">${escapeHTML(p.name)}</strong>
+                                    <span class="text-xs text-muted" style="display:block;">${escapeHTML(p.address || p.category)}</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <a href="${dirUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:11px;" title="Google Maps">
+                                    <i data-lucide="navigation"></i>
+                                </a>
+                                <button type="button" class="btn btn-secondary btn-sm btn-dash-toggle-place" data-id="${p.id}" style="padding:4px 8px; font-size:11px;" title="Gezildi Yap">
+                                    ✓
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            placesSummaryEl.innerHTML = html;
+
+            placesSummaryEl.querySelectorAll('.btn-dash-toggle-place').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const pid = btn.dataset.id;
+                    await db.updatePlaceStatus(pid, 'visited');
+                    await loadDashboardData();
+                });
+            });
+        }
+    }
+
+    // Render Recent Expenses Preview
+    const recentExpEl = document.getElementById('dash-recent-expenses');
+    if (recentExpEl) {
+        const tripExpenses = activeTrip ? state.expensesList.filter(e => e.trip_id === activeTrip.id) : state.expensesList;
+        const recent3 = tripExpenses.slice(0, 3);
+        if (recent3.length === 0) {
+            recentExpEl.innerHTML = `<p class="text-muted text-sm" style="padding:10px 0;">Henüz masraf kaydı bulunmuyor.</p>`;
+        } else {
+            recentExpEl.innerHTML = recent3.map(exp => {
+                const cat = state.categoriesList.find(c => c.id === exp.category_id);
+                const catName = cat ? cat.name : (exp.category || 'Diğer');
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <div>
+                            <strong style="font-size:13px; color:var(--text-primary);">${escapeHTML(exp.title)}</strong>
+                            <span class="text-xs text-muted" style="display:block;">${formatDate(exp.date)} • ${escapeHTML(catName)}</span>
+                        </div>
+                        <span style="font-size:14px; font-weight:700; color:var(--text-primary);">
+                            ${exp.amount.toFixed(2)} ${exp.currency}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
 
     if (window.lucide) window.lucide.createIcons();
     

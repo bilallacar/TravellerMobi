@@ -8,6 +8,9 @@ export const state = {
     expensesList: [],
     categoriesList: [], // Dinamik kategori listesi
     memoriesList: [],
+    placesList: [],
+    activePlaceFilter: 'all', // 'all', 'planned', 'visited', 'hotel', 'museum', 'food'
+    selectedPlaceForEdit: null,
     activeTripId: null,
     currentGalleryTab: 'all',
     exchangeRates: {},

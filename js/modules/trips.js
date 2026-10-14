@@ -26,35 +26,70 @@ export function renderTrips() {
     }
 
     listEl.innerHTML = state.tripsList.map(trip => {
+        const isActive = state.activeTripId === trip.id;
+        const coverImg = getTripCoverImage(trip.name);
+        
+        // Calculate spent amount for this trip
+        const tripExpenses = (state.expensesList || []).filter(e => e.trip_id === trip.id);
+        let totalSpent = 0;
+        tripExpenses.forEach(e => {
+            totalSpent += Number(e.amount) || 0;
+        });
+        const percent = trip.budget > 0 ? Math.min((totalSpent / trip.budget) * 100, 100) : 0;
+        const isOverBudget = trip.budget > 0 && totalSpent > trip.budget;
+        const progressColor = isOverBudget ? 'var(--color-danger)' : (percent > 80 ? 'var(--color-warning)' : 'var(--color-success)');
+
         return `
-            <div class="trip-card">
+            <div class="trip-card ${isActive ? 'active-trip-card' : ''}">
                 <div class="trip-card-glow"></div>
-                <div>
-                    <div class="trip-card-header">
-                        <span class="trip-title">${escapeHTML(trip.name)}</span>
-                        <div class="trip-actions">
-                            <button class="btn-icon-only btn-edit-trip" data-id="${trip.id}" title="Seyahati Düzenle">
-                                <i data-lucide="edit-3" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                <div class="trip-cover-banner" style="background-image: url('${coverImg}');">
+                    <div class="trip-cover-overlay"></div>
+                    <div class="trip-cover-header">
+                        ${isActive ? '<span class="trip-badge-active"><span class="pulse-indicator online"></span> Aktif Rota</span>' : '<span></span>'}
+                        <div class="trip-actions" style="position:relative; z-index:2;">
+                            <button class="btn-icon-sm btn-edit-trip" data-id="${trip.id}" title="Seyahati Düzenle" style="background:rgba(0,0,0,0.5); border-color:rgba(255,255,255,0.2);">
+                                <i data-lucide="edit-3" style="width: 14px; height: 14px; color: #fff;"></i>
                             </button>
-                            <button class="btn-icon-only btn-delete-trip" data-id="${trip.id}" title="Seyahati Sil">
-                                <i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--color-danger);"></i>
+                            <button class="btn-icon-sm btn-delete-trip" data-id="${trip.id}" title="Seyahati Sil" style="background:rgba(0,0,0,0.5); border-color:rgba(255,255,255,0.2);">
+                                <i data-lucide="trash-2" style="width: 14px; height: 14px; color: var(--color-danger);"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="trip-dates">
-                        <i data-lucide="calendar" style="width: 12px; height: 12px; display:inline; margin-right:4px;"></i>
-                        ${formatDate(trip.start_date)} - ${formatDate(trip.end_date)}
+                    <div class="trip-cover-title-row">
+                        <span class="trip-title">${escapeHTML(trip.name)}</span>
+                        <div class="trip-dates text-xs" style="color:rgba(255,255,255,0.85);">
+                            <i data-lucide="calendar" style="width: 12px; height: 12px; display:inline; margin-right:4px;"></i>
+                            ${formatDate(trip.start_date)} - ${formatDate(trip.end_date)}
+                        </div>
                     </div>
                 </div>
-                <div class="trip-budget-summary">
-                    <div class="trip-budget-row">
-                        <span>Planlanan Bütçe:</span>
-                        <span>${trip.budget.toFixed(2)} ${trip.currency}</span>
+
+                <div class="trip-card-content" style="padding: 16px;">
+                    <!-- Budget Progress Bar -->
+                    <div class="trip-progress-container" style="margin-bottom: 14px;">
+                        <div class="trip-progress-labels" style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+                            <span>Harcanan: <strong>${totalSpent.toFixed(2)} ${trip.currency}</strong></span>
+                            <span>Bütçe: <strong>${trip.budget.toFixed(2)} ${trip.currency}</strong></span>
+                        </div>
+                        <div class="progress-bar-bg" style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+                            <div class="progress-bar-fill" style="width: ${percent}%; height:100%; background: ${progressColor}; border-radius: 4px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="text-align:right; font-size:11px; margin-top:4px; color:var(--text-muted);">
+                            %${percent.toFixed(0)} kullanıldı ${isOverBudget ? '⚠️ (Bütçe Aşıldı)' : ''}
+                        </div>
                     </div>
+
+                    ${isActive ? `
+                        <div class="trip-active-status-bar" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); border-radius:8px; font-size:12px; color:var(--color-success);">
+                            <span>🟢 Bu rota şu anda aktif</span>
+                            <a href="#places" style="color:var(--color-success); font-weight:600; text-decoration:none;">Haritaya Git ➔</a>
+                        </div>
+                    ` : `
+                        <button class="btn btn-secondary btn-sm btn-block btn-select-trip" data-id="${trip.id}">
+                            Bu Rotayı Aktif Yap
+                        </button>
+                    `}
                 </div>
-                <button class="btn btn-secondary btn-sm btn-select-trip" data-id="${trip.id}">
-                     Aktif Rota Yap
-                </button>
             </div>
         `;
     }).join('');
@@ -220,4 +255,25 @@ function escapeHTML(str) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+function getTripCoverImage(tripName) {
+    const lower = (tripName || '').toLowerCase();
+    if (lower.includes('atina') || lower.includes('athens') || lower.includes('yunan')) {
+        return 'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=600&q=80';
+    } else if (lower.includes('prag') || lower.includes('prague')) {
+        return 'https://images.unsplash.com/photo-1541849546-216549ae216d?auto=format&fit=crop&w=600&q=80';
+    } else if (lower.includes('roma') || lower.includes('rome') || lower.includes('italy')) {
+        return 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=600&q=80';
+    } else if (lower.includes('paris') || lower.includes('fransa')) {
+        return 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=600&q=80';
+    } else if (lower.includes('tokyo') || lower.includes('japon')) {
+        return 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80';
+    } else if (lower.includes('london') || lower.includes('londra')) {
+        return 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=600&q=80';
+    } else if (lower.includes('istanbul')) {
+        return 'https://images.unsplash.com/photo-1527838832700-5059252407fa?auto=format&fit=crop&w=600&q=80';
+    } else {
+        return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=600&q=80';
+    }
 }

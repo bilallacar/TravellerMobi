@@ -130,6 +130,7 @@ const CACHE_KEYS = {
     TRIPS: 'cached_trips',
     EXPENSES: 'cached_expenses',
     MEMORIES: 'cached_memories',
+    PLACES: 'cached_places',
     QUEUE: 'offline_sync_queue'
 };
 
@@ -253,6 +254,18 @@ export async function syncOfflineQueue(onProgress) {
             }
             else if (item.action === 'delete_memory') {
                 const { error } = await supabase.from('memories').delete().eq('id', item.data.id);
+                if (error) throw error;
+            }
+            else if (item.action === 'create_place') {
+                const { error } = await supabase.from('places').insert([payload]);
+                if (error) throw error;
+            }
+            else if (item.action === 'update_place') {
+                const { error } = await supabase.from('places').update(payload).eq('id', item.data.id);
+                if (error) throw error;
+            }
+            else if (item.action === 'delete_place') {
+                const { error } = await supabase.from('places').delete().eq('id', item.data.id);
                 if (error) throw error;
             }
 
@@ -981,6 +994,227 @@ export async function deleteCategory(id) {
         .eq('id', id);
     if (error) throw error;
     return { success: true };
+}
+
+/* ==========================================================================
+   PLACES & MAP RESOURCE API
+   ========================================================================== */
+
+export async function getPlaces(tripId = null) {
+    if (!isOnline()) {
+        const local = getLocalCache(CACHE_KEYS.PLACES);
+        return tripId ? local.filter(p => p.trip_id === tripId) : local;
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            const local = getLocalCache(CACHE_KEYS.PLACES);
+            return tripId ? local.filter(p => p.trip_id === tripId) : local;
+        }
+
+        let query = client
+            .from('places')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (tripId) {
+            query = query.eq('trip_id', tripId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        // Merge with local cache
+        const allLocal = getLocalCache(CACHE_KEYS.PLACES);
+        let updated;
+        if (tripId) {
+            updated = allLocal.filter(p => p.trip_id !== tripId).concat(data || []);
+        } else {
+            updated = data || [];
+        }
+        setLocalCache(CACHE_KEYS.PLACES, updated);
+        return data || [];
+    } catch (err) {
+        console.warn("Error fetching places, falling back to local cache", err);
+        const local = getLocalCache(CACHE_KEYS.PLACES);
+        return tripId ? local.filter(p => p.trip_id === tripId) : local;
+    }
+}
+
+export async function createPlace(placeData) {
+    const payload = {
+        id: generateUUID(),
+        trip_id: placeData.trip_id,
+        name: placeData.name,
+        category: placeData.category || 'other',
+        status: placeData.status || 'planned',
+        latitude: parseFloat(placeData.latitude),
+        longitude: parseFloat(placeData.longitude),
+        address: placeData.address || '',
+        notes: placeData.notes || '',
+        opening_hours: placeData.opening_hours || '',
+        estimated_cost: parseFloat(placeData.estimated_cost) || 0,
+        currency: placeData.currency || 'EUR',
+        visit_order: parseInt(placeData.visit_order) || 0,
+        visited_at: placeData.status === 'visited' ? new Date().toISOString() : null,
+        created_at: new Date().toISOString()
+    };
+
+    // Optimistic cache update
+    const places = getLocalCache(CACHE_KEYS.PLACES);
+    places.unshift(payload);
+    setLocalCache(CACHE_KEYS.PLACES, places);
+
+    if (!isOnline()) {
+        addToSyncQueue('create_place', payload);
+        return payload;
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            addToSyncQueue('create_place', payload);
+            return payload;
+        }
+        const user = await getCurrentUser();
+        if (user) payload.user_id = user.id;
+
+        const { data, error } = await client
+            .from('places')
+            .insert([payload])
+            .select();
+
+        if (error) throw error;
+        return data[0];
+    } catch (err) {
+        console.warn("DB offline or error, queued place creation:", err);
+        addToSyncQueue('create_place', payload);
+        return payload;
+    }
+}
+
+export async function updatePlace(placeId, placeData) {
+    const payload = {
+        id: placeId,
+        trip_id: placeData.trip_id,
+        name: placeData.name,
+        category: placeData.category,
+        status: placeData.status,
+        latitude: parseFloat(placeData.latitude),
+        longitude: parseFloat(placeData.longitude),
+        address: placeData.address || '',
+        notes: placeData.notes || '',
+        opening_hours: placeData.opening_hours || '',
+        estimated_cost: parseFloat(placeData.estimated_cost) || 0,
+        currency: placeData.currency || 'EUR',
+        visit_order: parseInt(placeData.visit_order) || 0
+    };
+
+    if (placeData.status === 'visited') {
+        payload.visited_at = placeData.visited_at || new Date().toISOString();
+    } else {
+        payload.visited_at = null;
+    }
+
+    // Optimistic cache update
+    const places = getLocalCache(CACHE_KEYS.PLACES);
+    const index = places.findIndex(p => p.id === placeId);
+    if (index > -1) {
+        places[index] = { ...places[index], ...payload };
+        setLocalCache(CACHE_KEYS.PLACES, places);
+    }
+
+    if (!isOnline()) {
+        addToSyncQueue('update_place', payload);
+        return payload;
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            addToSyncQueue('update_place', payload);
+            return payload;
+        }
+        const { data, error } = await client
+            .from('places')
+            .update(payload)
+            .eq('id', placeId)
+            .select();
+
+        if (error) throw error;
+        return data[0];
+    } catch (err) {
+        console.warn("DB offline or error, queued place update:", err);
+        addToSyncQueue('update_place', payload);
+        return payload;
+    }
+}
+
+export async function updatePlaceStatus(placeId, newStatus) {
+    const visitedAt = newStatus === 'visited' ? new Date().toISOString() : null;
+    const updatePayload = {
+        status: newStatus,
+        visited_at: visitedAt
+    };
+
+    // Optimistic cache update
+    const places = getLocalCache(CACHE_KEYS.PLACES);
+    const index = places.findIndex(p => p.id === placeId);
+    if (index > -1) {
+        places[index] = { ...places[index], ...updatePayload };
+        setLocalCache(CACHE_KEYS.PLACES, places);
+    }
+
+    if (!isOnline()) {
+        addToSyncQueue('update_place', { id: placeId, ...updatePayload });
+        return { success: true, status: newStatus };
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            addToSyncQueue('update_place', { id: placeId, ...updatePayload });
+            return { success: true, status: newStatus };
+        }
+        const { error } = await client
+            .from('places')
+            .update(updatePayload)
+            .eq('id', placeId);
+
+        if (error) throw error;
+        return { success: true, status: newStatus };
+    } catch (err) {
+        console.warn("DB error updating place status, queued offline:", err);
+        addToSyncQueue('update_place', { id: placeId, ...updatePayload });
+        return { success: true, status: newStatus };
+    }
+}
+
+export async function deletePlace(placeId) {
+    // Optimistic cache update
+    const places = getLocalCache(CACHE_KEYS.PLACES).filter(p => p.id !== placeId);
+    setLocalCache(CACHE_KEYS.PLACES, places);
+
+    if (!isOnline()) {
+        addToSyncQueue('delete_place', { id: placeId });
+        return { success: true };
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            addToSyncQueue('delete_place', { id: placeId });
+            return { success: true };
+        }
+        const { error } = await client.from('places').delete().eq('id', placeId);
+        if (error) throw error;
+        return { success: true };
+    } catch (err) {
+        console.error("DB error deleting place:", err);
+        addToSyncQueue('delete_place', { id: placeId });
+        return { success: true };
+    }
 }
 
 // Initialize active user on load if config is present

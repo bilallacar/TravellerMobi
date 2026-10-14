@@ -119,11 +119,32 @@ create table if not exists memories (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. Row Level Security (RLS) Aktifleştirme
+-- 8. Gezi Noktaları & Harita Tablosu (Places)
+create table if not exists public.places (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users not null,
+  trip_id uuid references trips on delete cascade not null,
+  name text not null,
+  category text not null default 'other',
+  status text not null default 'planned',
+  latitude double precision not null,
+  longitude double precision not null,
+  address text,
+  notes text,
+  opening_hours text,
+  estimated_cost numeric default 0,
+  currency text default 'EUR',
+  visit_order integer default 0,
+  visited_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 9. Row Level Security (RLS) Aktifleştirme
 alter table public.profiles enable row level security;
 alter table trips enable row level security;
 alter table expenses enable row level security;
 alter table memories enable row level security;
+alter table public.places enable row level security;
 alter table public.categories enable row level security;
 
 -- 9. Onay Kontrol Fonksiyonu
@@ -159,6 +180,10 @@ create policy "Users can perform all actions on their own expenses" on expenses
 
 drop policy if exists "Users can perform all actions on their own memories" on memories;
 create policy "Users can perform all actions on their own memories" on memories
+  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
+
+drop policy if exists "Users can perform all actions on their own places" on public.places;
+create policy "Users can perform all actions on their own places" on public.places
   for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
 
 -- Kategoriler RLS

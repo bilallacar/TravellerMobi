@@ -167,22 +167,41 @@ export function renderExpenses() {
         const amtInBase = convertCurrency(exp.amount, exp.currency, baseCur);
         const cat = state.categoriesList.find(c => c.id === exp.category_id);
         const catName = cat ? cat.name : (exp.category || 'Diğer');
-        const catBadgeClass = cat ? getCategoryBadgeClass(cat.name) : 'badge-other';
+        const catColor = cat ? cat.color : '#6366f1';
+        
+        // Handle long category names or subcategories
+        const parts = catName.split('/').map(s => s.trim());
+        const mainCat = parts[0];
+        let catBadgeHtml = '';
+        if (parts.length > 1) {
+            const subDetail = parts.slice(1).join(' / ');
+            catBadgeHtml = `
+                <span class="badge badge-category-pill" style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40;" title="${escapeHTML(catName)}">
+                    ${escapeHTML(mainCat)} <span class="badge-sub-info" title="${escapeHTML(subDetail)}">ℹ️</span>
+                </span>
+            `;
+        } else {
+            catBadgeHtml = `
+                <span class="badge badge-category-pill" style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40;" title="${escapeHTML(catName)}">
+                    ${escapeHTML(mainCat)}
+                </span>
+            `;
+        }
         
         return `
             <tr>
                 <td>${formatDate(exp.date)}</td>
                 <td><strong>${escapeHTML(exp.title)}</strong></td>
-                <td><span class="badge ${catBadgeClass}">${escapeHTML(catName)}</span></td>
+                <td>${catBadgeHtml}</td>
                 <td>${exp.amount.toFixed(2)} ${exp.currency}</td>
                 <td>${amtInBase.toFixed(2)} ${baseCur}</td>
                 <td>
-                    <div class="table-actions" style="display: flex; gap: 8px;">
-                        <button class="btn btn-secondary btn-sm btn-edit-expense" data-id="${exp.id}" title="Düzenle">
-                             Düzenle
+                    <div class="table-actions" style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn-icon-sm btn-edit-expense" data-id="${exp.id}" title="Düzenle">
+                             <i data-lucide="edit-2"></i>
                         </button>
-                        <button class="btn btn-secondary btn-sm btn-delete-expense" data-id="${exp.id}" title="Sil">
-                             Sil
+                        <button class="btn-icon-sm btn-delete-expense" data-id="${exp.id}" title="Sil">
+                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>
                 </td>
@@ -263,15 +282,20 @@ export function renderExpenseChart(expenses) {
     chartEl.innerHTML = Object.keys(totals).map(catName => {
         const catVal = totals[catName];
         const percent = grandTotal > 0 ? (catVal / grandTotal) * 100 : 0;
+        const catObj = state.categoriesList.find(c => c.name === catName);
+        const barColor = catObj ? catObj.color : '#6366f1';
         
         return `
             <div class="chart-bar-row">
                 <div class="chart-bar-label">
-                    <span>${escapeHTML(catName)}</span>
+                    <span style="display:flex; align-items:center; gap:6px;">
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${barColor};"></span>
+                        ${escapeHTML(catName)}
+                    </span>
                     <span>${catVal.toFixed(2)} ${baseCur} (${percent.toFixed(0)}%)</span>
                 </div>
                 <div class="chart-bar-bg">
-                    <div class="chart-bar-fill" style="width: ${percent}%; background-color: var(--color-primary);"></div>
+                    <div class="chart-bar-fill" style="width: ${percent}%; background-color: ${barColor};"></div>
                 </div>
             </div>
         `;

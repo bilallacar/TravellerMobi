@@ -117,7 +117,7 @@ export function renderJournal() {
                 if (e.target.classList.contains('btn-delete-photo-grid')) return;
                 const memId = item.getAttribute('data-id');
                 const mem = state.memoriesList.find(m => m.id === memId);
-                if (mem) alert(`[${mem.title}] - ${mem.location}\n\n${mem.description}`);
+                if (mem) openPhotoLightbox(mem);
             });
         });
 
@@ -147,46 +147,27 @@ export function renderJournal() {
                     </div>
                     ${hasImage ? `
                         <div class="journal-image-col">
-                            <img src="${getDisplayPhotoUrl(mem.photo_url)}" class="journal-img" alt="${escapeHTML(mem.title)}" onclick="window.open(this.src, '_blank')">
+                            <img src="${getDisplayPhotoUrl(mem.photo_url)}" class="journal-img photo-lightbox-trigger" data-id="${mem.id}" alt="${escapeHTML(mem.title)}" title="Büyütmek ve anıyı okumak için tıklayın" style="cursor: pointer;">
                         </div>
                     ` : ''}
                 </div>
             `;
         }).join('');
+
+        document.querySelectorAll('.photo-lightbox-trigger').forEach(img => {
+            img.addEventListener('click', () => {
+                const memId = img.getAttribute('data-id');
+                const mem = state.memoriesList.find(m => m.id === memId);
+                if (mem) openPhotoLightbox(mem);
+            });
+        });
     }
 
     document.querySelectorAll('.btn-edit-memory').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-id');
             const mem = state.memoriesList.find(m => m.id === id);
-            if (mem) {
-                document.getElementById('memory-id').value = mem.id;
-                document.getElementById('memory-trip-id').value = mem.trip_id;
-                document.getElementById('memory-title').value = mem.title;
-                document.getElementById('memory-desc').value = mem.description || '';
-                document.getElementById('memory-location').value = mem.location || '';
-                document.getElementById('memory-date').value = mem.date;
-                
-                const previewImg = document.getElementById('photo-preview');
-                const previewContainer = document.getElementById('photo-preview-container');
-                const photoPlaceholder = document.getElementById('photo-upload-placeholder');
-                
-                if (mem.photo_url) {
-                    previewImg.src = getDisplayPhotoUrl(mem.photo_url);
-                    previewContainer.classList.remove('hidden');
-                    photoPlaceholder.classList.add('hidden');
-                } else {
-                    previewImg.src = '';
-                    previewContainer.classList.add('hidden');
-                    photoPlaceholder.classList.remove('hidden');
-                }
-                
-                document.getElementById('memory-modal-title').textContent = 'Anıyı Düzenle';
-                document.getElementById('memory-modal').classList.remove('hidden');
-                
-                state.selectedPhotoFile = null;
-                document.getElementById('memory-photo').value = '';
-            }
+            if (mem) populateMemoryFormForEdit(mem);
         });
     });
 
@@ -360,6 +341,123 @@ export function initJournalEvents() {
             renderJournal();
         });
     }
+
+    // Lightbox Modal Controls
+    const lightboxModal = document.getElementById('modal-photo-lightbox');
+    const btnCloseLightbox = document.getElementById('btn-close-lightbox');
+    if (lightboxModal && btnCloseLightbox) {
+        btnCloseLightbox.addEventListener('click', () => {
+            lightboxModal.classList.add('hidden');
+        });
+
+        // Close on clicking backdrop outside card
+        lightboxModal.addEventListener('click', (e) => {
+            if (e.target === lightboxModal) {
+                lightboxModal.classList.add('hidden');
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !lightboxModal.classList.contains('hidden')) {
+                lightboxModal.classList.add('hidden');
+            }
+        });
+    }
+}
+
+export function populateMemoryFormForEdit(mem) {
+    if (!mem) return;
+    document.getElementById('memory-id').value = mem.id;
+    document.getElementById('memory-trip-id').value = mem.trip_id;
+    document.getElementById('memory-title').value = mem.title;
+    document.getElementById('memory-desc').value = mem.description || '';
+    document.getElementById('memory-location').value = mem.location || '';
+    document.getElementById('memory-date').value = mem.date;
+    
+    const previewImg = document.getElementById('photo-preview');
+    const previewContainer = document.getElementById('photo-preview-container');
+    const photoPlaceholder = document.getElementById('photo-upload-placeholder');
+    
+    if (mem.photo_url) {
+        previewImg.src = getDisplayPhotoUrl(mem.photo_url);
+        previewContainer.classList.remove('hidden');
+        photoPlaceholder.classList.add('hidden');
+    } else {
+        previewImg.src = '';
+        previewContainer.classList.add('hidden');
+        photoPlaceholder.classList.remove('hidden');
+    }
+    
+    document.getElementById('memory-modal-title').textContent = 'Anıyı Düzenle';
+    document.getElementById('memory-modal').classList.remove('hidden');
+    
+    state.selectedPhotoFile = null;
+    document.getElementById('memory-photo').value = '';
+}
+
+export function openPhotoLightbox(mem) {
+    if (!mem) return;
+    const lightboxModal = document.getElementById('modal-photo-lightbox');
+    if (!lightboxModal) return;
+
+    const imgEl = document.getElementById('lightbox-img');
+    const titleEl = document.getElementById('lightbox-title');
+    const dateEl = document.getElementById('lightbox-date');
+    const locEl = document.getElementById('lightbox-location');
+    const descEl = document.getElementById('lightbox-desc');
+    const btnOpenFull = document.getElementById('btn-lightbox-open-full');
+    const btnEdit = document.getElementById('btn-lightbox-edit');
+
+    const photoUrl = mem.photo_url ? getDisplayPhotoUrl(mem.photo_url) : '';
+    if (imgEl) {
+        imgEl.src = photoUrl;
+        imgEl.alt = mem.title || 'Anı Fotoğrafı';
+    }
+
+    if (titleEl) titleEl.textContent = mem.title || 'Seyahat Anısı';
+
+    if (dateEl) {
+        dateEl.innerHTML = `<i data-lucide="calendar"></i> <span>${formatDate(mem.date)}</span>`;
+    }
+
+    if (locEl) {
+        if (mem.location) {
+            locEl.innerHTML = `<i data-lucide="map-pin"></i> <span>${escapeHTML(mem.location)}</span>`;
+            locEl.style.display = 'inline-flex';
+        } else {
+            locEl.style.display = 'none';
+        }
+    }
+
+    if (descEl) {
+        if (mem.description && mem.description.trim()) {
+            const paragraphs = escapeHTML(mem.description)
+                .split('\n\n')
+                .filter(p => p.trim())
+                .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                .join('');
+            descEl.innerHTML = paragraphs;
+        } else {
+            descEl.innerHTML = '<p class="text-muted" style="font-style: italic;">Bu anı için herhangi bir günlük metni girilmemiş.</p>';
+        }
+    }
+
+    if (btnOpenFull) {
+        btnOpenFull.onclick = () => {
+            if (photoUrl) window.open(photoUrl, '_blank');
+        };
+    }
+
+    if (btnEdit) {
+        btnEdit.onclick = () => {
+            lightboxModal.classList.add('hidden');
+            populateMemoryFormForEdit(mem);
+        };
+    }
+
+    lightboxModal.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
 }
 
 // Helpers
