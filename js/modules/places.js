@@ -9,6 +9,8 @@ let markersLayer = null;
 let tempDraftMarker = null;
 let routePolylineLayer = null;
 let showRouteLine = true;
+let userLocationMarker = null;
+let userLocationCircle = null;
 
 // Category icons and colors
 export const PLACE_CATEGORIES = {
@@ -188,7 +190,45 @@ function initOrUpdateMap() {
         }
 
         routePolylineLayer = L.layerGroup().addTo(mapInstance);
-        markersLayer = L.layerGroup().addTo(mapInstance);
+
+        // MarkerCluster Layer (Clusters close pins and avoids overlap)
+        if (typeof L.markerClusterGroup !== 'undefined') {
+            markersLayer = L.markerClusterGroup({
+                maxClusterRadius: 40,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true
+            }).addTo(mapInstance);
+        } else {
+            markersLayer = L.layerGroup().addTo(mapInstance);
+        }
+
+        // GPS "Konumumu Bul" Leaflet Control under zoom buttons
+        const LocateControl = L.Control.extend({
+            options: { position: 'topleft' },
+            onAdd: function() {
+                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                const button = L.DomUtil.create('a', 'leaflet-control-locate', container);
+                button.innerHTML = '🎯';
+                button.href = '#';
+                button.title = 'Konumumu Bul (GPS)';
+                button.setAttribute('role', 'button');
+                button.setAttribute('aria-label', 'Konumumu Bul');
+
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.on(button, 'click', function(e) {
+                    L.DomEvent.stop(e);
+                    handleUserLocationRequest();
+                });
+
+                return container;
+            }
+        });
+        mapInstance.addControl(new LocateControl());
+
+        // Listen for GPS location events
+        mapInstance.on('locationfound', onLocationFound);
+        mapInstance.on('locationerror', onLocationError);
 
         // Click on map to add draft pin and trigger modal
         mapInstance.on('click', (e) => {
@@ -208,6 +248,56 @@ function initOrUpdateMap() {
 
     renderMapMarkers();
     renderRoutePolyline();
+}
+
+/**
+ * Handle GPS location request via browser Geolocation API
+ */
+function handleUserLocationRequest() {
+    if (!mapInstance) return;
+    showToast("GPS konumu tespit ediliyor...", "info");
+    mapInstance.locate({
+        setView: true,
+        maxZoom: 16,
+        enableHighAccuracy: true
+    });
+}
+
+function onLocationFound(e) {
+    const radius = Math.round(e.accuracy);
+    if (userLocationMarker && mapInstance) mapInstance.removeLayer(userLocationMarker);
+    if (userLocationCircle && mapInstance) mapInstance.removeLayer(userLocationCircle);
+
+    const userIcon = L.divIcon({
+        className: 'user-gps-marker',
+        html: `
+            <div class="user-gps-pulse-outer">
+                <div class="user-gps-dot"></div>
+            </div>
+        `,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+    });
+
+    userLocationMarker = L.marker(e.latlng, { icon: userIcon })
+        .addTo(mapInstance)
+        .bindPopup(`<b>📍 Şu an buradasınız!</b><br><small>Hassasiyet: ~${radius} metre</small>`)
+        .openPopup();
+
+    userLocationCircle = L.circle(e.latlng, {
+        radius: radius,
+        color: '#3b82f6',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.12,
+        weight: 1.5
+    }).addTo(mapInstance);
+
+    showToast(`Konumunuz bulundu (Hassasiyet: ~${radius}m)`, "success");
+}
+
+function onLocationError(e) {
+    console.warn("Location error:", e.message);
+    showToast("Konumunuz alınamadı. Lütfen tarayıcı konum izinlerini ve cihaz GPS'ini kontrol edin.", "warning");
 }
 
 /**
@@ -614,13 +704,15 @@ export function closePlaceModal() {
 }
 
 /**
- * Search Location with OpenStreetMap Nominatim Geocoding API
+ * Smart Multilingual Location Search
+ * Combines OpenStreetMap Nominatim with Turkish Wikipedia/Wikidata Geosearch
+ * so users can search in Turkish (e.g. 'Ulusal Arkeoloji Müzesi atina', 'Sintagma', 'Akropolis')
  */
 async function handleLocationSearch() {
     const queryInput = document.getElementById('place-search-query');
     const query = queryInput ? queryInput.value.trim() : '';
     if (!query) {
-        showToast("Lütfen aranacak yeri yazın (örn: Acropolis Athens)", "warning");
+        showToast("Lütfen aranacak yeri yazın (örn: Ulusal Arkeoloji Müzesi veya Acropolis)", "warning");
         return;
     }
 
@@ -631,36 +723,82 @@ async function handleLocationSearch() {
     }
 
     try {
-        // Free OpenStreetMap Nominatim API
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-        const res = await fetch(url, {
-            headers: { 'Accept-Language': 'tr,en' }
-        });
-        const data = await res.json();
+        let found = false;
 
-        if (data && data.length > 0) {
-            const result = data[0];
-            const lat = parseFloat(result.lat);
-            const lon = parseFloat(result.lon);
+        // Step 1: OpenStreetMap Nominatim API
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+            const res = await fetch(url, {
+                headers: { 'Accept-Language': 'tr,en' }
+            });
+            const data = await res.json();
 
-            document.getElementById('place-lat').value = lat.toFixed(6);
-            document.getElementById('place-lng').value = lon.toFixed(6);
-            document.getElementById('place-address').value = result.display_name.split(',').slice(0, 3).join(', ');
+            if (data && data.length > 0) {
+                const result = data[0];
+                const lat = parseFloat(result.lat);
+                const lon = parseFloat(result.lon);
 
-            // If name is still empty, auto-fill
-            const nameInput = document.getElementById('place-name');
-            if (!nameInput.value.trim()) {
-                nameInput.value = query;
+                document.getElementById('place-lat').value = lat.toFixed(6);
+                document.getElementById('place-lng').value = lon.toFixed(6);
+                document.getElementById('place-address').value = result.display_name.split(',').slice(0, 3).join(', ');
+
+                const nameInput = document.getElementById('place-name');
+                if (!nameInput.value.trim()) {
+                    nameInput.value = query;
+                }
+
+                showToast(`"${query}" başarıyla bulundu!`, "success");
+                if (mapInstance) mapInstance.setView([lat, lon], 16);
+                found = true;
+                return;
             }
+        } catch (nomErr) {
+            console.warn("Nominatim search failed, trying multilingual wiki fallback:", nomErr);
+        }
 
-            showToast("Konum başarıyla bulundu ve koordinatlar dolduruldu!", "success");
+        // Step 2: Wikipedia / Wikidata Multilingual Geosearch Fallback (Perfect for Turkish names)
+        if (!found) {
+            try {
+                const wikiUrl = `https://tr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+                const wikiRes = await fetch(wikiUrl);
+                const wikiData = await wikiRes.json();
+                const searchList = wikiData?.query?.search || [];
 
-            // Pan map
-            if (mapInstance) {
-                mapInstance.setView([lat, lon], 16);
+                if (searchList.length > 0) {
+                    const topTitle = searchList[0].title;
+                    const coordUrl = `https://tr.wikipedia.org/w/api.php?action=query&prop=coordinates|langlinks&titles=${encodeURIComponent(topTitle)}&format=json&lllang=en&origin=*`;
+                    const coordRes = await fetch(coordUrl);
+                    const coordData = await coordRes.json();
+                    const pages = coordData?.query?.pages || {};
+
+                    for (const pid of Object.keys(pages)) {
+                        const page = pages[pid];
+                        const coords = page.coordinates;
+                        if (coords && coords.length > 0) {
+                            const lat = coords[0].lat;
+                            const lon = coords[0].lon;
+                            const enName = page.langlinks?.[0]?.['*'] || '';
+                            const cleanName = topTitle.replace(/\s*\([^)]*\)/g, '').trim();
+
+                            document.getElementById('place-lat').value = lat.toFixed(6);
+                            document.getElementById('place-lng').value = lon.toFixed(6);
+                            document.getElementById('place-name').value = cleanName;
+                            document.getElementById('place-address').value = enName ? `${cleanName} (${enName})` : cleanName;
+
+                            showToast(`"${cleanName}" başarıyla bulundu!`, "success");
+                            if (mapInstance) mapInstance.setView([lat, lon], 16);
+                            found = true;
+                            return;
+                        }
+                    }
+                }
+            } catch (wikiErr) {
+                console.warn("Wikipedia fallback search error:", wikiErr);
             }
-        } else {
-            showToast("Konum bulunamadı. Lütfen daha detaylı yazın (örn: Şehir adını ekleyin).", "warning");
+        }
+
+        if (!found) {
+            showToast("Konum bulunamadı. Lütfen şehir adını ekleyin (örn: Ulusal Arkeoloji Müzesi Atina) veya haritaya tıklayarak pini yerleştirin.", "warning");
         }
     } catch (err) {
         console.error("Geocoding failed:", err);
