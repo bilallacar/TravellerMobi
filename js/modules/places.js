@@ -148,12 +148,24 @@ export async function loadPlacesData() {
 
     try {
         const places = await db.getPlaces(state.activeTripId);
-        state.placesList = places || [];
-        renderPlacesList();
-        initOrUpdateMap();
+        // Sanitize places data to avoid any null/undefined element crashes
+        state.placesList = (places || []).filter(p => p && typeof p === 'object' && p.id);
+        
+        try {
+            renderPlacesList();
+        } catch (listErr) {
+            console.error("Failed to render places list:", listErr);
+        }
+
+        try {
+            initOrUpdateMap();
+        } catch (mapErr) {
+            console.error("Failed to initialize or update map:", mapErr);
+        }
     } catch (err) {
         console.error("Failed to load places:", err);
-        showToast("Mekanlar yüklenirken hata oluştu: " + err.message, "danger");
+        const errMsg = err?.message || err?.error || (typeof err === 'string' ? err : 'Veriler alınırken bağlantı hatası oluştu');
+        showToast("Mekanlar yüklenirken hata oluştu: " + errMsg, "danger");
     }
 }
 
@@ -172,63 +184,61 @@ function initOrUpdateMap() {
             scrollWheelZoom: true
         }).setView([37.9838, 23.7275], 13);
 
-        // OpenFreeMap Positron (Clean, minimalist vector map with English/Latin labels - NO API KEY REQUIRED, NO WATERMARK)
-        try {
-            if (typeof L.maplibreGL !== 'undefined') {
-                L.maplibreGL({
-                    style: 'https://tiles.openfreemap.org/styles/positron'
-                }).addTo(mapInstance);
-            } else {
-                throw new Error("L.maplibreGL is not available");
-            }
-        } catch (err) {
-            console.warn("MapLibre GL failed, falling back to raster tiles:", err);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            }).addTo(mapInstance);
-        }
+        // Esri World Street Map (Clean, high-performance international map with English/Latin labels, NO API KEY, NO WATERMARK)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS'
+        }).addTo(mapInstance);
 
         routePolylineLayer = L.layerGroup().addTo(mapInstance);
 
         // MarkerCluster Layer (Clusters close pins and avoids overlap)
         if (typeof L.markerClusterGroup !== 'undefined') {
-            markersLayer = L.markerClusterGroup({
-                maxClusterRadius: 40,
-                spiderfyOnMaxZoom: true,
-                showCoverageOnHover: false,
-                zoomToBoundsOnClick: true
-            }).addTo(mapInstance);
+            try {
+                markersLayer = L.markerClusterGroup({
+                    maxClusterRadius: 40,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: true
+                }).addTo(mapInstance);
+            } catch (clusterErr) {
+                console.warn("MarkerCluster init fallback to layerGroup:", clusterErr);
+                markersLayer = L.layerGroup().addTo(mapInstance);
+            }
         } else {
             markersLayer = L.layerGroup().addTo(mapInstance);
         }
 
         // GPS "Konumumu Bul" Leaflet Control under zoom buttons
-        const LocateControl = L.Control.extend({
-            options: { position: 'topleft' },
-            onAdd: function() {
-                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-                const button = L.DomUtil.create('a', 'leaflet-control-locate', container);
-                button.innerHTML = '🎯';
-                button.href = '#';
-                button.title = 'Konumumu Bul (GPS)';
-                button.setAttribute('role', 'button');
-                button.setAttribute('aria-label', 'Konumumu Bul');
+        try {
+            const LocateControl = L.Control.extend({
+                options: { position: 'topleft' },
+                onAdd: function() {
+                    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                    const button = L.DomUtil.create('a', 'leaflet-control-locate', container);
+                    button.innerHTML = '🎯';
+                    button.href = '#';
+                    button.title = 'Konumumu Bul (GPS)';
+                    button.setAttribute('role', 'button');
+                    button.setAttribute('aria-label', 'Konumumu Bul');
 
-                L.DomEvent.disableClickPropagation(container);
-                L.DomEvent.on(button, 'click', function(e) {
-                    L.DomEvent.stop(e);
-                    handleUserLocationRequest();
-                });
+                    L.DomEvent.disableClickPropagation(container);
+                    L.DomEvent.on(button, 'click', function(e) {
+                        L.DomEvent.stop(e);
+                        handleUserLocationRequest();
+                    });
 
-                return container;
-            }
-        });
-        mapInstance.addControl(new LocateControl());
+                    return container;
+                }
+            });
+            mapInstance.addControl(new LocateControl());
 
-        // Listen for GPS location events
-        mapInstance.on('locationfound', onLocationFound);
-        mapInstance.on('locationerror', onLocationError);
+            // Listen for GPS location events
+            mapInstance.on('locationfound', onLocationFound);
+            mapInstance.on('locationerror', onLocationError);
+        } catch (ctrlErr) {
+            console.warn("LocateControl init error:", ctrlErr);
+        }
 
         // Click on map to add draft pin and trigger modal
         mapInstance.on('click', (e) => {
