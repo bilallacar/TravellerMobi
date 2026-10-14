@@ -7,6 +7,8 @@ import { showToast } from '../utils.js';
 let mapInstance = null;
 let markersLayer = null;
 let tempDraftMarker = null;
+let routePolylineLayer = null;
+let showRouteLine = true;
 
 // Category icons and colors
 export const PLACE_CATEGORIES = {
@@ -55,6 +57,38 @@ export function initPlacesEvents() {
             state.activePlaceFilter = pill.dataset.filter || 'all';
             renderPlacesList();
             renderMapMarkers();
+        });
+    }
+
+    // Route Polyline Toggle Button
+    const btnToggleRoute = document.getElementById('btn-toggle-route-line');
+    const routeStatusText = document.getElementById('route-line-status-text');
+    if (btnToggleRoute) {
+        btnToggleRoute.addEventListener('click', () => {
+            showRouteLine = !showRouteLine;
+            if (routeStatusText) {
+                routeStatusText.textContent = showRouteLine ? 'Rota Çizgisi: Açık' : 'Rota Çizgisi: Kapalı';
+            }
+            if (showRouteLine) {
+                btnToggleRoute.classList.remove('btn-secondary');
+                btnToggleRoute.classList.add('btn-primary');
+            } else {
+                btnToggleRoute.classList.remove('btn-primary');
+                btnToggleRoute.classList.add('btn-secondary');
+            }
+            renderRoutePolyline();
+        });
+    }
+
+    // Modal Delete Place Button
+    const btnDeleteModal = document.getElementById('btn-delete-place-modal');
+    if (btnDeleteModal) {
+        btnDeleteModal.addEventListener('click', async () => {
+            const placeId = document.getElementById('place-id').value;
+            if (placeId) {
+                closePlaceModal();
+                await window.deletePlaceAction(placeId);
+            }
         });
     }
 
@@ -136,12 +170,14 @@ function initOrUpdateMap() {
             scrollWheelZoom: true
         }).setView([37.9838, 23.7275], 13);
 
-        // Standard OpenStreetMap Tile Layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        // CartoDB Positron Tile Layer (Clean minimalist map with English/international labels)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }).addTo(mapInstance);
 
+        routePolylineLayer = L.layerGroup().addTo(mapInstance);
         markersLayer = L.layerGroup().addTo(mapInstance);
 
         // Click on map to add draft pin and trigger modal
@@ -161,6 +197,7 @@ function initOrUpdateMap() {
     }
 
     renderMapMarkers();
+    renderRoutePolyline();
 }
 
 /**
@@ -176,7 +213,10 @@ function renderMapMarkers() {
     }
 
     const filtered = getFilteredPlaces();
-    if (filtered.length === 0) return;
+    if (filtered.length === 0) {
+        renderRoutePolyline();
+        return;
+    }
 
     // Find active hotel for distance reference
     const hotel = state.placesList.find(p => p.category === 'hotel');
@@ -201,11 +241,11 @@ function renderMapMarkers() {
         // Custom HTML Marker Icon
         const markerHtml = `
             <div class="custom-marker-wrapper ${isVisited ? 'marker-visited' : 'marker-planned'} category-${place.category}">
-                <div class="marker-bubble" style="background-color: ${isVisited ? '#6b7280' : catInfo.color};">
+                <div class="marker-bubble" style="background-color: ${isVisited ? '#64748b' : catInfo.color};">
                     <span class="marker-emoji">${catInfo.emoji}</span>
                     ${isVisited ? '<span class="marker-check">✓</span>' : ''}
                 </div>
-                <div class="marker-pin-tip" style="border-top-color: ${isVisited ? '#6b7280' : catInfo.color};"></div>
+                <div class="marker-pin-tip" style="border-top-color: ${isVisited ? '#64748b' : catInfo.color};"></div>
             </div>
         `;
 
@@ -242,9 +282,14 @@ function renderMapMarkers() {
                     <button type="button" class="btn btn-secondary btn-sm btn-block btn-toggle-status" data-id="${place.id}">
                         ${isVisited ? 'Gidilecek Olarak İşaretle' : '✓ Gidildi Olarak İşaretle'}
                     </button>
-                    <button type="button" class="btn btn-text btn-sm btn-edit-place" data-id="${place.id}">
-                        Düzenle
-                    </button>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button type="button" class="btn btn-secondary btn-sm btn-edit-place" data-id="${place.id}" style="flex: 1;">
+                            ✏️ Düzenle
+                        </button>
+                        <button type="button" class="btn btn-sm btn-delete-popup" data-id="${place.id}" style="flex: 1;">
+                            🗑️ Sil
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -267,6 +312,13 @@ function renderMapMarkers() {
                         openPlaceModal(place);
                     };
                 }
+                const btnDelete = popupEl.querySelector('.btn-delete-popup');
+                if (btnDelete) {
+                    btnDelete.onclick = () => {
+                        mapInstance.closePopup();
+                        window.deletePlaceAction(place.id);
+                    };
+                }
             }
         });
 
@@ -278,6 +330,46 @@ function renderMapMarkers() {
     if (latLngBounds.length > 0) {
         mapInstance.fitBounds(latLngBounds, { padding: [40, 40], maxZoom: 16 });
     }
+
+    renderRoutePolyline();
+}
+
+/**
+ * Render Polyline connecting Hotel -> Places
+ */
+function renderRoutePolyline() {
+    if (!mapInstance || !routePolylineLayer) return;
+    routePolylineLayer.clearLayers();
+    if (!showRouteLine) return;
+
+    const filtered = getFilteredPlaces().filter(p => p.latitude && p.longitude);
+    if (filtered.length < 2) return;
+
+    // Find hotel as starting base, or start from first point
+    const hotel = filtered.find(p => p.category === 'hotel');
+    const nonHotels = filtered.filter(p => p.category !== 'hotel');
+
+    const routePoints = [];
+    if (hotel) {
+        routePoints.push([hotel.latitude, hotel.longitude]);
+    }
+    nonHotels.forEach(p => {
+        routePoints.push([p.latitude, p.longitude]);
+    });
+
+    if (routePoints.length < 2) return;
+
+    const polyline = L.polyline(routePoints, {
+        color: '#6366f1',
+        weight: 4,
+        opacity: 0.85,
+        dashArray: '8, 8',
+        className: 'route-polyline',
+        lineJoin: 'round'
+    });
+
+    polyline.bindTooltip("🗺️ Günlük Güzergah / Rota", { sticky: true });
+    routePolylineLayer.addLayer(polyline);
 }
 
 /**
@@ -431,6 +523,7 @@ export function openPlaceModal(place = null) {
     const modal = document.getElementById('modal-place');
     const form = document.getElementById('place-form');
     const titleEl = document.getElementById('place-modal-title');
+    const btnDeleteModal = document.getElementById('btn-delete-place-modal');
     if (!modal || !form) return;
 
     form.reset();
@@ -451,6 +544,10 @@ export function openPlaceModal(place = null) {
     if (place) {
         state.selectedPlaceForEdit = place;
         if (titleEl) titleEl.textContent = 'Mekanı Düzenle';
+        if (btnDeleteModal) {
+            btnDeleteModal.classList.remove('hidden');
+            btnDeleteModal.style.display = 'inline-flex';
+        }
         document.getElementById('place-id').value = place.id;
         document.getElementById('place-name').value = place.name;
         document.getElementById('place-category').value = place.category;
@@ -465,6 +562,10 @@ export function openPlaceModal(place = null) {
     } else {
         state.selectedPlaceForEdit = null;
         if (titleEl) titleEl.textContent = 'Yeni Gezi Noktası / Otel Ekle';
+        if (btnDeleteModal) {
+            btnDeleteModal.classList.add('hidden');
+            btnDeleteModal.style.display = 'none';
+        }
         document.getElementById('place-id').value = '';
         // If map has a center, pre-fill
         if (mapInstance) {
@@ -475,6 +576,7 @@ export function openPlaceModal(place = null) {
     }
 
     modal.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
 }
 
 /**
@@ -493,6 +595,11 @@ function openPlaceModalWithCoords(lat, lng) {
 export function closePlaceModal() {
     const modal = document.getElementById('modal-place');
     if (modal) modal.classList.add('hidden');
+    const btnDeleteModal = document.getElementById('btn-delete-place-modal');
+    if (btnDeleteModal) {
+        btnDeleteModal.classList.add('hidden');
+        btnDeleteModal.style.display = 'none';
+    }
     state.selectedPlaceForEdit = null;
 }
 
@@ -636,16 +743,29 @@ window.editPlaceAction = function(placeId) {
 };
 
 /**
- * Delete place action
+ * Delete place action (with instant optimistic update)
  */
 window.deletePlaceAction = async function(placeId) {
-    if (!confirm("Bu mekanı haritadan silmek istediğinize emin misiniz?")) return;
+    const place = state.placesList.find(p => p.id === placeId);
+    const placeName = place ? `"${place.name}"` : "Bu mekanı";
+    if (!confirm(`${placeName} haritadan ve gezi listesinden silinsin mi?`)) return;
+
     try {
+        if (mapInstance) mapInstance.closePopup();
+
+        // Optimistic UI update
+        state.placesList = state.placesList.filter(p => p.id !== placeId);
+        renderPlacesList();
+        renderMapMarkers();
+        renderRoutePolyline();
+
         await db.deletePlace(placeId);
-        showToast("Mekan silindi", "info");
+        showToast("Mekan başarıyla silindi", "info");
         await loadPlacesData();
     } catch (err) {
+        console.error("Delete place failed:", err);
         showToast("Silinemedi: " + err.message, "danger");
+        await loadPlacesData();
     }
 };
 

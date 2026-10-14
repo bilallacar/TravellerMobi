@@ -436,8 +436,11 @@
 
                     <!-- Interactive Leaflet Map -->
                     <div class="card glass map-card-container">
-                        <div class="map-card-header">
+                        <div class="map-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <span class="map-tip"><i data-lucide="info"></i> <strong>İpucu:</strong> Haritada istediğiniz bir noktaya tıklayarak doğrudan o koordinata yeni yer ekleyebilirsiniz.</span>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-route-line" title="Gezi noktaları arası rota güzergah çizgisini göster/gizle">
+                                <i data-lucide="route"></i> <span id="route-line-status-text">Rota Çizgisi: Açık</span>
+                            </button>
                         </div>
                         <div id="places-map" class="places-leaflet-map"></div>
                     </div>
@@ -547,9 +550,14 @@
                                     <textarea id="place-notes" rows="2" class="textarea-input" placeholder="Örn: Sabah 09:00'da açılıyor, bilet online alındı, manzarası çok güzel."></textarea>
                                 </div>
 
-                                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
-                                    <button type="button" class="btn btn-secondary" id="btn-cancel-place-modal">Vazgeç</button>
-                                    <button type="submit" class="btn btn-primary" id="btn-save-place">Kaydet</button>
+                                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px;">
+                                    <button type="button" class="btn btn-danger hidden" id="btn-delete-place-modal">
+                                        <i data-lucide="trash-2"></i> Bu Mekanı Sil
+                                    </button>
+                                    <div style="display: flex; gap: 12px; margin-left: auto;">
+                                        <button type="button" class="btn btn-secondary" id="btn-cancel-place-modal">Vazgeç</button>
+                                        <button type="submit" class="btn btn-primary" id="btn-save-place">Kaydet</button>
+                                    </div>
                                 </div>
                             </form>
                         </div>

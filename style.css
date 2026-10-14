@@ -2559,7 +2559,7 @@ select:-webkit-autofill:focus {
 .lightbox-desc {
     font-size: 14px;
     line-height: 1.7;
-    color: var(--text-primary);
+    color: #e2e8f0;
 }
 
 .lightbox-desc p {
@@ -2599,5 +2599,144 @@ select:-webkit-autofill:focus {
         padding: 18px 16px;
     }
 }
+
+/* ==========================================================================
+   Light Theme Overrides for Lightbox Modal
+   ========================================================================== */
+.light-theme .modal-lightbox {
+    background: rgba(15, 23, 42, 0.6);
+}
+
+.light-theme .modal-lightbox-card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.25);
+}
+
+.light-theme .lightbox-photo-pane {
+    background: #090d16; /* Stays cinema dark for true photographic contrast */
+}
+
+.light-theme .lightbox-info-pane {
+    background: #ffffff;
+}
+
+.light-theme .lightbox-title {
+    color: #0f172a;
+}
+
+.light-theme .lightbox-badge {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #475569;
+}
+
+.light-theme .lightbox-divider {
+    background: #e2e8f0;
+}
+
+.light-theme .lightbox-desc {
+    color: #334155; /* Crisp, high-contrast readable dark slate text */
+}
+
+.light-theme .lightbox-desc p {
+    color: #334155;
+}
+
+.light-theme .lightbox-actions-row {
+    border-top-color: #e2e8f0;
+}
+
+.light-theme .btn-lightbox-close {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: #0f172a;
+}
+
+.light-theme .btn-lightbox-close:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: transparent;
+}
+
+/* ==========================================================================
+   Map Enhancements, Popup & Route Polyline Styling
+   ========================================================================== */
+.light-theme .places-leaflet-map {
+    background: #f8fafc;
+}
+
+.light-theme .leaflet-popup-content-wrapper {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important;
+}
+
+.light-theme .leaflet-popup-tip {
+    background: #ffffff !important;
+}
+
+.light-theme .popup-notes {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+}
+
+/* Popup Action Buttons */
+.btn-delete-popup {
+    margin-top: 6px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-popup:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+/* Marker Glow & Dynamic State */
+.marker-planned .marker-bubble {
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3), 0 6px 16px rgba(0, 0, 0, 0.35);
+    animation: markerPulse 2.5s infinite;
+}
+
+@keyframes markerPulse {
+    0% {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35), 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    50% {
+        box-shadow: 0 0 0 7px rgba(99, 102, 241, 0.15), 0 6px 18px rgba(0, 0, 0, 0.45);
+    }
+    100% {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35), 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+}
+
+.marker-visited .marker-bubble {
+    background-color: #64748b !important;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    opacity: 0.72;
+}
+
+.marker-visited .marker-pin-tip {
+    border-top-color: #64748b !important;
+}
+
+/* Route Polyline Styling */
+.route-polyline {
+    stroke-dasharray: 8, 8;
+    animation: dashMove 20s linear infinite;
+}
+
+@keyframes dashMove {
+    to {
+        stroke-dashoffset: -100;
+    }
+}
+
 
 
