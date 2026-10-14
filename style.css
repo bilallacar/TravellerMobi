@@ -2850,6 +2850,366 @@ select:-webkit-autofill:focus {
     }
 }
 
+/* ==========================================================================
+   Numbered Pin Markers (1, 2, 3...) & Zoom-Level Visibility Labels
+   ========================================================================== */
+.marker-number {
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    font-family: var(--font-family, sans-serif);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.marker-check-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    background: #10b981;
+    color: #ffffff;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Zoom-Level Visibility Label (Visible when zoom >= 14) */
+.custom-marker-wrapper .marker-label {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 4px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.map-detailed-zoom .custom-marker-wrapper .marker-label {
+    display: block;
+    animation: labelFadeIn 0.25s ease-out;
+}
+
+@keyframes labelFadeIn {
+    from { opacity: 0; transform: translate(-50%, -4px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Category bubble gradients for numbered pins */
+.category-hotel .marker-bubble {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+}
+.category-hotel .marker-pin-tip {
+    border-top-color: #1d4ed8 !important;
+}
+
+.category-museum .marker-bubble,
+.category-historical .marker-bubble {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+}
+.category-museum .marker-pin-tip,
+.category-historical .marker-pin-tip {
+    border-top-color: #d97706 !important;
+}
+
+.category-food .marker-bubble {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+.category-food .marker-pin-tip {
+    border-top-color: #dc2626 !important;
+}
+
+.category-viewpoint .marker-bubble {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+.category-viewpoint .marker-pin-tip {
+    border-top-color: #059669 !important;
+}
+
+.category-shopping .marker-bubble {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+}
+.category-shopping .marker-pin-tip {
+    border-top-color: #7c3aed !important;
+}
+
+/* Route Polyline Segment Distance Markers */
+.route-dist-label-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.route-dist-pill {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    color: #c7d2fe;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.places-route-summary-pill {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #818cf8;
+}
+
+/* Place Cards Left Number Badge */
+.place-card-left-number {
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.card-number-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 8px rgba(99, 102, 241, 0.35);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+
+.place-visited .card-number-badge {
+    background: #64748b;
+    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.place-card-content-area {
+    flex: 1;
+    min-width: 0;
+}
+
+.popup-number-badge {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
+    background: #6366f1;
+    padding: 2px 7px;
+    border-radius: 6px;
+    margin-right: 4px;
+}
+
+/* ==========================================================================
+   Read-Only Share System & PIN Security Gate
+   ========================================================================== */
+.pin-gate-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeInModal 0.25s ease-out;
+}
+
+.pin-gate-card {
+    max-width: 420px;
+    width: 100%;
+    padding: 36px 28px;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+}
+
+.pin-gate-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.pin-boxes-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.pin-digit-box {
+    width: 54px;
+    height: 60px;
+    text-align: center;
+    font-size: 26px;
+    font-weight: 800;
+    background: rgba(15, 23, 42, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    color: #ffffff;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.pin-digit-box:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35);
+    transform: scale(1.05);
+}
+
+.shake-error {
+    animation: shakeAnim 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shakeAnim {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(3px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+    40%, 60% { transform: translate3d(5px, 0, 0); }
+}
+
+/* Share Hero Header */
+.share-hero-header {
+    padding: 24px 28px;
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.share-hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.share-hero-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.badge-guest-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Share Infographic Places Grid */
+.share-places-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+}
+
+.share-place-card {
+    display: flex;
+    flex-direction: row;
+    gap: 14px;
+    padding: 18px;
+    border-radius: 16px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.share-place-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.share-card-left-badge {
+    flex-shrink: 0;
+}
+
+.share-place-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+}
+
+.share-card-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.share-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+}
+
+.badge-read-only {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+/* Light Theme Adjustments */
+.light-theme .pin-gate-card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+}
+.light-theme .pin-digit-box {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+.light-theme .share-hero-header {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+.light-theme .share-place-card {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+.light-theme .share-place-card:hover {
+    border-color: #6366f1;
+}
+
+
 
 
 

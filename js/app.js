@@ -14,6 +14,7 @@ import { initJournalEvents, loadJournalData } from './modules/journal.js';
 import { initDashboardEvents, loadDashboardData, renderDashboard } from './modules/dashboard.js';
 import { loadAdminData } from './modules/admin.js';
 import { initPlacesEvents, loadPlacesData } from './modules/places.js';
+import { initShareEvents, loadShareView } from './modules/share.js';
 
 // Global error logging for diagnostics
 let globalErrors = [];
@@ -79,6 +80,7 @@ const views = {
     journal: document.getElementById('view-journal'),
     settings: document.getElementById('view-settings'),
     admin: document.getElementById('view-admin'),
+    share: document.getElementById('view-share'),
     'approval-pending': document.getElementById('view-approval-pending')
 };
 
@@ -114,6 +116,17 @@ function initNavigation() {
 
 async function handleRouting() {
     const hash = window.location.hash || '#dashboard';
+
+    // Handle Read-Only Guest Share View (#share?id=...)
+    if (hash.startsWith('#share')) {
+        const layout = document.getElementById('layout-container');
+        const mobileNav = document.querySelector('.mobile-nav');
+        if (layout) layout.classList.add('no-sidebar');
+        if (mobileNav) mobileNav.classList.add('hidden');
+        showView('share');
+        await loadShareView(hash);
+        return;
+    }
     
     if (!isConfigured()) {
         showView('setup');
@@ -336,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTripsEvents();
     initExpensesEvents();
     initPlacesEvents();
+    initShareEvents();
     initJournalEvents();
     initDashboardEvents();
 

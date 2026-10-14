@@ -414,6 +414,9 @@
                             <select id="places-trip-selector" class="select-input compact-select">
                                 <!-- Loaded dynamically -->
                             </select>
+                            <button id="btn-share-places-route" class="btn btn-secondary" title="Bu rotayı benzersiz link ve PIN ile arkadaşlarınla paylaş">
+                                <i data-lucide="share-2"></i> Rotayı Paylaş
+                            </button>
                             <button id="btn-add-place" class="btn btn-primary">
                                 <i data-lucide="map-pin"></i> Yeni Yer Ekle
                             </button>
@@ -441,7 +444,10 @@
                     <!-- Interactive Leaflet Map -->
                     <div class="card glass map-card-container">
                         <div class="map-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <span class="map-tip"><i data-lucide="info"></i> <strong>İpucu:</strong> Haritada istediğiniz bir noktaya tıklayarak doğrudan o koordinata yeni yer ekleyebilirsiniz.</span>
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <span class="map-tip"><i data-lucide="info"></i> <strong>İpucu:</strong> Haritaya tıklayarak yer ekleyebilir, yakınlaştığınızda isimleri görebilirsiniz.</span>
+                                <div id="places-route-total-summary" class="places-route-summary-pill hidden"></div>
+                            </div>
                             <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-route-line" title="Gezi noktaları arası rota güzergah çizgisini göster/gizle">
                                 <i data-lucide="route"></i> <span id="route-line-status-text">Rota Çizgisi: Açık</span>
                             </button>
@@ -564,6 +570,74 @@
                                     </div>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+
+                    <!-- Share Route Modal -->
+                    <div id="modal-share-route" class="modal hidden">
+                        <div class="modal-content glass" style="max-width: 520px;">
+                            <div class="modal-header">
+                                <h2>🔗 Gezi Rotasını Paylaş</h2>
+                                <button type="button" class="btn-close-modal" id="btn-close-share-modal">&times;</button>
+                            </div>
+                            <div class="share-modal-body margin-top-12">
+                                <div class="share-trip-meta-box card glass" style="padding: 14px; background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.25);">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <h3 id="share-modal-trip-name" style="margin: 0; font-size: 17px;">Seyahat Rotası</h3>
+                                        <span id="share-modal-place-count" class="badge-pill pill-planned">0 Gezi Noktası</span>
+                                    </div>
+                                    <p class="text-xs text-muted margin-top-6" style="margin-bottom: 0;">Bu linki açan kişiler üye olmak veya giriş yapmak zorunda kalmadan rotanızı interaktif infografik formatında görüntüler.</p>
+                                </div>
+
+                                <!-- 4-digit PIN Security Option -->
+                                <div class="share-pin-section card glass margin-top-16" style="padding: 14px;">
+                                    <div class="pin-toggle-header">
+                                        <label class="switch-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                                            <input type="checkbox" id="share-pin-enable" checked>
+                                            <span style="font-weight: 600; font-size: 14px;">🔒 4 Haneli PIN Kodu ile Koru (Önerilen)</span>
+                                        </label>
+                                    </div>
+                                    <div id="share-pin-input-container" class="margin-top-12">
+                                        <p class="text-xs text-muted" style="margin-bottom: 8px;">Karşı taraf linke tıkladığında rotayı açabilmek için bu 4 haneli PIN kodunu girecektir.</p>
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <input type="text" id="share-pin-code" class="text-input" style="font-size: 20px; font-weight: 700; letter-spacing: 4px; text-align: center; width: 130px; padding: 6px;" maxlength="4" value="1903">
+                                            <button type="button" id="btn-regenerate-pin" class="btn btn-secondary btn-sm" title="Yeni rastgele PIN üret">
+                                                🎲 Yeni PIN
+                                            </button>
+                                            <button type="button" id="btn-copy-share-pin" class="btn btn-secondary btn-sm" title="PIN Kodunu Kopyala">
+                                                📋 PIN'i Kopyala
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Share Link Section -->
+                                <div class="margin-top-16">
+                                    <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px;">Benzersiz Paylaşım Linki</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="share-link-result" class="text-input" readonly style="font-size: 12px; background: rgba(0,0,0,0.25);">
+                                        <button type="button" id="btn-copy-share-link" class="btn btn-primary" style="white-space: nowrap;">
+                                            📋 Kopyala
+                                        </button>
+                                    </div>
+                                    <span id="share-pin-display-badge" class="badge-pill pill-planned margin-top-8" style="display: inline-block;">PIN: 1903</span>
+                                </div>
+
+                                <!-- Quick Actions -->
+                                <div class="margin-top-20" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <button type="button" id="btn-whatsapp-share" class="btn btn-block" style="background: #25d366; color: #ffffff; font-weight: 600; padding: 12px;">
+                                        💬 WhatsApp ile Gönder
+                                    </button>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="button" id="btn-preview-share-guest" class="btn btn-secondary" style="flex: 1;">
+                                            👁️ Misafir Olarak Aç
+                                        </button>
+                                        <button type="button" id="btn-cancel-share-modal" class="btn btn-secondary" style="flex: 1;">
+                                            Kapat
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1267,6 +1341,74 @@ create policy "Users can delete their own photos" on storage.objects
                         <button id="btn-pending-logout" class="btn btn-secondary btn-block">
                             <i data-lucide="log-out"></i> Çıkış Yap
                         </button>
+                    </div>
+                </section>
+
+                <!-- 10. READ-ONLY GUEST SHARE VIEW -->
+                <section id="view-share" class="app-view hidden">
+                    <!-- PIN Security Gate (Shown when route has PIN protection) -->
+                    <div id="share-pin-gate" class="pin-gate-overlay hidden">
+                        <div class="pin-gate-card card glass text-center">
+                            <div class="pin-gate-icon">🔒</div>
+                            <h2>Güvenli Rota Paylaşımı</h2>
+                            <p class="text-muted" style="margin-top: 8px; line-height: 1.5;">
+                                Bu seyahat rotası sahibi tarafından <strong>4 haneli PIN kodu</strong> ile korunmaktadır.<br>
+                                Rotayı görüntülemek için lütfen PIN kodunu giriniz.
+                            </p>
+
+                            <div id="pin-boxes-container" class="pin-boxes-row margin-top-24">
+                                <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box" autofocus>
+                                <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box">
+                                <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box">
+                                <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box">
+                            </div>
+
+                            <button type="button" id="btn-submit-share-pin" class="btn btn-primary btn-block margin-top-24" style="padding: 14px; font-size: 16px;">
+                                🔓 Rotayı Aç
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Infographic Content Container -->
+                    <div id="share-content-container" class="share-content-container hidden">
+                        <!-- Share Hero Header -->
+                        <div class="share-hero-header card glass">
+                            <div class="share-hero-top">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                        <h1 id="share-trip-title" style="margin: 0; font-size: 26px;">🏛️ Seyahat Rotası</h1>
+                                        <span class="badge-guest-pill">👁️ Misafir Görünümü (Salt-Okunur)</span>
+                                    </div>
+                                    <p id="share-trip-dates" class="text-muted margin-top-6">📅 Seyahat Günleri</p>
+                                </div>
+                                <div class="share-hero-stats">
+                                    <span class="stat-pill" id="share-trip-place-count">📍 0 Gezi Noktası</span>
+                                    <span class="stat-pill pill-planned" id="share-trip-total-distance">🚶 Toplam Güzergah: -</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upper Half: Interactive Leaflet Map with Numbered Pins & Polyline -->
+                        <div class="card glass map-card-container margin-top-20">
+                            <div class="map-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="map-tip"><i data-lucide="info"></i> Haritaya yakınlaştığınızda (zoom in) mekan adları pinlerin altında otomatik olarak belirir.</span>
+                                <span class="badge-pill">🗺️ Numaralı Güzergah Haritası</span>
+                            </div>
+                            <div id="share-map" class="places-leaflet-map" style="min-height: 480px;"></div>
+                        </div>
+
+                        <!-- Lower Half: Infographic Route / Places List -->
+                        <div class="share-places-section margin-top-30">
+                            <div class="section-title-row">
+                                <div>
+                                    <h2>📍 Rota Sırası ve Gezi Rehberi</h2>
+                                    <p class="subtitle">Haritadaki numaralandırma sırasına göre gezilecek yerler, notlar ve yol tarifleri.</p>
+                                </div>
+                            </div>
+                            <div id="share-places-list" class="share-places-grid margin-top-16">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
                     </div>
                 </section>
             </main>

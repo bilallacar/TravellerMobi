@@ -3,6 +3,7 @@
 import { state } from '../state.js';
 import * as db from '../../db.js';
 import { showToast } from '../utils.js';
+import { openShareModal } from './share.js';
 
 let mapInstance = null;
 let markersLayer = null;
@@ -31,6 +32,12 @@ export function initPlacesEvents() {
     const btnAdd = document.getElementById('btn-add-place');
     if (btnAdd) {
         btnAdd.addEventListener('click', () => openPlaceModal());
+    }
+
+    // Share Route Button
+    const btnShareRoute = document.getElementById('btn-share-places-route');
+    if (btnShareRoute) {
+        btnShareRoute.addEventListener('click', () => openShareModal());
     }
 
     // Modal Close and Cancel
@@ -184,11 +191,19 @@ function initOrUpdateMap() {
             scrollWheelZoom: true
         }).setView([37.9838, 23.7275], 13);
 
-        // Esri World Street Map (Clean, high-performance international map with English/Latin labels, NO API KEY, NO WATERMARK)
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        // Esri World Light Gray Canvas (Minimalist, pale, distraction-free with English/Latin labels, NO API KEY, NO WATERMARK)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS'
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
         }).addTo(mapInstance);
+
+        // English Reference Labels overlay
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19
+        }).addTo(mapInstance);
+
+        // Zoom-level visibility listener for marker labels (zoom >= 14)
+        mapInstance.on('zoomend', updatePlacesMapZoomClass);
 
         routePolylineLayer = L.layerGroup().addTo(mapInstance);
 
@@ -311,7 +326,31 @@ function onLocationError(e) {
 }
 
 /**
- * Render markers on the map
+ * Toggle map container class when zoom >= 14 to show place name labels under pins
+ */
+function updatePlacesMapZoomClass() {
+    if (!mapInstance) return;
+    const zoom = mapInstance.getZoom();
+    const mapEl = document.getElementById('places-map');
+    if (mapEl) {
+        if (zoom >= 14) mapEl.classList.add('map-detailed-zoom');
+        else mapEl.classList.remove('map-detailed-zoom');
+    }
+}
+
+/**
+ * Sort places: Hotel first (base), then by visit_order or creation
+ */
+export function getSortedPlaces(places) {
+    return [...places].sort((a, b) => {
+        if (a.category === 'hotel') return -1;
+        if (b.category === 'hotel') return 1;
+        return (a.visit_order || 0) - (b.visit_order || 0);
+    });
+}
+
+/**
+ * Render Numbered Markers on the map (1, 2, 3...) with Zoom-Level Visibility Labels
  */
 function renderMapMarkers() {
     if (!mapInstance || !markersLayer) return;
@@ -328,14 +367,16 @@ function renderMapMarkers() {
         return;
     }
 
+    const sorted = getSortedPlaces(filtered);
+
     // Find active hotel for distance reference
     const hotel = state.placesList.find(p => p.category === 'hotel');
-
     const latLngBounds = [];
 
-    filtered.forEach(place => {
+    sorted.forEach((place, index) => {
         if (!place.latitude || !place.longitude) return;
 
+        const placeNumber = index + 1;
         const isVisited = place.status === 'visited';
         const catInfo = PLACE_CATEGORIES[place.category] || PLACE_CATEGORIES.other;
         
@@ -348,23 +389,24 @@ function renderMapMarkers() {
             distanceHtml = `<div class="popup-distance">🏨 Otele <strong>${distText}</strong> (~${walkMin} dk yürüme)</div>`;
         }
 
-        // Custom HTML Marker Icon
+        // Custom Numbered HTML Marker Icon with Zoom-Sensitive Label
         const markerHtml = `
             <div class="custom-marker-wrapper ${isVisited ? 'marker-visited' : 'marker-planned'} category-${place.category}">
-                <div class="marker-bubble" style="background-color: ${isVisited ? '#64748b' : catInfo.color};">
-                    <span class="marker-emoji">${catInfo.emoji}</span>
-                    ${isVisited ? '<span class="marker-check">✓</span>' : ''}
+                <div class="marker-bubble">
+                    <span class="marker-number">${placeNumber}</span>
+                    ${isVisited ? '<span class="marker-check-badge">✓</span>' : ''}
                 </div>
-                <div class="marker-pin-tip" style="border-top-color: ${isVisited ? '#64748b' : catInfo.color};"></div>
+                <div class="marker-pin-tip"></div>
+                <div class="marker-label">${escapeHtml(place.name)}</div>
             </div>
         `;
 
         const icon = L.divIcon({
             className: 'custom-leaflet-icon',
             html: markerHtml,
-            iconSize: [36, 44],
-            iconAnchor: [18, 42],
-            popupAnchor: [0, -38]
+            iconSize: [38, 46],
+            iconAnchor: [19, 44],
+            popupAnchor: [0, -40]
         });
 
         const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
@@ -372,6 +414,7 @@ function renderMapMarkers() {
         const popupContent = `
             <div class="place-popup-card">
                 <div class="popup-header">
+                    <span class="popup-number-badge">#${placeNumber}</span>
                     <span class="popup-category-badge" style="background: ${catInfo.bg}; color: ${catInfo.color};">
                         ${catInfo.emoji} ${catInfo.name}
                     </span>
@@ -441,35 +484,50 @@ function renderMapMarkers() {
         mapInstance.fitBounds(latLngBounds, { padding: [40, 40], maxZoom: 16 });
     }
 
+    updatePlacesMapZoomClass();
     renderRoutePolyline();
 }
 
 /**
- * Render Polyline connecting Hotel -> Places
+ * Render Polyline connecting Numbered Points (1 -> 2 -> 3...) with Segment Distance Badges
  */
 function renderRoutePolyline() {
     if (!mapInstance || !routePolylineLayer) return;
     routePolylineLayer.clearLayers();
     if (!showRouteLine) return;
 
-    const filtered = getFilteredPlaces().filter(p => p.latitude && p.longitude);
-    if (filtered.length < 2) return;
+    const sorted = getSortedPlaces(getFilteredPlaces().filter(p => p.latitude && p.longitude));
+    if (sorted.length < 2) return;
 
-    // Find hotel as starting base, or start from first point
-    const hotel = filtered.find(p => p.category === 'hotel');
-    const nonHotels = filtered.filter(p => p.category !== 'hotel');
+    let totalMeters = 0;
+    const polyCoords = [];
 
-    const routePoints = [];
-    if (hotel) {
-        routePoints.push([hotel.latitude, hotel.longitude]);
+    for (let i = 0; i < sorted.length; i++) {
+        polyCoords.push([sorted[i].latitude, sorted[i].longitude]);
+
+        // Draw distance badge on segment between i and i+1
+        if (i < sorted.length - 1) {
+            const p1 = sorted[i];
+            const p2 = sorted[i + 1];
+            const segDist = calculateDistance(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+            totalMeters += segDist;
+
+            const midLat = (p1.latitude + p2.latitude) / 2;
+            const midLng = (p1.longitude + p2.longitude) / 2;
+            const segText = segDist >= 1000 ? `${(segDist / 1000).toFixed(1)} km` : `${Math.round(segDist)} m`;
+
+            const distIcon = L.divIcon({
+                className: 'route-dist-label-container',
+                html: `<div class="route-dist-pill">➔ ${segText}</div>`,
+                iconSize: [64, 22],
+                iconAnchor: [32, 11]
+            });
+
+            L.marker([midLat, midLng], { icon: distIcon, interactive: false }).addTo(routePolylineLayer);
+        }
     }
-    nonHotels.forEach(p => {
-        routePoints.push([p.latitude, p.longitude]);
-    });
 
-    if (routePoints.length < 2) return;
-
-    const polyline = L.polyline(routePoints, {
+    const polyline = L.polyline(polyCoords, {
         color: '#6366f1',
         weight: 4,
         opacity: 0.85,
@@ -478,8 +536,17 @@ function renderRoutePolyline() {
         lineJoin: 'round'
     });
 
-    polyline.bindTooltip("🗺️ Günlük Güzergah / Rota", { sticky: true });
+    const totalText = totalMeters >= 1000 ? `${(totalMeters / 1000).toFixed(1)} km` : `${Math.round(totalMeters)} m`;
+    const walkMin = Math.round(totalMeters / 80);
+    polyline.bindTooltip(`🗺️ Toplam Güzergah: ${totalText} (~${walkMin} dk yürüme)`, { sticky: true });
     routePolylineLayer.addLayer(polyline);
+
+    // Update total route summary pill in header if element exists
+    const summaryEl = document.getElementById('places-route-total-summary');
+    if (summaryEl) {
+        summaryEl.innerHTML = `🚶 Rota: <strong>${totalText}</strong> (~${walkMin} dk yürüme)`;
+        summaryEl.classList.remove('hidden');
+    }
 }
 
 /**
@@ -495,7 +562,7 @@ function getFilteredPlaces() {
 }
 
 /**
- * Render places list / cards below the map
+ * Render places list / cards below the map with matching Number Badges (#1, #2, #3...)
  */
 function renderPlacesList() {
     const listContainer = document.getElementById('places-cards-container');
@@ -535,7 +602,10 @@ function renderPlacesList() {
         return;
     }
 
-    listContainer.innerHTML = filtered.map(place => {
+    const sorted = getSortedPlaces(filtered);
+
+    listContainer.innerHTML = sorted.map((place, index) => {
+        const placeNumber = index + 1;
         const catInfo = PLACE_CATEGORIES[place.category] || PLACE_CATEGORIES.other;
         const isVisited = place.status === 'visited';
 
@@ -554,38 +624,44 @@ function renderPlacesList() {
 
         return `
             <div class="place-card card glass ${isVisited ? 'place-visited' : 'place-planned'}" data-id="${place.id}">
-                <div class="place-card-header">
-                    <div class="place-category-pill" style="background: ${catInfo.bg}; color: ${catInfo.color};">
-                        ${catInfo.emoji} ${catInfo.name}
+                <div class="place-card-left-number">
+                    <span class="card-number-badge">#${placeNumber}</span>
+                </div>
+
+                <div class="place-card-content-area">
+                    <div class="place-card-header">
+                        <div class="place-category-pill" style="background: ${catInfo.bg}; color: ${catInfo.color};">
+                            ${catInfo.emoji} ${catInfo.name}
+                        </div>
+                        <div class="place-status-wrapper">
+                            <button type="button" class="btn-toggle-badge ${isVisited ? 'badge-visited' : 'badge-planned'}" onclick="window.togglePlaceStatusAction('${place.id}')">
+                                ${isVisited ? '✓ Gezildi' : '🟢 Gidilecek'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="place-status-wrapper">
-                        <button type="button" class="btn-toggle-badge ${isVisited ? 'badge-visited' : 'badge-planned'}" onclick="window.togglePlaceStatusAction('${place.id}')">
-                            ${isVisited ? '✓ Gezildi' : '🟢 Gidilecek'}
+
+                    <div class="place-card-body">
+                        <h3 class="place-name ${isVisited ? 'text-strikethrough' : ''}">${escapeHtml(place.name)}</h3>
+                        ${place.address ? `<p class="place-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</p>` : ''}
+                        ${distanceBadge ? `<div class="margin-bottom-8">${distanceBadge}</div>` : ''}
+                        ${place.notes ? `<p class="place-notes">${escapeHtml(place.notes)}</p>` : ''}
+                        ${place.estimated_cost > 0 ? `<div class="place-cost-tag">Giriş: <strong>${place.estimated_cost} ${place.currency || 'EUR'}</strong></div>` : ''}
+                    </div>
+
+                    <div class="place-card-actions">
+                        <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" title="Google Maps Navigasyonu">
+                            <i data-lucide="navigation"></i> Yol Tarifi
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.focusPlaceOnMapAction(${place.latitude}, ${place.longitude})" title="Haritada Odaklan">
+                            <i data-lucide="crosshair"></i> Haritada Gör
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.editPlaceAction('${place.id}')" title="Düzenle">
+                            <i data-lucide="edit-2"></i>
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm btn-delete-place" onclick="window.deletePlaceAction('${place.id}')" title="Sil">
+                            <i data-lucide="trash-2"></i>
                         </button>
                     </div>
-                </div>
-
-                <div class="place-card-body">
-                    <h3 class="place-name ${isVisited ? 'text-strikethrough' : ''}">${escapeHtml(place.name)}</h3>
-                    ${place.address ? `<p class="place-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</p>` : ''}
-                    ${distanceBadge ? `<div class="margin-bottom-8">${distanceBadge}</div>` : ''}
-                    ${place.notes ? `<p class="place-notes">${escapeHtml(place.notes)}</p>` : ''}
-                    ${place.estimated_cost > 0 ? `<div class="place-cost-tag">Giriş: <strong>${place.estimated_cost} ${place.currency || 'EUR'}</strong></div>` : ''}
-                </div>
-
-                <div class="place-card-actions">
-                    <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" title="Google Maps Navigasyonu">
-                        <i data-lucide="navigation"></i> Yol Tarifi
-                    </a>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.focusPlaceOnMapAction(${place.latitude}, ${place.longitude})" title="Haritada Odaklan">
-                        <i data-lucide="crosshair"></i> Haritada Gör
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.editPlaceAction('${place.id}')" title="Düzenle">
-                        <i data-lucide="edit-2"></i>
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm btn-delete-place" onclick="window.deletePlaceAction('${place.id}')" title="Sil">
-                        <i data-lucide="trash-2"></i>
-                    </button>
                 </div>
             </div>
         `;
