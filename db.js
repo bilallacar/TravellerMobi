@@ -1217,7 +1217,65 @@ export async function deletePlace(placeId) {
     }
 }
 
+/* ==========================================================================
+   SHARED ROUTES API (Short Links & Guest Read-Only Access)
+   ========================================================================== */
+
+export async function saveSharedRoute(slug, tripName, places, pinHash = '') {
+    try {
+        const client = await getSupabase();
+        if (!client) return null;
+
+        const record = {
+            id: slug,
+            user_id: currentCachedUserId || null,
+            trip_name: tripName,
+            pin_hash: pinHash || null,
+            places: places,
+            created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await client
+            .from('shared_routes')
+            .upsert(record)
+            .select()
+            .single();
+
+        if (error) {
+            console.warn("Could not save to shared_routes table (table may not exist yet):", error.message);
+            return null;
+        }
+        return data;
+    } catch (err) {
+        console.warn("Error in saveSharedRoute:", err);
+        return null;
+    }
+}
+
+export async function getSharedRoute(slug) {
+    try {
+        const client = await getSupabase();
+        if (!client) return null;
+
+        const { data, error } = await client
+            .from('shared_routes')
+            .select('*')
+            .eq('id', slug)
+            .single();
+
+        if (error) {
+            console.warn("Could not fetch shared route from DB:", error.message);
+            return null;
+        }
+        return data;
+    } catch (err) {
+        console.warn("Error in getSharedRoute:", err);
+        return null;
+    }
+}
+
 // Initialize active user on load if config is present
 if (config.supabaseUrl && config.supabaseKey) {
     getCurrentUser().catch(() => {});
 }
+
