@@ -170,12 +170,22 @@ function initOrUpdateMap() {
             scrollWheelZoom: true
         }).setView([37.9838, 23.7275], 13);
 
-        // CartoDB Positron Tile Layer (Clean minimalist map with English/international labels)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 20,
-            subdomains: 'abcd',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        }).addTo(mapInstance);
+        // OpenFreeMap Positron (Clean, minimalist vector map with English/Latin labels - NO API KEY REQUIRED, NO WATERMARK)
+        try {
+            if (typeof L.maplibreGL !== 'undefined') {
+                L.maplibreGL({
+                    style: 'https://tiles.openfreemap.org/styles/positron'
+                }).addTo(mapInstance);
+            } else {
+                throw new Error("L.maplibreGL is not available");
+            }
+        } catch (err) {
+            console.warn("MapLibre GL failed, falling back to raster tiles:", err);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(mapInstance);
+        }
 
         routePolylineLayer = L.layerGroup().addTo(mapInstance);
         markersLayer = L.layerGroup().addTo(mapInstance);
