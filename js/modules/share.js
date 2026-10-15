@@ -115,7 +115,7 @@ export async function openShareModal() {
     const currentTrip = state.tripsList.find(t => t.id === state.activeTripId) || { name: 'Seyahat Rotası' };
 
     // Fresh unique slug for this share session: e.g. atina-4821
-    const slugBase = slugify(currentTrip.name);
+    const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     activeModalSlug = `${slugBase}-${randomSuffix}`;
 
@@ -169,7 +169,7 @@ async function updateShareLinkPreview() {
     const pinBadgeEl = document.getElementById('share-pin-display-badge');
 
     if (!activeModalSlug) {
-        const slugBase = slugify(currentTrip.name);
+        const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         activeModalSlug = `${slugBase}-${randomSuffix}`;
     }
@@ -224,7 +224,7 @@ async function updateShareLinkPreview() {
     let fullUrl = '';
 
     if (savedToCloud) {
-        fullUrl = `${baseUrl}#share?id=${slug}`;
+        fullUrl = `${baseUrl}#s=${slug}`;
     } else {
         const { payload } = encodeRoutePayload(currentTrip.name, compactPlaces, isPinEnabled ? pin : '');
         let hash = `#share?id=${slug}&d=${payload}`;
@@ -292,18 +292,18 @@ function shareViaWhatsApp() {
     const isPin = pinCheckbox && pinCheckbox.checked && pinInput && pinInput.value.length === 4;
     const pin = isPin ? pinInput.value : '';
 
-    let text = `🗺️ *TravellerMobi Rota Paylaşımı*\n\n${tripName} için hazırladığım seyahat rotamı ve gezilecek yerleri seninle paylaştım!\n\n🔗 *Link:* ${link}\n`;
+    let text = `🗺️ *${tripName} Gezi Rotası*\n\n🔗 ${link}\n`;
     if (isPin) {
-        text += `\n🔑 *Giriş PIN Kodu:* *${pin}* (Rotayı açmak için bu 4 haneli şifreyi giriniz)\n`;
+        text += `\n🔑 *Giriş PIN Kodu:* *${pin}*\n`;
     }
-    text += `\nÜye olmadan ve uygulama indirmeden tarayıcından hemen inceleyebilirsin! ✨`;
+    text += `\nÜye olmadan tek tıkla rotayı ve haritayı inceleyebilirsin! ✨`;
 
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
 }
 
 /* ==========================================================================
-   READ-ONLY GUEST VIEW LOADING & RENDERING (#share)
+   READ-ONLY GUEST VIEW LOADING & RENDERING (#share or #s=)
    ========================================================================== */
 
 /**
@@ -322,13 +322,27 @@ export async function loadShareView(hash) {
     pendingShareTripName = null;
     currentDecodedShareData = null;
 
-    // Parse URL params from hash (e.g. #share?id=...&d=...&h=...)
-    const queryString = hash.includes('?') ? hash.substring(hash.indexOf('?') + 1) : '';
-    const params = new URLSearchParams(queryString);
+    // Parse URL params from hash (e.g. #s=atina-9511 or #share?id=...)
+    let slug = null;
+    let payload = null;
+    let pinHashFromUrl = null;
 
-    const slug = params.get('id');
-    const payload = params.get('d');
-    const pinHashFromUrl = params.get('h');
+    if (hash.startsWith('#s=')) {
+        const afterPrefix = hash.substring(3);
+        const [cleanSlug, queryPart] = afterPrefix.split('?');
+        slug = cleanSlug;
+        if (queryPart) {
+            const params = new URLSearchParams(queryPart);
+            payload = params.get('d');
+            pinHashFromUrl = params.get('h');
+        }
+    } else {
+        const queryString = hash.includes('?') ? hash.substring(hash.indexOf('?') + 1) : '';
+        const params = new URLSearchParams(queryString);
+        slug = params.get('id') || params.get('s');
+        payload = params.get('d');
+        pinHashFromUrl = params.get('h');
+    }
 
     // 1. Try to fetch from Supabase Cloud Table
     if (slug) {

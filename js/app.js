@@ -117,8 +117,8 @@ function initNavigation() {
 async function handleRouting() {
     const hash = window.location.hash || '#dashboard';
 
-    // Handle Read-Only Guest Share View (#share?id=...)
-    if (hash.startsWith('#share')) {
+    // Handle Read-Only Guest Share View (#share?id=... or #s=...)
+    if (hash.startsWith('#share') || hash.startsWith('#s=') || hash.startsWith('#s?')) {
         const layout = document.getElementById('layout-container');
         const mobileNav = document.querySelector('.mobile-nav');
         if (layout) layout.classList.add('no-sidebar');
