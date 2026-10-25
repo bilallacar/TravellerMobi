@@ -16,6 +16,8 @@ let pendingSharePayload = null;
 let pendingSharePinHash = null;
 let pendingShareTripName = null;
 let activeModalSlug = null;
+let isOpeningShareModal = false;
+let sharePreviewSeq = 0;
 
 /**
  * Initialize event listeners for share system
@@ -43,6 +45,8 @@ export function initShareEvents() {
                 generateNewPin();
             } else {
                 pinContainer.classList.add('hidden');
+                const pinBadgeEl = document.getElementById('share-pin-display-badge');
+                if (pinBadgeEl) pinBadgeEl.style.display = 'none';
             }
             await updateShareLinkPreview();
         });
@@ -62,6 +66,11 @@ export function initShareEvents() {
     if (pinInput) {
         pinInput.addEventListener('input', async (e) => {
             e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+            const pinBadgeEl = document.getElementById('share-pin-display-badge');
+            if (pinBadgeEl && e.target.value.length === 4) {
+                pinBadgeEl.textContent = `PIN: ${e.target.value}`;
+                pinBadgeEl.style.display = 'inline-block';
+            }
             await updateShareLinkPreview();
         });
     }
@@ -89,7 +98,7 @@ export function initShareEvents() {
     if (btnPreviewGuest) {
         btnPreviewGuest.addEventListener('click', () => {
             const url = document.getElementById('share-link-result').value;
-            if (url && !url.includes("hazırlanıyor")) {
+            if (url && !url.includes("hazırlanıyor") && !url.includes("oluşturuluyor")) {
                 closeShareModal();
                 window.location.href = url;
             }
@@ -104,39 +113,59 @@ export function initShareEvents() {
  * Open Share Modal for the active trip
  */
 export async function openShareModal() {
-    const modal = document.getElementById('modal-share-route');
-    if (!modal) return;
+    if (isOpeningShareModal) return;
+    isOpeningShareModal = true;
 
-    if (!state.activeTripId || !state.placesList || state.placesList.length === 0) {
-        showToast("Paylaşmak için seyahatinizde en az 1 gezi noktası bulunmalıdır.", "warning");
-        return;
+    try {
+        const modal = document.getElementById('modal-share-route');
+        if (!modal) return;
+
+        if (!state.activeTripId || !state.placesList || state.placesList.length === 0) {
+            showToast("Paylaşmak için seyahatinizde en az 1 gezi noktası bulunmalıdır.", "warning");
+            return;
+        }
+
+        const currentTrip = state.tripsList.find(t => t.id === state.activeTripId) || { name: 'Seyahat Rotası' };
+
+        // Fresh unique slug for this share session: e.g. atina-4821
+        const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        activeModalSlug = `${slugBase}-${randomSuffix}`;
+
+        // Set trip title & count
+        const tripNameEl = document.getElementById('share-modal-trip-name');
+        if (tripNameEl) tripNameEl.textContent = currentTrip.name;
+
+        const countEl = document.getElementById('share-modal-place-count');
+        if (countEl) countEl.textContent = `${state.placesList.length} Gezi Noktası`;
+
+        // Reset PIN options (Default: 4-digit PIN ON)
+        const pinCheckbox = document.getElementById('share-pin-enable');
+        const pinContainer = document.getElementById('share-pin-input-container');
+        if (pinCheckbox) pinCheckbox.checked = true;
+        if (pinContainer) pinContainer.classList.remove('hidden');
+
+        // Generate and sync initial random PIN immediately
+        const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+        const pinInput = document.getElementById('share-pin-code');
+        if (pinInput) pinInput.value = randomPin;
+
+        const pinBadgeEl = document.getElementById('share-pin-display-badge');
+        if (pinBadgeEl) {
+            pinBadgeEl.textContent = `PIN: ${randomPin}`;
+            pinBadgeEl.style.display = 'inline-block';
+        }
+
+        const linkResultInput = document.getElementById('share-link-result');
+        if (linkResultInput) linkResultInput.value = "Kısa link ve PIN hazırlanıyor...";
+
+        modal.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+
+        await updateShareLinkPreview();
+    } finally {
+        isOpeningShareModal = false;
     }
-
-    const currentTrip = state.tripsList.find(t => t.id === state.activeTripId) || { name: 'Seyahat Rotası' };
-
-    // Fresh unique slug for this share session: e.g. atina-4821
-    const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    activeModalSlug = `${slugBase}-${randomSuffix}`;
-
-    // Set trip title & count
-    const tripNameEl = document.getElementById('share-modal-trip-name');
-    if (tripNameEl) tripNameEl.textContent = currentTrip.name;
-
-    const countEl = document.getElementById('share-modal-place-count');
-    if (countEl) countEl.textContent = `${state.placesList.length} Gezi Noktası`;
-
-    // Reset PIN options (Default: 4-digit PIN ON)
-    const pinCheckbox = document.getElementById('share-pin-enable');
-    const pinContainer = document.getElementById('share-pin-input-container');
-    if (pinCheckbox) pinCheckbox.checked = true;
-    if (pinContainer) pinContainer.classList.remove('hidden');
-    generateNewPin();
-
-    modal.classList.remove('hidden');
-    if (window.lucide) window.lucide.createIcons();
-
-    await updateShareLinkPreview();
 }
 
 /**
@@ -154,19 +183,28 @@ function generateNewPin() {
     const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
     const pinInput = document.getElementById('share-pin-code');
     if (pinInput) pinInput.value = randomPin;
+
+    const pinBadgeEl = document.getElementById('share-pin-display-badge');
+    if (pinBadgeEl) {
+        pinBadgeEl.textContent = `PIN: ${randomPin}`;
+        pinBadgeEl.style.display = 'inline-block';
+    }
 }
 
 /**
  * Generate share URL:
- * 1. Checks Supabase shared_routes table -> Generates ultra-short URL (e.g. #share?id=atina-4821)
+ * 1. Checks Supabase shared_routes table -> Generates ultra-short URL (e.g. #s=atina-4821)
  * 2. If table not yet created -> Uses compact URL-safe Base64URL fallback
  */
 async function updateShareLinkPreview() {
+    const currentSeq = ++sharePreviewSeq;
     const currentTrip = state.tripsList.find(t => t.id === state.activeTripId) || { name: 'Seyahat Rotası' };
     const pinCheckbox = document.getElementById('share-pin-enable');
     const pinInput = document.getElementById('share-pin-code');
     const linkResultInput = document.getElementById('share-link-result');
     const pinBadgeEl = document.getElementById('share-pin-display-badge');
+    const btnWhatsapp = document.getElementById('btn-whatsapp-share');
+    const btnCopyLink = document.getElementById('btn-copy-share-link');
 
     if (!activeModalSlug) {
         const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
@@ -180,15 +218,17 @@ async function updateShareLinkPreview() {
     const pinHash = (isPinEnabled && pin.length === 4) ? hashPin(pin) : '';
 
     if (linkResultInput) linkResultInput.value = "Kısa link oluşturuluyor...";
+    if (btnWhatsapp) btnWhatsapp.disabled = true;
+    if (btnCopyLink) btnCopyLink.disabled = true;
 
     // 1. Prepare clean places payload
-    const compactPlaces = state.placesList.map((p, idx) => ({
+    const compactPlaces = (state.placesList || []).map((p, idx) => ({
         id: p.id || `p_${idx}`,
         name: p.name || '',
         category: p.category || 'other',
         status: p.status || 'planned',
-        latitude: p.latitude,
-        longitude: p.longitude,
+        latitude: p.latitude !== undefined ? Number(p.latitude) : 0,
+        longitude: p.longitude !== undefined ? Number(p.longitude) : 0,
         address: p.address || '',
         notes: p.notes || '',
         estimated_cost: p.estimated_cost || 0,
@@ -217,8 +257,11 @@ async function updateShareLinkPreview() {
         console.warn("Cloud save skipped:", e);
     }
 
+    // Ignore stale request if a newer update started in the meantime
+    if (currentSeq !== sharePreviewSeq) return;
+
     // 4. Form final URL:
-    // If cloud saved: ULTRA-SHORT link (e.g. https://.../#share?id=atina-4821)
+    // If cloud saved: ULTRA-SHORT link (e.g. https://.../#s=atina-4821)
     // If not: Compact URL-safe Base64URL fallback
     const baseUrl = window.location.origin + window.location.pathname;
     let fullUrl = '';
@@ -235,6 +278,8 @@ async function updateShareLinkPreview() {
     }
 
     if (linkResultInput) linkResultInput.value = fullUrl;
+    if (btnWhatsapp) btnWhatsapp.disabled = false;
+    if (btnCopyLink) btnCopyLink.disabled = false;
 
     if (pinBadgeEl) {
         if (isPinEnabled && pin.length === 4) {
@@ -251,7 +296,10 @@ async function updateShareLinkPreview() {
  */
 async function copyShareLink() {
     const linkInput = document.getElementById('share-link-result');
-    if (!linkInput || !linkInput.value || linkInput.value.includes("oluşturuluyor")) return;
+    if (!linkInput || !linkInput.value || linkInput.value.includes("oluşturuluyor") || linkInput.value.includes("hazırlanıyor")) {
+        showToast("Link hazırlanıyor, lütfen 1 saniye bekleyin...", "warning");
+        return;
+    }
 
     try {
         await navigator.clipboard.writeText(linkInput.value);
@@ -271,10 +319,10 @@ async function copySharePin() {
     if (!pinInput || !pinInput.value) return;
 
     try {
-        await navigator.clipboard.writeText(pinInput.value);
-        showToast(`🔑 PIN kodu (${pinInput.value}) panoya kopyalandı!`, "success");
+        await navigator.clipboard.writeText(pinInput.value.trim());
+        showToast(`🔑 PIN kodu (${pinInput.value.trim()}) panoya kopyalandı!`, "success");
     } catch (e) {
-        showToast(`PIN: ${pinInput.value}`, "info");
+        showToast(`PIN: ${pinInput.value.trim()}`, "info");
     }
 }
 
@@ -287,10 +335,15 @@ function shareViaWhatsApp() {
     const pinInput = document.getElementById('share-pin-code');
     const tripNameEl = document.getElementById('share-modal-trip-name');
 
+    if (!linkInput || !linkInput.value || linkInput.value.includes("oluşturuluyor") || linkInput.value.includes("hazırlanıyor")) {
+        showToast("Link hazırlanıyor, lütfen 1 saniye bekleyin...", "warning");
+        return;
+    }
+
     const tripName = tripNameEl ? tripNameEl.textContent : 'Seyahat';
-    const link = linkInput ? linkInput.value : '';
-    const isPin = pinCheckbox && pinCheckbox.checked && pinInput && pinInput.value.length === 4;
-    const pin = isPin ? pinInput.value : '';
+    const link = linkInput.value;
+    const isPin = pinCheckbox && pinCheckbox.checked && pinInput && pinInput.value.trim().length === 4;
+    const pin = isPin ? pinInput.value.trim() : '';
 
     let text = `🗺️ *${tripName} Gezi Rotası*\n\n🔗 ${link}\n`;
     if (isPin) {
@@ -301,6 +354,7 @@ function shareViaWhatsApp() {
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
 }
+
 
 /* ==========================================================================
    READ-ONLY GUEST VIEW LOADING & RENDERING (#share or #s=)
@@ -330,7 +384,7 @@ export async function loadShareView(hash) {
     if (hash.startsWith('#s=')) {
         const afterPrefix = hash.substring(3);
         const [cleanSlug, queryPart] = afterPrefix.split('?');
-        slug = cleanSlug;
+        slug = cleanSlug ? cleanSlug.replace(/\/+$/, '').trim() : null;
         if (queryPart) {
             const params = new URLSearchParams(queryPart);
             payload = params.get('d');
@@ -339,7 +393,7 @@ export async function loadShareView(hash) {
     } else {
         const queryString = hash.includes('?') ? hash.substring(hash.indexOf('?') + 1) : '';
         const params = new URLSearchParams(queryString);
-        slug = params.get('id') || params.get('s');
+        slug = (params.get('id') || params.get('s') || '').replace(/\/+$/, '').trim() || null;
         payload = params.get('d');
         pinHashFromUrl = params.get('h');
     }
@@ -349,9 +403,13 @@ export async function loadShareView(hash) {
         try {
             const cloudRoute = await db.getSharedRoute(slug);
             if (cloudRoute && cloudRoute.places) {
-                pendingShareData = cloudRoute.places;
+                let placesData = cloudRoute.places;
+                if (typeof placesData === 'string') {
+                    try { placesData = JSON.parse(placesData); } catch (e) {}
+                }
+                pendingShareData = placesData;
                 pendingShareTripName = cloudRoute.trip_name || 'Seyahat Rotası';
-                pendingSharePinHash = cloudRoute.pin_hash || null;
+                pendingSharePinHash = cloudRoute.pin_hash ? String(cloudRoute.pin_hash).trim() : null;
             }
         } catch (e) {
             console.warn("Could not load from cloud table:", e);
@@ -364,9 +422,13 @@ export async function loadShareView(hash) {
             const cached = localStorage.getItem(`shared_route_${slug}`);
             if (cached) {
                 const parsed = JSON.parse(cached);
-                pendingShareData = parsed.places;
+                let placesData = parsed.places;
+                if (typeof placesData === 'string') {
+                    try { placesData = JSON.parse(placesData); } catch (e) {}
+                }
+                pendingShareData = placesData;
                 pendingShareTripName = parsed.tripName;
-                pendingSharePinHash = parsed.pinHash || null;
+                pendingSharePinHash = parsed.pinHash ? String(parsed.pinHash).trim() : null;
             }
         } catch (e) {}
     }
@@ -374,7 +436,7 @@ export async function loadShareView(hash) {
     // 3. Fallback to URL Payload (&d=...)
     if (!pendingShareData && payload) {
         pendingSharePayload = payload;
-        pendingSharePinHash = pinHashFromUrl || null;
+        pendingSharePinHash = pinHashFromUrl ? String(pinHashFromUrl).trim() : null;
     }
 
     // Check if we found any data source
@@ -415,7 +477,7 @@ export async function loadShareView(hash) {
 }
 
 /**
- * Setup 4-digit PIN Gate inputs with auto-advance and backspace
+ * Setup 4-digit PIN Gate inputs with auto-advance, backspace and multi-digit paste/type
  */
 function setupPinGateInputs() {
     const inputs = document.querySelectorAll('.pin-digit-box');
@@ -423,10 +485,24 @@ function setupPinGateInputs() {
 
     inputs.forEach((input, index) => {
         input.addEventListener('input', (e) => {
-            const val = e.target.value.replace(/\D/g, '');
-            e.target.value = val ? val[0] : '';
-            if (val && index < inputs.length - 1) {
-                inputs[index + 1].focus();
+            const rawVal = e.target.value.replace(/\D/g, '');
+            if (!rawVal) {
+                e.target.value = '';
+                return;
+            }
+
+            // Distribute multi-digit input (from paste, autofill, or fast typing)
+            if (rawVal.length > 1) {
+                for (let k = 0; k < rawVal.length && (index + k) < inputs.length; k++) {
+                    inputs[index + k].value = rawVal[k];
+                }
+                const nextIndex = Math.min(index + rawVal.length, inputs.length - 1);
+                inputs[nextIndex].focus();
+            } else {
+                e.target.value = rawVal;
+                if (index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
             }
             checkAutoSubmitPin();
         });
@@ -434,6 +510,9 @@ function setupPinGateInputs() {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' && !e.target.value && index > 0) {
                 inputs[index - 1].focus();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                handlePinGateSubmit();
             }
         });
 
@@ -441,11 +520,12 @@ function setupPinGateInputs() {
         input.addEventListener('paste', (e) => {
             e.preventDefault();
             const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim().replace(/\D/g, '');
-            if (pasteData.length >= 4) {
-                for (let i = 0; i < 4; i++) {
-                    if (inputs[i]) inputs[i].value = pasteData[i];
+            if (pasteData.length > 0) {
+                for (let k = 0; k < pasteData.length && (index + k) < inputs.length; k++) {
+                    inputs[index + k].value = pasteData[k];
                 }
-                inputs[3].focus();
+                const nextIndex = Math.min(index + pasteData.length, inputs.length - 1);
+                inputs[nextIndex].focus();
                 checkAutoSubmitPin();
             }
         });
@@ -477,7 +557,11 @@ function checkAutoSubmitPin() {
     }
 }
 
+let isSubmittingPin = false;
+
 function handlePinGateSubmit() {
+    if (isSubmittingPin) return;
+
     const inputs = document.querySelectorAll('.pin-digit-box');
     let pin = '';
     inputs.forEach(input => pin += input.value.trim());
@@ -487,9 +571,11 @@ function handlePinGateSubmit() {
         return;
     }
 
-    // Verify PIN Hash
-    const enteredHash = hashPin(pin);
-    if (pendingSharePinHash && enteredHash !== pendingSharePinHash) {
+    // Verify PIN Hash (case-insensitive & trimmed)
+    const enteredHash = hashPin(pin).toLowerCase();
+    const expectedHash = String(pendingSharePinHash || '').trim().toLowerCase();
+
+    if (expectedHash && enteredHash !== expectedHash) {
         showToast("Hatalı PIN kodu! Lütfen tekrar deneyiniz.", "danger");
         const box = document.getElementById('pin-boxes-container');
         if (box) {
@@ -501,6 +587,7 @@ function handlePinGateSubmit() {
         return;
     }
 
+    isSubmittingPin = true;
     try {
         let routeData = null;
         if (pendingShareData) {
@@ -521,12 +608,19 @@ function handlePinGateSubmit() {
         if (pinGate) pinGate.classList.add('hidden');
         if (shareContent) shareContent.classList.remove('hidden');
 
-        renderInfographicShareContent(routeData);
+        try {
+            renderInfographicShareContent(routeData);
+        } catch (renderErr) {
+            console.error("Error rendering infographic content:", renderErr);
+            showToast("Rota içeriği gösterilirken bir hata oluştu: " + renderErr.message, "warning");
+        }
     } catch (err) {
         console.error("PIN check failed:", err);
-        showToast("Hatalı PIN kodu veya bozuk veri: " + err.message, "danger");
+        showToast("Rota açılamadı: " + err.message, "danger");
         clearPinGateInputs();
         focusFirstPinInput();
+    } finally {
+        isSubmittingPin = false;
     }
 }
 
@@ -555,13 +649,17 @@ function renderInfographicShareContent(data) {
         }
     }
 
-    const places = (data.places || []).map((p, idx) => ({
+    let rawPlaces = data.places || [];
+    if (typeof rawPlaces === 'string') {
+        try { rawPlaces = JSON.parse(rawPlaces); } catch (e) { rawPlaces = []; }
+    }
+    const places = (Array.isArray(rawPlaces) ? rawPlaces : []).map((p, idx) => ({
         id: p.id || `p_${idx}`,
         name: p.name || p.n || '',
         category: p.category || p.c || 'other',
         status: p.status || p.s || 'planned',
-        latitude: p.latitude !== undefined ? p.latitude : p.lt,
-        longitude: p.longitude !== undefined ? p.longitude : p.ln,
+        latitude: p.latitude !== undefined ? Number(p.latitude) : (p.lt !== undefined ? Number(p.lt) : 0),
+        longitude: p.longitude !== undefined ? Number(p.longitude) : (p.ln !== undefined ? Number(p.ln) : 0),
         address: p.address || p.a || '',
         notes: p.notes || p.nt || '',
         estimated_cost: p.estimated_cost !== undefined ? p.estimated_cost : (p.ec || 0),
@@ -583,6 +681,7 @@ function renderInfographicShareContent(data) {
 
     // 3. Render Infographic Places List (Read-Only)
     renderSharePlacesList(places);
+
 
     if (window.lucide) window.lucide.createIcons();
 }
@@ -876,7 +975,7 @@ window.focusShareMapAction = function(lat, lng) {
 
 export function hashPin(pin) {
     let hash = 0;
-    const str = String(pin || '');
+    const str = String(pin || '').trim();
     for (let i = 0; i < str.length; i++) {
         hash = ((hash << 5) - hash) + str.charCodeAt(i);
         hash |= 0;

@@ -33,14 +33,6 @@ export function initPlacesEvents() {
         btnAdd.addEventListener('click', () => openPlaceModal());
     }
 
-    // Share Route Button (dynamic import to avoid circular dependencies)
-    const btnShareRoute = document.getElementById('btn-share-places-route');
-    if (btnShareRoute) {
-        btnShareRoute.addEventListener('click', async () => {
-            const { openShareModal } = await import('./share.js');
-            openShareModal();
-        });
-    }
 
     // Modal Close and Cancel
     const btnClose = document.getElementById('btn-close-place-modal');

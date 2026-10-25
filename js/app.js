@@ -124,6 +124,7 @@ async function handleRouting() {
         if (layout) layout.classList.add('no-sidebar');
         if (mobileNav) mobileNav.classList.add('hidden');
         showView('share');
+        db.initSupabase();
         await loadShareView(hash);
         return;
     }
