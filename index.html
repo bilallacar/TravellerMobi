@@ -571,7 +571,13 @@
                                 <span class="map-tip"><i data-lucide="info"></i> <strong>İpucu:</strong> Haritadaki pinlere dokunarak detayları ve yol tarifini görebilirsiniz.</span>
                                 <div id="places-route-total-summary" class="places-route-summary-pill hidden"></div>
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-optimize-route" title="Mekanlar arasındaki toplam yürüyüş mesafesini en aza indirecek şekilde sırayı otomatik düzenle">
+                                    <i data-lucide="sparkles"></i> <span>Akıllı Sırala</span>
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-story-export" title="Instagram Story ve sosyal medya için 9:16 infografik kartı oluştur">
+                                    <i data-lucide="image"></i> <span>Story Kartı</span>
+                                </button>
                                 <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-fullscreen-map" title="Haritayı tam ekran moduna al/kapat">
                                     <i data-lucide="maximize"></i> <span id="fullscreen-map-text">Tam Ekran</span>
                                 </button>
@@ -897,6 +903,49 @@
                                     </button>
                                     <button type="button" id="btn-dismiss-location-modal" class="btn btn-secondary btn-block" style="padding: 10px; font-size: 13px;">
                                         Şimdilik Kapat
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instagram Story & Infographic Export Modal -->
+                    <div id="modal-story-export" class="modal hidden">
+                        <div class="modal-content glass story-export-modal-dialog">
+                            <div class="modal-header">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div class="icon-bubble" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 10px;">
+                                        <i data-lucide="sparkles" style="width:18px;height:18px;"></i>
+                                    </div>
+                                    <div>
+                                        <h2 style="font-size:18px; margin:0;">Instagram Story Kartı</h2>
+                                        <span class="text-xs text-muted">9:16 Yüksek Çözünürlüklü (1080x1920) Rota İnfografiği</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close-modal" id="btn-close-story-modal">&times;</button>
+                            </div>
+
+                            <div class="story-export-modal-body">
+                                <!-- Preview container where live scaled canvas is mounted -->
+                                <div id="story-preview-container" class="story-preview-container">
+                                    <!-- Rendered dynamically -->
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="story-modal-actions margin-top-16">
+                                    <button type="button" id="btn-share-story-native" class="btn btn-primary btn-block" style="padding: 13px; font-size: 15px; font-weight: 600;">
+                                        <i data-lucide="send" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Hikayede / Sosyal Medyada Paylaş
+                                    </button>
+                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                        <button type="button" id="btn-download-story-png" class="btn btn-secondary" style="flex: 1; padding: 11px; font-size: 13px;">
+                                            <i data-lucide="download"></i> Görseli İndir (PNG)
+                                        </button>
+                                        <button type="button" id="btn-copy-story-clipboard" class="btn btn-secondary" style="flex: 1; padding: 11px; font-size: 13px;">
+                                            <i data-lucide="copy"></i> Panoya Kopyala
+                                        </button>
+                                    </div>
+                                    <button type="button" id="btn-cancel-story-modal" class="btn btn-text btn-block text-muted margin-top-8" style="font-size: 12px;">
+                                        Kapat
                                     </button>
                                 </div>
                             </div>
@@ -1691,6 +1740,9 @@ create policy "Users can delete own shared routes" on public.shared_routes
                                 <div class="share-hero-stats" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                     <span class="stat-pill" id="share-trip-place-count">0 Gezi Noktası</span>
                                     <span class="stat-pill pill-planned" id="share-trip-total-distance">Toplam Güzergah: -</span>
+                                    <button type="button" id="btn-guest-open-story-export" class="btn btn-secondary btn-sm" title="Instagram Story ve sosyal medya için 9:16 infografik kartı oluştur">
+                                        <i data-lucide="image"></i> Story Kartı
+                                    </button>
                                     <button type="button" id="btn-guest-suggest-place" class="btn btn-primary btn-sm">
                                         <i data-lucide="plus"></i> Mekan Öner
                                     </button>

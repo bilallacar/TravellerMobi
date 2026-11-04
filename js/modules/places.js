@@ -3,6 +3,7 @@
 import { state } from '../state.js';
 import * as db from '../../db.js';
 import { showToast, escapeHtml } from '../utils.js';
+import { openStoryModal, initStoryExportEvents } from './story_export.js';
 
 let mapInstance = null;
 let markersLayer = null;
@@ -240,6 +241,21 @@ export function initPlacesEvents() {
             renderMapMarkers();
         });
     }
+
+    // Smart Route Optimizer Button (En az yürüme mesafesi sıralayıcı)
+    const btnOptimize = document.getElementById('btn-optimize-route');
+    if (btnOptimize) {
+        btnOptimize.addEventListener('click', () => optimizeRouteOrder());
+    }
+
+    // Story Infographic Card Export Button
+    const btnStory = document.getElementById('btn-open-story-export');
+    if (btnStory) {
+        btnStory.addEventListener('click', () => handleOpenStoryExport());
+    }
+
+    // Initialize Story Modal Event Handlers
+    initStoryExportEvents();
 
     // Fullscreen Map Toggle Button
     const btnToggleFullscreen = document.getElementById('btn-toggle-fullscreen-map');
@@ -792,6 +808,212 @@ function updatePlacesMapZoomClass() {
         else mapEl.classList.remove('map-detailed-zoom');
     }
 }
+
+/**
+ * Smart Route Optimizer (En az yürüme mesafesi sıralayıcı)
+ * Solves Traveling Salesperson Problem (TSP) using Nearest-Neighbor heuristic + 2-Opt edge swapping.
+ * Re-orders places starting from hotel (or closest place to user GPS location),
+ * calculates walking distance savings, updates visit_order in database and local cache,
+ * and re-renders the route polyline and cards.
+ */
+export async function optimizeRouteOrder() {
+    const validPlaces = state.placesList.filter(p => p && p.latitude && p.longitude);
+
+    if (validPlaces.length < 2) {
+        showToast("Optimizasyon için haritada en az 2 konumlu mekan bulunmalıdır.", "warning");
+        return;
+    }
+
+    if (validPlaces.length === 2) {
+        const sorted = getSortedPlaces(validPlaces);
+        if (sorted[0].category !== 'hotel' && sorted[1].category === 'hotel') {
+            sorted[0].visit_order = 2;
+            sorted[1].visit_order = 1;
+            await Promise.all([
+                db.updatePlace(sorted[0].id, { visit_order: 2 }),
+                db.updatePlace(sorted[1].id, { visit_order: 1 })
+            ]);
+            renderPlacesList();
+            renderMapMarkers();
+            showToast("Otel başlangıç noktası olarak öne alındı.", "success");
+        } else {
+            showToast("2 mekan arasında tek bir güzergah bulunmaktadır.", "info");
+        }
+        return;
+    }
+
+    showToast("Rota en az yürüme mesafesine göre optimize ediliyor...", "info");
+
+    // 1. Calculate initial distance before optimization
+    const sortedInitial = getSortedPlaces(validPlaces);
+    let initialDist = 0;
+    for (let i = 0; i < sortedInitial.length - 1; i++) {
+        initialDist += calculateDistance(
+            sortedInitial[i].latitude, sortedInitial[i].longitude,
+            sortedInitial[i + 1].latitude, sortedInitial[i + 1].longitude
+        );
+    }
+
+    // 2. Identify Starting Node
+    // Priority 1: Place with category === 'hotel'
+    // Priority 2: Place closest to user's current GPS coords
+    // Priority 3: Current first place
+    let startIdx = 0;
+    const hotelIdx = validPlaces.findIndex(p => p.category === 'hotel');
+    if (hotelIdx !== -1) {
+        startIdx = hotelIdx;
+    } else if (currentUserCoords) {
+        let minDist = Infinity;
+        validPlaces.forEach((p, idx) => {
+            const d = calculateDistance(currentUserCoords.lat, currentUserCoords.lng, p.latitude, p.longitude);
+            if (d < minDist) {
+                minDist = d;
+                startIdx = idx;
+            }
+        });
+    }
+
+    // 3. Nearest-Neighbor Heuristic
+    const remaining = [...validPlaces];
+    const route = [remaining.splice(startIdx, 1)[0]];
+
+    while (remaining.length > 0) {
+        const current = route[route.length - 1];
+        let bestDist = Infinity;
+        let bestIdx = 0;
+
+        for (let i = 0; i < remaining.length; i++) {
+            const cand = remaining[i];
+            const dist = calculateDistance(current.latitude, current.longitude, cand.latitude, cand.longitude);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIdx = i;
+            }
+        }
+        route.push(remaining.splice(bestIdx, 1)[0]);
+    }
+
+    // 4. 2-Opt Local Search (Edge Swapping)
+    // Anchor hotel as start node if present
+    const anchorStart = (route[0].category === 'hotel') ? 1 : 0;
+    let improved = true;
+    let iterations = 0;
+    const maxIterations = 60;
+
+    while (improved && iterations < maxIterations) {
+        improved = false;
+        iterations++;
+        for (let i = anchorStart; i < route.length - 1; i++) {
+            for (let k = i + 1; k < route.length; k++) {
+                const pA1 = i > 0 ? route[i - 1] : null;
+                const pA2 = route[i];
+                const pB1 = route[k];
+                const pB2 = k < route.length - 1 ? route[k + 1] : null;
+
+                let curCost = 0;
+                let newCost = 0;
+
+                if (pA1) {
+                    curCost += calculateDistance(pA1.latitude, pA1.longitude, pA2.latitude, pA2.longitude);
+                    newCost += calculateDistance(pA1.latitude, pA1.longitude, pB1.latitude, pB1.longitude);
+                }
+                if (pB2) {
+                    curCost += calculateDistance(pB1.latitude, pB1.longitude, pB2.latitude, pB2.longitude);
+                    newCost += calculateDistance(pA2.latitude, pA2.longitude, pB2.latitude, pB2.longitude);
+                }
+
+                // If swapping improves route distance by at least 1 meter
+                if (newCost < curCost - 1) {
+                    const sub = route.slice(i, k + 1).reverse();
+                    route.splice(i, sub.length, ...sub);
+                    improved = true;
+                }
+            }
+        }
+    }
+
+    // 5. Calculate final optimized distance & savings
+    let optimizedDist = 0;
+    for (let i = 0; i < route.length - 1; i++) {
+        optimizedDist += calculateDistance(
+            route[i].latitude, route[i].longitude,
+            route[i + 1].latitude, route[i + 1].longitude
+        );
+    }
+
+    const savedMeters = Math.max(0, initialDist - optimizedDist);
+    const savedPercent = initialDist > 0 ? Math.round((savedMeters / initialDist) * 100) : 0;
+    const savedKm = (savedMeters / 1000).toFixed(1);
+    const savedMin = Math.round(savedMeters / 80);
+
+    // 6. Persist new visit_order (1, 2, 3...)
+    const updatePromises = [];
+    route.forEach((place, index) => {
+        const newOrder = index + 1;
+        place.visit_order = newOrder;
+
+        const targetInState = state.placesList.find(p => p.id === place.id);
+        if (targetInState) targetInState.visit_order = newOrder;
+
+        updatePromises.push(db.updatePlace(place.id, { visit_order: newOrder }));
+    });
+
+    try {
+        await Promise.all(updatePromises);
+    } catch (saveErr) {
+        console.warn("Could not save all visit_orders to DB, cached locally:", saveErr);
+    }
+
+    // 7. Re-render UI & Map
+    renderPlacesList();
+    renderMapMarkers();
+
+    // 8. Celebratory Feedback Toast
+    const optKmText = (optimizedDist / 1000).toFixed(1);
+    if (savedMeters > 50) {
+        showToast(
+            `Rota optimize edildi! Toplam yürüyüş ${optKmText} km'ye düşürüldü (%${savedPercent} tasarruf, ~${savedMin} dk kazanç).`,
+            "success"
+        );
+    } else {
+        showToast(`Rota sırası optimize edildi. Toplam güzergah: ${optKmText} km.`, "success");
+    }
+}
+
+/**
+ * Open 9:16 Instagram Story Export for currently viewed places
+ */
+export function handleOpenStoryExport() {
+    const trip = state.tripsList.find(t => t.id === state.activeTripId);
+    let title = trip ? trip.name : 'Şehir Rehberim & Gezi Rotası';
+    let subtitle = '';
+    if (trip && trip.start_date) {
+        subtitle = trip.end_date ? `${trip.start_date} — ${trip.end_date}` : trip.start_date;
+    }
+
+    const validPlaces = getSortedPlaces(getFilteredPlaces().filter(p => p.latitude && p.longitude));
+    if (validPlaces.length === 0) {
+        showToast("Story kartı oluşturmak için haritada en az 1 konumlu mekan olmalıdır.", "warning");
+        return;
+    }
+
+    let totalDist = 0;
+    for (let i = 0; i < validPlaces.length - 1; i++) {
+        totalDist += calculateDistance(
+            validPlaces[i].latitude, validPlaces[i].longitude,
+            validPlaces[i + 1].latitude, validPlaces[i + 1].longitude
+        );
+    }
+
+    openStoryModal({
+        title,
+        subtitle,
+        places: validPlaces,
+        totalDistMeters: totalDist
+    });
+}
+window.optimizeRouteOrder = optimizeRouteOrder;
+window.handleOpenStoryExport = handleOpenStoryExport;
 
 /**
  * Sort places: Hotel first (base), then by visit_order or creation
@@ -1774,7 +1996,7 @@ window.deletePlaceAction = async function(placeId) {
 /**
  * Haversine formula to calculate distance in meters between two lat/lng points
  */
-function calculateDistance(lat1, lon1, lat2, lon2) {
+export function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3; // metres
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;

@@ -1125,32 +1125,35 @@ export async function createPlace(placeData) {
 }
 
 export async function updatePlace(placeId, placeData) {
-    const validTripId = (placeData.trip_id && placeData.trip_id !== 'city-guide' && placeData.trip_id !== 'all-places') ? placeData.trip_id : null;
+    const places = getLocalCache(CACHE_KEYS.PLACES);
+    const existing = places.find(p => p.id === placeId) || {};
+    const merged = { ...existing, ...placeData };
+
+    const validTripId = (merged.trip_id && merged.trip_id !== 'city-guide' && merged.trip_id !== 'all-places') ? merged.trip_id : null;
     const payload = {
         id: placeId,
         trip_id: validTripId,
-        name: placeData.name,
-        category: placeData.category,
-        status: placeData.status,
-        latitude: parseFloat(placeData.latitude),
-        longitude: parseFloat(placeData.longitude),
-        address: placeData.address || '',
-        notes: placeData.notes || '',
-        opening_hours: placeData.opening_hours || '',
-        estimated_cost: parseFloat(placeData.estimated_cost) || 0,
-        currency: placeData.currency || 'EUR',
-        visit_order: parseInt(placeData.visit_order) || 0,
-        rating: parseInt(placeData.rating) || 0
+        name: merged.name,
+        category: merged.category,
+        status: merged.status,
+        latitude: parseFloat(merged.latitude),
+        longitude: parseFloat(merged.longitude),
+        address: merged.address || '',
+        notes: merged.notes || '',
+        opening_hours: merged.opening_hours || '',
+        estimated_cost: parseFloat(merged.estimated_cost) || 0,
+        currency: merged.currency || 'EUR',
+        visit_order: parseInt(merged.visit_order) || 0,
+        rating: parseInt(merged.rating) || 0
     };
 
-    if (placeData.status === 'visited') {
-        payload.visited_at = placeData.visited_at || new Date().toISOString();
+    if (merged.status === 'visited') {
+        payload.visited_at = merged.visited_at || new Date().toISOString();
     } else {
         payload.visited_at = null;
     }
 
     // Optimistic cache update
-    const places = getLocalCache(CACHE_KEYS.PLACES);
     const index = places.findIndex(p => p.id === placeId);
     if (index > -1) {
         places[index] = { ...places[index], ...payload };

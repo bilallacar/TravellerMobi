@@ -4,6 +4,7 @@ import { state } from '../state.js';
 import * as db from '../../db.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { PLACE_CATEGORIES } from './places.js';
+import { openStoryModal } from './story_export.js';
 
 let shareMapInstance = null;
 let shareMarkersLayer = null;
@@ -154,6 +155,29 @@ export function initShareEvents() {
         guestSuggestForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             await handleGuestSuggestSubmit();
+        });
+    }
+
+    // Guest Open Story Export
+    const btnGuestStory = document.getElementById('btn-guest-open-story-export');
+    if (btnGuestStory) {
+        btnGuestStory.addEventListener('click', () => {
+            if (!currentDecodedShareData) {
+                showToast("Görüntülenecek rota verisi bulunamadı.", "warning");
+                return;
+            }
+            const rawPlaces = currentDecodedShareData.places || [];
+            const valid = rawPlaces.filter(p => p.latitude && p.longitude);
+            let totalDist = 0;
+            for (let i = 0; i < valid.length - 1; i++) {
+                totalDist += calculateDistance(valid[i].latitude, valid[i].longitude, valid[i+1].latitude, valid[i+1].longitude);
+            }
+            openStoryModal({
+                title: currentDecodedShareData.tripName || 'Seyahat Rotası',
+                subtitle: currentDecodedShareData.startDate ? `${currentDecodedShareData.startDate} — ${currentDecodedShareData.endDate || ''}` : '',
+                places: valid,
+                totalDistMeters: totalDist
+            });
         });
     }
 

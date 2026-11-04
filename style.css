@@ -3747,8 +3747,62 @@ select:-webkit-autofill:focus {
     display: inline-block;
 }
 
+/* ==========================================================================
+   INSTAGRAM STORY & INFOGRAPHIC 9:16 EXPORT MODAL
+   ========================================================================== */
+.story-export-modal-dialog {
+    max-width: 440px !important;
+    width: 95% !important;
+    padding: 20px !important;
+    border-radius: 24px !important;
+    background: rgba(15, 17, 26, 0.94) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8) !important;
+}
 
+.story-preview-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at center, rgba(30, 41, 59, 0.5) 0%, rgba(11, 13, 20, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 12px;
+    max-height: 56vh;
+    min-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
 
+#story-live-canvas {
+    max-height: 52vh;
+    width: auto !important;
+    max-width: 100%;
+    aspect-ratio: 9 / 16;
+    object-fit: contain;
+    border-radius: 14px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+    transition: transform 0.2s ease;
+}
 
+#story-live-canvas:hover {
+    transform: scale(1.01);
+}
 
+.story-modal-actions {
+    display: flex;
+    flex-direction: column;
+}
 
+@media (max-width: 480px) {
+    .story-export-modal-dialog {
+        padding: 16px !important;
+    }
+    .story-preview-container {
+        max-height: 50vh;
+        padding: 8px;
+    }
+    #story-live-canvas {
+        max-height: 46vh;
+    }
+}
