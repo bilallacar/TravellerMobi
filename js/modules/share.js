@@ -9,6 +9,7 @@ let shareMapInstance = null;
 let shareMarkersLayer = null;
 let sharePolylineLayer = null;
 let currentDecodedShareData = null;
+let currentShareSlug = null;
 
 // Guest view pending state
 let pendingShareData = null;
@@ -126,8 +127,155 @@ export function initShareEvents() {
         });
     }
 
+    // Guest Place Suggestion Handlers
+    const btnGuestSuggest = document.getElementById('btn-guest-suggest-place');
+    const modalGuestSuggest = document.getElementById('modal-guest-suggest-place');
+    const btnCloseGuestSuggest = document.getElementById('btn-close-guest-suggest');
+    const btnCancelGuestSuggest = document.getElementById('btn-cancel-guest-suggest');
+    const guestSuggestForm = document.getElementById('guest-suggest-form');
+
+    if (btnGuestSuggest && modalGuestSuggest) {
+        btnGuestSuggest.addEventListener('click', () => {
+            if (guestSuggestForm) guestSuggestForm.reset();
+            modalGuestSuggest.classList.remove('hidden');
+            const nameInp = document.getElementById('guest-suggest-name');
+            if (nameInp) nameInp.focus();
+        });
+    }
+
+    const closeGuestSuggestModal = () => {
+        if (modalGuestSuggest) modalGuestSuggest.classList.add('hidden');
+    };
+
+    if (btnCloseGuestSuggest) btnCloseGuestSuggest.addEventListener('click', closeGuestSuggestModal);
+    if (btnCancelGuestSuggest) btnCancelGuestSuggest.addEventListener('click', closeGuestSuggestModal);
+
+    if (guestSuggestForm) {
+        guestSuggestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleGuestSuggestSubmit();
+        });
+    }
+
     // Setup 4-digit PIN Gate inputs
     setupPinGateInputs();
+}
+
+/**
+ * Handle Guest Suggestion Submission (allows friends to recommend places with 1-click)
+ */
+async function handleGuestSuggestSubmit() {
+    const modalGuestSuggest = document.getElementById('modal-guest-suggest-place');
+    const nameInput = document.getElementById('guest-suggest-name');
+    const catInput = document.getElementById('guest-suggest-category');
+    const authorInput = document.getElementById('guest-suggest-author');
+    const notesInput = document.getElementById('guest-suggest-notes');
+    const submitBtn = document.getElementById('btn-save-guest-suggest');
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const category = catInput ? catInput.value : 'cafe';
+    const author = authorInput ? authorInput.value.trim() : '';
+    const notes = notesInput ? notesInput.value.trim() : '';
+
+    if (!name) {
+        showToast("Lütfen bir mekan veya konum adı girin.", "warning");
+        return;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Ekleniyor...';
+    }
+
+    try {
+        let lat = null;
+        let lng = null;
+
+        // Try geocoding place name with OpenStreetMap Nominatim
+        try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}&limit=1`, {
+                headers: { 'Accept-Language': 'tr' }
+            });
+            if (geoRes.ok) {
+                const results = await geoRes.json();
+                if (results && results.length > 0) {
+                    lat = parseFloat(results[0].lat);
+                    lng = parseFloat(results[0].lon);
+                }
+            }
+        } catch (e) {
+            console.warn("Geocoding failed for guest suggest:", e);
+        }
+
+        // Fallback: If not found, use center of existing places or default
+        if (!lat || !lng) {
+            if (currentDecodedShareData && currentDecodedShareData.places && currentDecodedShareData.places.length > 0) {
+                const firstWithCoords = currentDecodedShareData.places.find(p => p.latitude && p.longitude);
+                if (firstWithCoords) {
+                    lat = firstWithCoords.latitude + (Math.random() - 0.5) * 0.008;
+                    lng = firstWithCoords.longitude + (Math.random() - 0.5) * 0.008;
+                }
+            }
+            if (!lat || !lng) {
+                lat = 41.0082;
+                lng = 28.9784;
+            }
+        }
+
+        const noteHeader = author ? `[Öneren: ${author}]` : '[Grup Önerisi]';
+        const finalNotes = notes ? `${noteHeader} ${notes}` : noteHeader;
+
+        const newPlace = {
+            id: 'guest_' + Date.now(),
+            name: name,
+            category: category,
+            status: 'planned',
+            latitude: lat,
+            longitude: lng,
+            notes: finalNotes,
+            is_suggested: true,
+            estimated_cost: 0,
+            currency: 'TRY',
+            visit_order: (currentDecodedShareData?.places?.length || 0) + 1
+        };
+
+        if (!currentDecodedShareData) {
+            currentDecodedShareData = { tripName: 'Grup Rotası', places: [] };
+        }
+        currentDecodedShareData.places.push(newPlace);
+
+        // Save back to cloud table if this is a cloud route slug
+        if (currentShareSlug) {
+            try {
+                await db.saveSharedRoute(currentShareSlug, currentDecodedShareData.tripName, currentDecodedShareData.places, pendingSharePinHash || null);
+                localStorage.setItem(`shared_route_${currentShareSlug}`, JSON.stringify({
+                    tripName: currentDecodedShareData.tripName,
+                    places: currentDecodedShareData.places,
+                    pinHash: pendingSharePinHash
+                }));
+            } catch (err) {
+                console.warn("Failed to persist guest suggestion to DB:", err);
+            }
+        }
+
+        // Re-render map and places list
+        renderShareMap(currentDecodedShareData.places);
+        renderSharePlacesList(currentDecodedShareData.places);
+
+        const countEl = document.getElementById('share-trip-place-count');
+        if (countEl) countEl.textContent = `${currentDecodedShareData.places.length} Gezi Noktası`;
+
+        if (modalGuestSuggest) modalGuestSuggest.classList.add('hidden');
+        showToast("Mekan öneriniz rotaya başarıyla eklendi!", "success");
+    } catch (err) {
+        console.error("Guest suggest error:", err);
+        showToast("Öneri eklenirken hata: " + err.message, "danger");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Öneriyi Ekle';
+        }
+    }
 }
 
 /**
@@ -397,11 +545,11 @@ function shareViaWhatsApp() {
     const isPin = pinCheckbox && pinCheckbox.checked && pinInput && pinInput.value.trim().length === 4;
     const pin = isPin ? pinInput.value.trim() : '';
 
-    let text = `🗺️ *${tripName} Gezi Rotası*\n\n🔗 ${link}\n`;
+    let text = `*${tripName}*\nTravellerMobi ortak seyahat rotamız hazırlandı:\n\n${link}\n`;
     if (isPin) {
-        text += `\n🔑 *Giriş PIN Kodu:* *${pin}*\n`;
+        text += `\n*Giriş PIN Kodu:* *${pin}*\n`;
     }
-    text += `\nÜye olmadan tek tıkla rotayı ve haritayı inceleyebilirsin! ✨`;
+    text += `\nHesap oluşturmadan tek tıkla rotayı inceleyebilir ve "+ Mekan Öner" butonuyla yeni yerler ekleyebilirsin!`;
 
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
@@ -454,6 +602,8 @@ export async function loadShareView(hash) {
         payload = params.get('d');
         pinHashFromUrl = params.get('h');
     }
+
+    currentShareSlug = slug;
 
     // 1. Try to fetch from Supabase Cloud Table
     if (slug) {
@@ -769,15 +919,15 @@ function renderInfographicShareContent(data) {
     const countEl = document.getElementById('share-trip-place-count');
     const distEl = document.getElementById('share-trip-total-distance');
 
-    if (titleEl) titleEl.textContent = `🏛️ ${data.tripName || 'Seyahat Rotası'}`;
+    if (titleEl) titleEl.textContent = data.tripName || 'Seyahat Rotası';
     
     if (datesEl) {
         if (data.startDate && data.endDate) {
-            datesEl.textContent = `📅 ${data.startDate} — ${data.endDate}`;
+            datesEl.textContent = `${data.startDate} — ${data.endDate}`;
         } else if (data.startDate) {
-            datesEl.textContent = `📅 ${data.startDate}`;
+            datesEl.textContent = data.startDate;
         } else {
-            datesEl.textContent = `📅 Güncel Seyahat Güzergahı`;
+            datesEl.textContent = 'Ortak Seyahat Güzergahı';
         }
     }
 
@@ -794,6 +944,7 @@ function renderInfographicShareContent(data) {
         longitude: p.longitude !== undefined ? Number(p.longitude) : (p.ln !== undefined ? Number(p.ln) : 0),
         address: p.address || p.a || '',
         notes: p.notes || p.nt || '',
+        is_suggested: !!p.is_suggested,
         estimated_cost: p.estimated_cost !== undefined ? p.estimated_cost : (p.ec || 0),
         currency: p.currency || p.cr || data.currency || 'EUR',
         visit_order: p.visit_order !== undefined ? p.visit_order : (p.vo !== undefined ? p.vo : idx)
@@ -806,7 +957,7 @@ function renderInfographicShareContent(data) {
         return (a.visit_order || 0) - (b.visit_order || 0);
     });
 
-    if (countEl) countEl.textContent = `📍 ${places.length} Gezi Noktası`;
+    if (countEl) countEl.textContent = `${places.length} Gezi Noktası`;
 
     // 2. Render Interactive Map
     renderShareMap(places);
@@ -916,8 +1067,11 @@ function renderShareMarkersAndRoute(places) {
             const distM = calculateDistance(hotel.latitude, hotel.longitude, place.latitude, place.longitude);
             const distStr = distM >= 1000 ? `${(distM / 1000).toFixed(1)} km` : `${Math.round(distM)} m`;
             const walkMin = Math.round(distM / 80);
-            distanceHtml = `<div class="popup-distance">🏨 Otele: <strong>${distStr}</strong> (~${walkMin} dk yürüme)</div>`;
+            distanceHtml = `<div class="popup-distance"><i data-lucide="hotel" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px;"></i> Otele: <strong>${distStr}</strong> (~${walkMin} dk yürüme)</div>`;
         }
+
+        const isGroupSuggested = place.is_suggested || (place.notes && (place.notes.includes('[Öneren:') || place.notes.includes('[Grup Önerisi]')));
+        const suggestedBadge = isGroupSuggested ? `<span class="badge-group-suggested" style="margin-left: 6px;"><i data-lucide="users" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i> Grup Önerisi</span>` : '';
 
         const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
 
@@ -926,20 +1080,21 @@ function renderShareMarkersAndRoute(places) {
                 <div class="popup-header">
                     <span class="popup-number-badge">#${placeNumber}</span>
                     <span class="popup-category-badge" style="background: ${catInfo.bg}; color: ${catInfo.color};">
-                        ${catInfo.emoji} ${catInfo.name}
+                        <i data-lucide="${catInfo.icon || 'map-pin'}" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i>${catInfo.name}
                     </span>
                     <span class="popup-status-badge ${isVisited ? 'status-visited' : 'status-planned'}">
-                        ${isVisited ? '✓ Gezildi' : '🟢 Gidilecek'}
+                        ${isVisited ? 'Ziyaret Edildi' : 'Gidilecek'}
                     </span>
+                    ${suggestedBadge}
                 </div>
                 <h4 class="popup-title">${escapeHtml(place.name)}</h4>
-                ${place.address ? `<p class="popup-address">📍 ${escapeHtml(place.address)}</p>` : ''}
+                ${place.address ? `<p class="popup-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</p>` : ''}
                 ${distanceHtml}
-                ${place.notes ? `<p class="popup-notes">📝 ${escapeHtml(place.notes)}</p>` : ''}
-                ${place.estimated_cost > 0 ? `<div class="popup-cost">Tahmini Giriş/Masraf: <strong>${place.estimated_cost} ${place.currency}</strong></div>` : ''}
+                ${place.notes ? `<p class="popup-notes">${escapeHtml(place.notes)}</p>` : ''}
+                ${place.estimated_cost > 0 ? `<div class="popup-cost">Tahmini Masraf: <strong>${place.estimated_cost} ${place.currency || 'TRY'}</strong></div>` : ''}
                 <div class="popup-actions" style="margin-top: 12px;">
                     <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-sm btn-block">
-                        🗺️ Google Haritalar'da Yol Tarifi Al
+                        <i data-lucide="navigation"></i> Google Haritalar'da Yol Tarifi
                     </a>
                 </div>
             </div>
@@ -992,7 +1147,7 @@ function renderShareMarkersAndRoute(places) {
             lineJoin: 'round'
         });
 
-        polyline.bindTooltip(`🗺️ Toplam Rota: ${totalRouteMeters >= 1000 ? (totalRouteMeters / 1000).toFixed(1) + ' km' : Math.round(totalRouteMeters) + ' m'}`, { sticky: true });
+        polyline.bindTooltip(`Toplam Rota: ${totalRouteMeters >= 1000 ? (totalRouteMeters / 1000).toFixed(1) + ' km' : Math.round(totalRouteMeters) + ' m'}`, { sticky: true });
         sharePolylineLayer.addLayer(polyline);
     }
 
@@ -1002,9 +1157,9 @@ function renderShareMarkersAndRoute(places) {
         if (totalRouteMeters > 0) {
             const km = (totalRouteMeters / 1000).toFixed(1);
             const walkMin = Math.round(totalRouteMeters / 80);
-            distEl.textContent = `🚶 Toplam Güzergah: ${km} km (~${walkMin} dk yürüme)`;
+            distEl.innerHTML = `<i data-lucide="route" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px;"></i> Toplam Güzergah: ${km} km (~${walkMin} dk)`;
         } else {
-            distEl.textContent = `🚶 Gezi Rotası`;
+            distEl.innerHTML = `<i data-lucide="route" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px;"></i> Gezi Rotası`;
         }
     }
 
@@ -1042,10 +1197,13 @@ function renderSharePlacesList(places) {
             const distM = calculateDistance(hotel.latitude, hotel.longitude, place.latitude, place.longitude);
             const distStr = distM >= 1000 ? `${(distM / 1000).toFixed(1)} km` : `${Math.round(distM)} m`;
             const walkMin = Math.round(distM / 80);
-            distBadge = `<span class="place-distance-tag" title="Otele Uzaklık">🏨 Otele ${distStr} (~${walkMin} dk)</span>`;
+            distBadge = `<span class="place-distance-tag" title="Otele Uzaklık"><i data-lucide="hotel" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i> Otele ${distStr} (~${walkMin} dk)</span>`;
         } else if (place.category === 'hotel') {
-            distBadge = `<span class="place-distance-tag hotel-tag">📍 Ana Konaklama Üssü</span>`;
+            distBadge = `<span class="place-distance-tag hotel-tag">Konaklama Noktası</span>`;
         }
+
+        const isGroupSuggested = place.is_suggested || (place.notes && (place.notes.includes('[Öneren:') || place.notes.includes('[Grup Önerisi]')));
+        const suggestedBadge = isGroupSuggested ? `<span class="badge-group-suggested"><i data-lucide="users" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i> Grup Önerisi</span>` : '';
 
         const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
 
@@ -1057,12 +1215,15 @@ function renderSharePlacesList(places) {
 
                 <div class="share-card-content">
                     <div class="place-card-header">
-                        <div class="place-category-pill" style="background: ${catInfo.bg}; color: ${catInfo.color};">
-                            ${catInfo.emoji} ${catInfo.name}
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <div class="place-category-pill" style="background: ${catInfo.bg}; color: ${catInfo.color};">
+                                <i data-lucide="${catInfo.icon || 'map-pin'}" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i>${catInfo.name}
+                            </div>
+                            ${suggestedBadge}
                         </div>
                         <div class="place-status-wrapper">
                             <span class="badge-read-only ${isVisited ? 'badge-visited' : 'badge-planned'}">
-                                ${isVisited ? '✓ Gezildi' : '🟢 Gidilecek'}
+                                ${isVisited ? 'Ziyaret Edildi' : 'Gidilecek'}
                             </span>
                         </div>
                     </div>
@@ -1071,8 +1232,8 @@ function renderSharePlacesList(places) {
                         <h3 class="place-name ${isVisited ? 'text-strikethrough' : ''}">${escapeHtml(place.name)}</h3>
                         ${place.address ? `<p class="place-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</p>` : ''}
                         ${distBadge ? `<div class="margin-bottom-8">${distBadge}</div>` : ''}
-                        ${place.notes ? `<p class="place-notes">📝 ${escapeHtml(place.notes)}</p>` : ''}
-                        ${place.estimated_cost > 0 ? `<div class="place-cost-tag">Giriş/Masraf: <strong>${place.estimated_cost} ${place.currency}</strong></div>` : ''}
+                        ${place.notes ? `<p class="place-notes">${escapeHtml(place.notes)}</p>` : ''}
+                        ${place.estimated_cost > 0 ? `<div class="place-cost-tag">Giriş/Masraf: <strong>${place.estimated_cost} ${place.currency || 'TRY'}</strong></div>` : ''}
                     </div>
 
                     <div class="share-card-actions">

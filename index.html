@@ -39,7 +39,7 @@
         <!-- Sidebar Navigation (Desktop) -->
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-logo">
-                <span class="logo-icon">🌍</span>
+                <span class="logo-mark"><i data-lucide="compass"></i></span>
                 <span class="logo-text">TravellerMobi</span>
             </div>
             <nav class="sidebar-nav">
@@ -86,7 +86,7 @@
             <!-- Top Mobile Bar -->
             <header class="mobile-header">
                 <div class="mobile-logo">
-                    <span class="logo-icon">🌍</span>
+                    <span class="logo-mark"><i data-lucide="compass"></i></span>
                     <span class="logo-text">TravellerMobi</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -104,9 +104,9 @@
                 <!-- PWA Install Prompt Banner -->
                 <div id="pwa-install-banner" class="pwa-install-banner hidden">
                     <div class="pwa-install-content">
-                        <span class="pwa-app-icon">🌍</span>
+                        <span class="logo-mark" style="width: 32px; height: 32px; font-size: 14px;"><i data-lucide="compass"></i></span>
                         <div class="pwa-text">
-                            <strong>TravellerMobi'yi Telefona Yükle</strong>
+                            <strong>TravellerMobi'yi Yükle</strong>
                             <span>Hızlı erişim ve tam ekran deneyimi için ana ekrana ekleyin</span>
                         </div>
                     </div>
@@ -160,7 +160,7 @@
                         <!-- Forgot Password Box -->
                         <div id="auth-forgot-box" class="hidden" style="margin-top: 10px;">
                             <div style="text-align: center; margin-bottom: 16px;">
-                                <h3 style="margin: 0; font-size: 18px;">🔐 Şifre Sıfırlama</h3>
+                                <h3 style="margin: 0; font-size: 18px;"><i data-lucide="key-round" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Şifre Sıfırlama</h3>
                                 <p class="text-xs text-muted" style="margin-top: 6px;">Kayıtlı e-posta adresinizi girin, size şifre yenileme bağlantısı gönderelim.</p>
                             </div>
                             <form id="forgot-password-form">
@@ -184,7 +184,7 @@
                 <div id="modal-reset-password" class="modal hidden">
                     <div class="modal-content glass" style="max-width: 440px;">
                         <div class="modal-header">
-                            <h2>🔑 Yeni Şifre Belirleyin</h2>
+                            <h2><i data-lucide="lock" style="width:20px;height:20px;vertical-align:-3px;margin-right:8px;"></i> Yeni Şifre Belirleyin</h2>
                         </div>
                         <p class="text-sm text-muted margin-top-8">Lütfen hesabınız için yeni ve güvenli bir şifre belirleyin.</p>
                         <form id="reset-password-form" class="margin-top-16">
@@ -213,7 +213,7 @@
                 <section id="view-setup" class="app-view hidden">
                     <div class="setup-container">
                         <div class="card glass">
-                            <h2>⚙️ Supabase Bulut Kurulumu</h2>
+                            <h2><i data-lucide="database" style="width:20px;height:20px;vertical-align:-3px;margin-right:8px;"></i> Supabase Bulut Kurulumu</h2>
                             <p>Uygulamanın verileri 7/24 bulutta güvenle saklaması ve bu bilgisayar kapalıyken bile çalışması için ücretsiz Supabase hesabınızın bilgilerine ihtiyacımız var.</p>
                             
                             <div class="info-alert">
@@ -299,7 +299,7 @@
                             <div class="card glass">
                                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                                     <div>
-                                        <h2 style="font-size:18px; margin:0;">🗺️ Günün Rotası & Aktif Seyahat Durumu</h2>
+                                        <h2 style="font-size:18px; margin:0;"><i data-lucide="compass" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Günün Rotası & Aktif Seyahat Durumu</h2>
                                         <span class="text-sm text-muted" id="dash-route-subtitle">Gezilecek yerler ve bütçe kullanımı</span>
                                     </div>
                                     <div style="display:flex; gap:8px; align-items:center;">
@@ -326,7 +326,7 @@
                                 <!-- Mini Places Summary Container -->
                                 <div class="margin-top-20">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                        <h4 style="margin:0; font-size:14px; color:var(--text-secondary);">📍 Sıradaki Gezi Noktaları (Gidilecekler)</h4>
+                                        <h4 style="margin:0; font-size:14px; color:var(--text-secondary);"><i data-lucide="map-pin" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i> Sıradaki Gezi Noktaları</h4>
                                         <a href="#places" class="text-sm" style="color:var(--color-primary); text-decoration:none;">+ Yeni Yer Ekle</a>
                                     </div>
                                     <div id="dash-places-summary" class="dash-places-preview-grid">
@@ -338,7 +338,7 @@
                             <!-- Recent Expenses Preview Card -->
                             <div class="card glass margin-top-20">
                                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                                    <h3 style="margin:0; font-size:16px;">💸 Son Harcamalar</h3>
+                                    <h3 style="margin:0; font-size:16px;"><i data-lucide="credit-card" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Son Harcamalar</h3>
                                     <a href="#expenses" class="btn btn-secondary btn-sm">Tüm Masraflar</a>
                                 </div>
                                 <div id="dash-recent-expenses" class="dash-recent-list margin-top-12">
@@ -351,7 +351,7 @@
                         <div class="dashboard-side-col">
                             <!-- Quick Actions -->
                             <div class="card glass">
-                                <h3>⚡ Hızlı Eylemler</h3>
+                                <h3><i data-lucide="zap" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Hızlı Eylemler</h3>
                                 <div class="quick-actions-list margin-top-12">
                                     <a href="#places" class="quick-action-btn">
                                         <i data-lucide="map-pin" style="color:var(--color-success);"></i> Yer / Otel Ekle
@@ -371,7 +371,7 @@
                             <!-- Compact Currency Converter Widget -->
                             <div class="card glass margin-top-20">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                    <h4 style="margin:0; font-size:15px;">💱 Seyahat Döviz Çevirici</h4>
+                                    <h4 style="margin:0; font-size:15px;"><i data-lucide="arrow-left-right" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px;"></i> Seyahat Döviz Çevirici</h4>
                                 </div>
                                 <div class="exchange-grid compact-exchange">
                                     <div class="rate-box">
@@ -421,7 +421,8 @@
                 <section id="view-trips" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>🗺️ Seyahatlerim</h1>
+                            <h1>Seyahatler & Rotalar</h1>
+                            <p class="subtitle">Aktif rotalarınız, bütçe ve gezi planlarınız.</p>
                         </div>
                         <button id="btn-add-trip" class="btn btn-primary"><i data-lucide="plus"></i> Yeni Seyahat Ekle</button>
                     </div>
@@ -489,20 +490,48 @@
                 <section id="view-places" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>🗺️ Gezi Haritası & Rota</h1>
-                            <p class="subtitle">Oteliniz, gezilecek yerler, anlık mesafe ve Google Haritalar navigasyonu.</p>
+                            <h1>Gezi Haritası & Şehir Rehberi</h1>
+                            <p class="subtitle">Kaydedilen mekanlar, kişisel gurme notları, radar ve navigasyon.</p>
                         </div>
                         <div class="action-buttons-group">
                             <select id="places-trip-selector" class="select-input compact-select">
                                 <!-- Loaded dynamically -->
                             </select>
+                            <button id="btn-toggle-link-import" class="btn btn-secondary" title="Google Maps veya Instagram linkiyle anında mekan ekle">
+                                <i data-lucide="link"></i> Link İçe Aktar
+                            </button>
                             <button id="btn-share-places-route" class="btn btn-secondary" title="Bu rotayı benzersiz link ve PIN ile arkadaşlarınla paylaş">
                                 <i data-lucide="share-2"></i> Rotayı Paylaş
                             </button>
                             <button id="btn-add-place" class="btn btn-primary">
-                                <i data-lucide="map-pin"></i> Yeni Yer Ekle
+                                <i data-lucide="plus"></i> Yeni Mekan Ekle
                             </button>
                         </div>
+                    </div>
+
+                    <!-- 1-Click Link Import Card -->
+                    <div id="places-link-import-box" class="link-import-card hidden">
+                        <div class="link-import-header">
+                            <div class="link-import-title"><i data-lucide="link-2"></i> Google Maps veya Instagram Bağlantısıyla Hızlı Ekle</div>
+                            <button type="button" class="btn-close-modal" id="btn-close-link-import" style="position:static; padding:2px 8px; font-size:18px;">&times;</button>
+                        </div>
+                        <div class="link-import-input-row">
+                            <input type="text" id="quick-link-input" class="text-input" placeholder="Google Maps linki (maps.app.goo.gl), koordinat (41.0082, 28.9784) veya mekan adı yapıştırın...">
+                            <button type="button" id="btn-execute-link-import" class="btn btn-primary" style="white-space:nowrap;">
+                                <i data-lucide="download"></i> Çözümle & Ekle
+                            </button>
+                        </div>
+                        <span class="text-xs text-muted" style="margin-top:6px; display:block;">
+                            Google Maps veya Instagram'dan kopyaladığınız bağlantıyı yapıştırdığınızda koordinat ve adres otomatik doldurulur.
+                        </span>
+                    </div>
+
+                    <!-- Radar Status Banner -->
+                    <div id="radar-status-banner" class="radar-banner hidden">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <i data-lucide="crosshair"></i> <span><strong>Radar Aktif:</strong> Anlık konumunuza en yakın mekanlar listeleniyor.</span>
+                        </div>
+                        <button type="button" id="btn-close-radar" class="btn btn-sm btn-secondary" style="padding:2px 8px; font-size:11px;">Kapat</button>
                     </div>
 
                     <!-- Summary Stats Bar -->
@@ -514,24 +543,25 @@
                     <div class="places-search-bar margin-bottom-12">
                         <div class="input-icon-wrapper" style="width: 100%;">
                             <i data-lucide="search"></i>
-                            <input type="text" id="places-search-input" placeholder="🔍 Mekan adı, semt, tavsiye veya kategori ara... (Örn: Kadıköy, filtre kahve, müze)" class="text-input" style="padding-left: 38px;">
+                            <input type="text" id="places-search-input" placeholder="Mekan adı, semt, tavsiye veya kategori ara... (Örn: Kadıköy, filtre kahve, müze)" class="text-input" style="padding-left: 38px;">
                         </div>
                     </div>
 
-                    <!-- Category & Status Filter Bar -->
+                    <!-- Category & Status Filter Bar (Official, Clean Design) -->
                     <div class="places-filter-bar" id="places-filter-bar">
                         <button type="button" class="filter-pill active" data-filter="all">Tümü</button>
-                        <button type="button" class="filter-pill" data-filter="planned">🟢 Gitmek İstediklerim</button>
-                        <button type="button" class="filter-pill" data-filter="visited">⚪ Gezilenler</button>
-                        <button type="button" class="filter-pill" data-filter="cafe">☕ Kafe & Kahve</button>
-                        <button type="button" class="filter-pill" data-filter="food">🍽️ Restoran</button>
-                        <button type="button" class="filter-pill" data-filter="bar">🍸 Bar & Gece</button>
-                        <button type="button" class="filter-pill" data-filter="bakery">🥐 Fırın & Kahvaltı</button>
-                        <button type="button" class="filter-pill" data-filter="viewpoint">🌳 Park & Doğa</button>
-                        <button type="button" class="filter-pill" data-filter="museum">🏛️ Müzeler</button>
-                        <button type="button" class="filter-pill" data-filter="historical">🗿 Tarihi Alanlar</button>
-                        <button type="button" class="filter-pill" data-filter="shopping">🛍️ Alışveriş</button>
-                        <button type="button" class="filter-pill" data-filter="hotel">🏨 Otel</button>
+                        <button type="button" class="filter-pill" data-filter="radar"><i data-lucide="crosshair" style="width:13px; height:13px; vertical-align:middle; margin-right:4px;"></i> Yakınım (Radar)</button>
+                        <button type="button" class="filter-pill" data-filter="planned">İstek Listesi</button>
+                        <button type="button" class="filter-pill" data-filter="visited">Ziyaret Edilenler</button>
+                        <button type="button" class="filter-pill" data-filter="cafe">Kafe</button>
+                        <button type="button" class="filter-pill" data-filter="food">Restoran</button>
+                        <button type="button" class="filter-pill" data-filter="bar">Bar & Gece</button>
+                        <button type="button" class="filter-pill" data-filter="bakery">Fırın & Tatlı</button>
+                        <button type="button" class="filter-pill" data-filter="viewpoint">Park & Doğa</button>
+                        <button type="button" class="filter-pill" data-filter="museum">Müze & Sanat</button>
+                        <button type="button" class="filter-pill" data-filter="historical">Tarihi Alan</button>
+                        <button type="button" class="filter-pill" data-filter="shopping">Alışveriş</button>
+                        <button type="button" class="filter-pill" data-filter="hotel">Otel</button>
                     </div>
 
                     <!-- Interactive Leaflet Map -->
@@ -569,7 +599,7 @@
 
                     <!-- Places Cards Grid Section -->
                     <div class="places-section-header margin-top-30">
-                        <h2>📍 Eklenen Mekanlar & Gezi Rehberi</h2>
+                        <h2><i data-lucide="map-pin" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Eklenen Mekanlar & Gezi Rehberi</h2>
                         <span class="text-muted text-sm">Uzaklıklar, puanlar, bilet/ücret notları ve Google Haritalar yol tarifi</span>
                     </div>
                     <div id="places-cards-container" class="places-grid margin-top-16">
@@ -593,17 +623,17 @@
                                     </select>
                                 </div>
 
-                                <!-- Fast Geocoding Search -->
+                                <!-- Fast Geocoding & Link Search -->
                                 <div class="form-group">
-                                    <label for="place-search-query">🔍 Haritada Yer Ara (Semt, Kafe veya Otel Adı)</label>
+                                    <label for="place-search-query">Konum veya Bağlantı Ara (Google Maps, Instagram veya Mekan Adı)</label>
                                     <div style="display: flex; gap: 8px;">
-                                        <input type="text" id="place-search-query" class="text-input" placeholder="Örn: Moda Kadıköy veya Petra Gayrettepe">
+                                        <input type="text" id="place-search-query" class="text-input" placeholder="Google Maps linki, koordinat veya mekan adı yapıştırın...">
                                         <button type="button" id="btn-search-place-location" class="btn btn-secondary" style="white-space: nowrap;">
-                                            Konumu Bul
+                                            <i data-lucide="search"></i> Bul
                                         </button>
                                     </div>
                                     <span class="text-xs text-muted" style="margin-top: 4px; display: block;">
-                                        Şehir veya mekan adı yazıp 'Konumu Bul' derseniz koordinatlar otomatik doldurulur.
+                                        Google Maps linki (maps.app.goo.gl), enlem/boylam (41.0082, 28.9784) veya mekan adı yazabilirsiniz.
                                     </span>
                                 </div>
 
@@ -615,39 +645,61 @@
                                     <div class="form-group">
                                         <label for="place-category">Kategori</label>
                                         <select id="place-category" class="select-input" required>
-                                            <option value="cafe" selected>☕ Kafe & 3. Dalga Kahve</option>
-                                            <option value="food">🍽️ Restoran & Lezzet</option>
-                                            <option value="bar">🍸 Bar & Gece Hayatı</option>
-                                            <option value="bakery">🥐 Fırın, Tatlı & Kahvaltı</option>
-                                            <option value="viewpoint">🌳 Park, Doğa & Yürüyüş</option>
-                                            <option value="museum">🏛️ Kültür, Sanat & Müze</option>
-                                            <option value="historical">🗿 Tarihi Alan & Anıt</option>
-                                            <option value="shopping">🛍️ Alışveriş & Butik</option>
-                                            <option value="hotel">🏨 Otel & Konaklama</option>
-                                            <option value="other">📍 Favori Noktam / Diğer</option>
+                                            <option value="cafe" selected>Kafe & 3. Dalga Kahve</option>
+                                            <option value="food">Restoran & Gastronomi</option>
+                                            <option value="bar">Bar & Gece Hayatı</option>
+                                            <option value="bakery">Fırın, Tatlı & Kahvaltı</option>
+                                            <option value="viewpoint">Park, Doğa & Yürüyüş</option>
+                                            <option value="museum">Kültür, Sanat & Müze</option>
+                                            <option value="historical">Tarihi Alan & Anıt</option>
+                                            <option value="shopping">Alışveriş & Butik</option>
+                                            <option value="hotel">Otel & Konaklama</option>
+                                            <option value="other">Diğer / Özel Nokta</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="place-status">Durum</label>
+                                        <label for="place-status">Ziyaret Durumu</label>
                                         <select id="place-status" class="select-input">
-                                            <option value="planned" selected>🟢 Gitmek İstiyorum (Wishlist)</option>
-                                            <option value="visited">⚪ Gidildi / Ziyaret Edildi</option>
+                                            <option value="planned" selected>İstek Listesi (Gitmek İstiyorum)</option>
+                                            <option value="visited">Ziyaret Edildi / Gidildi</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
                                         <label for="place-rating">Kişisel Puanım</label>
                                         <select id="place-rating" class="select-input">
                                             <option value="0">Puan Belirtilmedi</option>
-                                            <option value="5">⭐⭐⭐⭐⭐ Kesinlikle Gidilmeli / Mükemmel</option>
-                                            <option value="4">⭐⭐⭐⭐ Çok İyi / Tavsiye Ederim</option>
-                                            <option value="3">⭐⭐⭐ Ortalama / Güzel</option>
-                                            <option value="2">⭐⭐ Vasat</option>
-                                            <option value="1">⭐ Beğenmedim</option>
+                                            <option value="5">5 / 5 — Mükemmel (Kesinlikle Önerilir)</option>
+                                            <option value="4">4 / 5 — Çok İyi</option>
+                                            <option value="3">3 / 5 — İyi / Ortalama</option>
+                                            <option value="2">2 / 5 — Vasat</option>
+                                            <option value="1">1 / 5 — Yetersiz</option>
                                         </select>
                                     </div>
+                                </div>
+
+                                <!-- Foodie / Gourmet Recommendation -->
+                                <div class="form-group">
+                                    <label for="place-must-try">Tavsiye Edilen Lezzet / Ne Denenmeli? (Gurme Notu)</label>
+                                    <input type="text" id="place-must-try" class="text-input" placeholder="Örn: San Sebastian Cheesecake, Flat White, Trüflü Makarna">
+                                </div>
+
+                                <!-- Vibe & Feature Tags -->
+                                <div class="form-group">
+                                    <label>Mekan Özellikleri & Etiketler</label>
+                                    <div class="quick-tags-container" id="place-quick-tags">
+                                        <span class="tag-chip" data-tag="Sessiz & Sakin">Sessiz & Sakin</span>
+                                        <span class="tag-chip" data-tag="Laptopla Çalışma">Laptopla Çalışma</span>
+                                        <span class="tag-chip" data-tag="Manzaralı">Manzaralı</span>
+                                        <span class="tag-chip" data-tag="Rezervasyon Şart">Rezervasyon Şart</span>
+                                        <span class="tag-chip" data-tag="Evcil Hayvan Dostu">Evcil Hayvan Dostu</span>
+                                        <span class="tag-chip" data-tag="Fiyat / Performans">Fiyat / Performans</span>
+                                        <span class="tag-chip" data-tag="Açık Alan / Teras">Açık Alan / Teras</span>
+                                        <span class="tag-chip" data-tag="Grup İçin Uygun">Grup İçin Uygun</span>
+                                    </div>
+                                    <input type="hidden" id="place-tags-value" value="">
                                 </div>
 
                                 <div class="form-group">
@@ -704,7 +756,7 @@
                     <div id="modal-share-route" class="modal hidden">
                         <div class="modal-content glass" style="max-width: 520px;">
                             <div class="modal-header">
-                                <h2>🔗 Gezi Rotasını Paylaş</h2>
+                                <h2>Gezi Rotasını ve Grup Haritasını Paylaş</h2>
                                 <button type="button" class="btn-close-modal" id="btn-close-share-modal">&times;</button>
                             </div>
                             <div class="share-modal-body margin-top-12">
@@ -713,7 +765,7 @@
                                         <h3 id="share-modal-trip-name" style="margin: 0; font-size: 17px;">Seyahat Rotası</h3>
                                         <span id="share-modal-place-count" class="badge-pill pill-planned">0 Gezi Noktası</span>
                                     </div>
-                                    <p class="text-xs text-muted margin-top-6" style="margin-bottom: 0;">Bu linki açan kişiler üye olmak veya giriş yapmak zorunda kalmadan rotanızı interaktif infografik formatında görüntüler.</p>
+                                    <p class="text-xs text-muted margin-top-6" style="margin-bottom: 0;">Bu linki açan kişiler üye olmak veya giriş yapmak zorunda kalmadan rotanızı interaktif infografik formatında görüntüler ve yeni mekanlar önerebilir.</p>
                                 </div>
 
                                 <!-- 4-digit PIN Security Option -->
@@ -721,7 +773,7 @@
                                     <div class="pin-toggle-header">
                                         <label class="switch-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
                                             <input type="checkbox" id="share-pin-enable" checked>
-                                            <span style="font-weight: 600; font-size: 14px;">🔒 4 Haneli PIN Kodu ile Koru (Önerilen)</span>
+                                            <span style="font-weight: 600; font-size: 14px;">4 Haneli PIN Kodu ile Koru (Önerilen)</span>
                                         </label>
                                     </div>
                                     <div id="share-pin-input-container" class="margin-top-12">
@@ -729,10 +781,10 @@
                                         <div style="display: flex; gap: 8px; align-items: center;">
                                             <input type="text" id="share-pin-code" class="text-input" style="font-size: 20px; font-weight: 700; letter-spacing: 4px; text-align: center; width: 130px; padding: 6px;" maxlength="4" value="1903">
                                             <button type="button" id="btn-regenerate-pin" class="btn btn-secondary btn-sm" title="Yeni rastgele PIN üret">
-                                                🎲 Yeni PIN
+                                                Yeni PIN
                                             </button>
                                             <button type="button" id="btn-copy-share-pin" class="btn btn-secondary btn-sm" title="PIN Kodunu Kopyala">
-                                                📋 PIN'i Kopyala
+                                                PIN'i Kopyala
                                             </button>
                                         </div>
                                     </div>
@@ -744,7 +796,7 @@
                                     <div style="display: flex; gap: 8px;">
                                         <input type="text" id="share-link-result" class="text-input" readonly style="font-size: 12px; background: rgba(0,0,0,0.25);">
                                         <button type="button" id="btn-copy-share-link" class="btn btn-primary" style="white-space: nowrap;">
-                                            📋 Kopyala
+                                            Kopyala
                                         </button>
                                     </div>
                                     <span id="share-pin-display-badge" class="badge-pill pill-planned margin-top-8" style="display: inline-block;">PIN: 1903</span>
@@ -752,12 +804,12 @@
 
                                 <!-- Quick Actions -->
                                 <div class="margin-top-20" style="display: flex; flex-direction: column; gap: 10px;">
-                                    <button type="button" id="btn-whatsapp-share" class="btn btn-block" style="background: #25d366; color: #ffffff; font-weight: 600; padding: 12px;">
-                                        💬 WhatsApp ile Gönder
+                                    <button type="button" id="btn-whatsapp-share" class="btn btn-block" style="background: #15803d; color: #ffffff; font-weight: 600; padding: 12px;">
+                                        WhatsApp ile Davet Et
                                     </button>
                                     <div style="display: flex; gap: 10px;">
                                         <button type="button" id="btn-preview-share-guest" class="btn btn-secondary" style="flex: 1;">
-                                            👁️ Misafir Olarak Aç
+                                            Misafir Olarak Önizle
                                         </button>
                                         <button type="button" id="btn-cancel-share-modal" class="btn btn-secondary" style="flex: 1;">
                                             Kapat
@@ -773,7 +825,7 @@
                         <div class="modal-content glass" style="max-width: 460px; padding: 22px; border-radius: 24px;">
                             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span style="font-size: 26px;">📍</span>
+                                    <i data-lucide="map-pin" style="width:24px;height:24px;color:var(--accent);"></i>
                                     <h2 style="font-size: 18px; margin: 0; font-weight: 700;">Konum İzni Gerekli</h2>
                                 </div>
                                 <button type="button" class="btn-close-modal" id="btn-close-location-modal">&times;</button>
@@ -790,13 +842,13 @@
                                 <!-- Device Instructions Tabs -->
                                 <div class="location-tabs-nav" style="display: flex; gap: 8px; margin-bottom: 12px;">
                                     <button type="button" id="tab-btn-ios" class="btn btn-sm btn-secondary active-loc-tab" style="flex: 1; padding: 8px 10px; font-size: 12px;">
-                                        🍎 iPhone (Safari)
+                                        <i data-lucide="smartphone" style="width:13px;height:13px;vertical-align:-1px;margin-right:3px;"></i> iPhone (Safari)
                                     </button>
                                     <button type="button" id="tab-btn-android" class="btn btn-sm btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 12px;">
-                                        🤖 Android (Chrome)
+                                        <i data-lucide="smartphone" style="width:13px;height:13px;vertical-align:-1px;margin-right:3px;"></i> Android (Chrome)
                                     </button>
                                     <button type="button" id="tab-btn-pc" class="btn btn-sm btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 12px;">
-                                        💻 Bilgisayar
+                                        <i data-lucide="laptop" style="width:13px;height:13px;vertical-align:-1px;margin-right:3px;"></i> Bilgisayar
                                     </button>
                                 </div>
 
@@ -805,14 +857,14 @@
                                     <div style="font-weight: 600; margin-bottom: 6px; color: #a5b4fc;">iPhone / Safari'de 2 Adımda Açın:</div>
                                     <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
                                         <span class="badge-pill pill-planned" style="padding: 2px 7px; font-weight: 700;">1</span>
-                                        <span>Adres çubuğundaki sol tarafta yer alan <strong>aA</strong> (veya sayfa ayarları) simgesine dokunun.</span>
+                                        <span>Adres çubuğundaki sol tarafta yer alan <strong>aA</strong> simgesine dokunun.</span>
                                     </div>
                                     <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
                                         <span class="badge-pill pill-planned" style="padding: 2px 7px; font-weight: 700;">2</span>
                                         <span><strong>Web Sitesi Ayarları</strong> bölümüne dokunup <strong>Konum</strong> seçeneğini <strong>"İzin Ver"</strong> yapın.</span>
                                     </div>
                                     <div class="text-xs text-muted" style="margin-top: 8px;">
-                                        💡 <em>(Veya iPhone Ayarlar > Gizlilik ve Güvenlik > Konum Servisleri > Safari'ye izin verin)</em>
+                                        <em>(Veya iPhone Ayarlar > Gizlilik ve Güvenlik > Konum Servisleri > Safari'ye izin verin)</em>
                                     </div>
                                 </div>
 
@@ -821,7 +873,7 @@
                                     <div style="font-weight: 600; margin-bottom: 6px; color: #6ee7b7;">Android / Chrome'da 2 Adımda Açın:</div>
                                     <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
                                         <span class="badge-pill pill-visited" style="padding: 2px 7px; font-weight: 700;">1</span>
-                                        <span>Adres çubuğundaki <strong>Kilit (🔒)</strong> veya ayarlar simgesine dokunun.</span>
+                                        <span>Adres çubuğundaki kilit simgesine dokunun.</span>
                                     </div>
                                     <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
                                         <span class="badge-pill pill-visited" style="padding: 2px 7px; font-weight: 700;">2</span>
@@ -834,14 +886,14 @@
                                     <div style="font-weight: 600; margin-bottom: 6px; color: #93c5fd;">Bilgisayar Tarayıcısında:</div>
                                     <div style="display: flex; gap: 8px; align-items: flex-start;">
                                         <span class="badge-pill pill-planned" style="padding: 2px 7px; font-weight: 700;">1</span>
-                                        <span>Adres çubuğunun solundaki kilit (🔒) ikonuna tıklayın ve Konum iznini <strong>"İzin Ver"</strong> yapın.</span>
+                                        <span>Adres çubuğunun solundaki kilit simgesine tıklayın ve Konum iznini <strong>"İzin Ver"</strong> yapın.</span>
                                     </div>
                                 </div>
 
                                 <!-- Primary Action: One Tap Retry Button -->
                                 <div class="margin-top-20" style="display: flex; flex-direction: column; gap: 10px;">
                                     <button type="button" id="btn-retry-location-permission" class="btn btn-primary btn-block" style="padding: 14px; font-size: 15px; font-weight: 700; border-radius: 14px;">
-                                        📍 Konumu Şimdi Al (Tek Tıkla)
+                                        <i data-lucide="locate-fixed" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Konumu Şimdi Al
                                     </button>
                                     <button type="button" id="btn-dismiss-location-modal" class="btn btn-secondary btn-block" style="padding: 10px; font-size: 13px;">
                                         Şimdilik Kapat
@@ -856,7 +908,8 @@
                 <section id="view-expenses" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>💸 Seyahat Masrafları</h1>
+                            <h1>Masraflar & Hesaplaşma</h1>
+                            <p class="subtitle">Bireysel ve ortak harcamalar, Splitwise borç denkleştirme tablosu.</p>
                         </div>
                         <div class="action-buttons-group">
                             <select id="expense-trip-filter" class="select-input compact-select">
@@ -868,9 +921,9 @@
 
                     <!-- Expense View Tabs -->
                     <div class="gallery-tabs margin-bottom-20">
-                        <button class="gallery-tab active" id="tab-expense-list">💸 Harcama Listesi</button>
-                        <button class="gallery-tab" id="tab-expense-balance">📊 Rota Bilançosu (Borç Bölüşümü)</button>
-                        <button class="gallery-tab" id="tab-expense-analysis">📈 Harcama Alışkanlıkları Analizi</button>
+                        <button class="gallery-tab active" id="tab-expense-list">Harcama Listesi</button>
+                        <button class="gallery-tab" id="tab-expense-balance">Grup Hesaplaşması (Splitwise)</button>
+                        <button class="gallery-tab" id="tab-expense-analysis">Harcama Analizi</button>
                     </div>
 
                     <div class="expenses-layout" id="expenses-list-container">
@@ -907,7 +960,7 @@
 
                         <!-- Expenses Analytics & Charts -->
                         <div class="card glass charts-card">
-                            <h3>📊 Kategori Dağılımı</h3>
+                            <h3>Kategori Dağılımı</h3>
                             <div class="category-chart-container" id="category-chart">
                                 <!-- Rendered dynamically using pure CSS and HTML -->
                                 <p class="text-muted">Masraf verisi bulunmamaktadır.</p>
@@ -919,7 +972,7 @@
                     <div class="expenses-layout hidden" id="expenses-balance-container">
                         <!-- Balance Status Card -->
                         <div class="card glass double-span" style="grid-column: 1 / -1;">
-                            <h3>👥 Katılımcı Durumları</h3>
+                            <h3>Katılımcı Durumları</h3>
                             <p class="text-muted" style="margin-top: 5px;">Kişi bazlı toplam ödenen tutarlar ve net alacak/borç dengesi.</p>
                             <div id="balance-members-list" class="balance-members-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px; margin-top:15px;">
                                 <!-- Rendered dynamically -->
@@ -928,8 +981,15 @@
 
                         <!-- Debt Settlement Card -->
                         <div class="card glass double-span" style="grid-column: 1 / -1; margin-top: 20px;">
-                            <h3>🔄 Ödeme Planı (Hesap Kapatma)</h3>
-                            <p class="text-muted" style="margin-top: 5px;">Seyahat sonrasında borçların kapatılması için yapılması önerilen transferler.</p>
+                            <div class="settlement-card-header">
+                                <div>
+                                    <h3 style="margin: 0;">Borç Denkleştirme & Hesap Kapatma</h3>
+                                    <p class="text-muted" style="margin-top: 4px; font-size: 13px;">Grup seyahati sonrasında borçların sıfırlanması için gereken minimum para transferleri.</p>
+                                </div>
+                                <button type="button" id="btn-copy-settlements-whatsapp" class="btn-whatsapp-copy" title="WhatsApp borç özetini kopyala">
+                                    <i data-lucide="copy"></i> WhatsApp Borç Özetini Kopyala
+                                </button>
+                            </div>
                             <div id="balance-settlements-list" class="settlements-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
                                 <!-- Rendered dynamically -->
                             </div>
@@ -946,7 +1006,7 @@
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px;">
                             <!-- Participant Shares & Habits -->
                             <div class="card glass">
-                                <h3>👥 Katılımcı Harcama Payları & Alışkanlıkları</h3>
+                                <h3><i data-lucide="pie-chart" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Katılımcı Harcama Payları & Alışkanlıkları</h3>
                                 <p class="text-muted" style="margin-top:5px; margin-bottom:15px;">Kim hangi oranda ödeme yaptı ve en çok hangi kategoride harcadı.</p>
                                 <div id="analysis-participants-list" style="display:flex; flex-direction:column; gap:20px;">
                                     <!-- Rendered dynamically -->
@@ -955,7 +1015,7 @@
 
                             <!-- Category Detailed Habits -->
                             <div class="card glass">
-                                <h3>🏷️ Kategori Bazlı Alışkanlık Analizi</h3>
+                                <h3><i data-lucide="tag" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Kategori Bazlı Alışkanlık Analizi</h3>
                                 <p class="text-muted" style="margin-top:5px; margin-bottom:15px;">Kategorilere göre harcama sıklığı, tutarı ve bütçe içindeki payı.</p>
                                 <div id="analysis-categories-list" style="display:flex; flex-direction:column; gap:16px;">
                                     <!-- Rendered dynamically -->
@@ -965,7 +1025,7 @@
 
                         <!-- Smart Insights Card -->
                         <div class="card glass" style="margin-top: 24px;">
-                            <h3>💡 Akıllı Seyahat Tavsiyeleri & İçgörüler</h3>
+                            <h3><i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Seyahat Tavsiyeleri & İçgörüler</h3>
                             <div id="analysis-insights-content" style="margin-top: 15px; display:flex; flex-direction:column; gap:12px;">
                                 <!-- Rendered dynamically -->
                             </div>
@@ -1050,7 +1110,8 @@
                 <section id="view-journal" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>📸 Seyahat Anılarım & Fotoğraflarım</h1>
+                            <h1>Anılar & Fotoğraf Galerisi</h1>
+                            <p class="subtitle">Seyahat günlükleri, fotoğraflar ve özel notlar.</p>
                         </div>
                         <div class="action-buttons-group">
                             <select id="journal-trip-filter" class="select-input compact-select">
@@ -1062,8 +1123,8 @@
 
                     <!-- Photo Gallery Filter Header -->
                     <div class="gallery-tabs">
-                        <button class="gallery-tab active" id="tab-all-memories">📝 Günlük Görünümü</button>
-                        <button class="gallery-tab" id="tab-only-photos">🖼️ Sadece Fotoğraflar</button>
+                        <button class="gallery-tab active" id="tab-all-memories">Günlük Görünümü</button>
+                        <button class="gallery-tab" id="tab-only-photos">Fotoğraf Akışı</button>
                     </div>
 
                     <!-- Journal Timeline / Photos Grid -->
@@ -1168,12 +1229,12 @@
 
                 <!-- 7. SETTINGS VIEW -->
                 <section id="view-settings" class="app-view hidden">
-                    <h1>⚙️ Ayarlar & Sistem Bilgileri</h1>
+                    <h1>Ayarlar & Tercihler</h1>
 
                     <div class="settings-grid">
                         <!-- API Configurations -->
                         <div class="card glass hidden" id="settings-api-card">
-                            <h3>🔌 Bulut Supabase Bağlantısı</h3>
+                            <h3><i data-lucide="database" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Bulut Supabase Bağlantısı</h3>
                             <form id="settings-api-form" class="settings-form">
                                 <div class="form-group">
                                     <label for="settings-supabase-url">Supabase Project URL</label>
@@ -1189,7 +1250,7 @@
 
                         <!-- System Settings -->
                         <div class="card glass">
-                            <h3>🗺️ Uygulama Tercihleri</h3>
+                            <h3><i data-lucide="sliders" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Uygulama Tercihleri</h3>
                             <form id="settings-preferences-form">
                                 <div class="form-group">
                                     <label for="settings-base-currency">Varsayılan Ana Para Birimi</label>
@@ -1214,20 +1275,20 @@
 
                          <!-- Category Management Panel Card -->
                          <div class="card glass double-span hidden" id="settings-categories-card" style="grid-column: 1 / -1;">
-                             <h3>🏷️ Harcama Kategorileri Yönetimi</h3>
+                             <h3><i data-lucide="tag" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Harcama Kategorileri Yönetimi</h3>
                              <p class="text-muted" style="margin-top: 5px; margin-bottom: 15px;">Uygulama genelinde kullanılacak harcama kategorilerini ekleyin veya silin.</p>
                              
                              <form id="admin-category-form" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom: 20px;">
                                  <input type="hidden" id="edit-cat-id">
                                  <input type="text" id="new-cat-name" placeholder="Kategori Adı (Örn: Yakıt)" class="text-input" style="flex:1; min-width:150px; margin:0;" required>
                                  <select id="new-cat-icon" class="select-input" style="width:140px; margin:0;">
-                                     <option value="tag">🔖 Etiket</option>
-                                     <option value="utensils">🍔 Yemek</option>
-                                     <option value="home">🏨 Konaklama</option>
-                                     <option value="plane">✈️ Ulaşım</option>
-                                     <option value="ticket">🎟️ Aktivite</option>
-                                     <option value="shopping-bag">🛍️ Alışveriş</option>
-                                     <option value="archive">📦 Diğer</option>
+                                     <option value="tag">Etiket</option>
+                                     <option value="utensils">Yemek</option>
+                                     <option value="home">Konaklama</option>
+                                     <option value="plane">Ulaşım</option>
+                                     <option value="ticket">Aktivite</option>
+                                     <option value="shopping-bag">Alışveriş</option>
+                                     <option value="archive">Diğer</option>
                                  </select>
                                  <input type="color" id="new-cat-color" class="text-input" style="width:50px; height:42px; padding:2px; margin:0; cursor:pointer;" value="#6366f1">
                                  <button type="submit" id="btn-submit-category" class="btn btn-primary" style="margin:0;"><i data-lucide="plus"></i> Kategori Ekle</button>
@@ -1252,7 +1313,7 @@
 
                         <!-- Admin Panel Card -->
                         <div class="card glass double-span nav-admin-only hidden" id="settings-admin-card">
-                            <h3>👥 Üye Yönetim Paneli</h3>
+                            <h3><i data-lucide="users" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Üye Yönetim Paneli</h3>
                             <p class="text-muted" style="margin-top: 8px; margin-bottom: 16px;">Yeni kayıt olan arkadaşlarınızın üyeliklerini onaylayın ve sistem erişimlerini yönetin.</p>
                             <a href="#admin" class="btn btn-primary"><i data-lucide="users"></i> Üyeleri Yönet</a>
                         </div>
@@ -1544,7 +1605,7 @@ create policy "Users can delete own shared routes" on public.shared_routes
                 <section id="view-admin" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>👥 Üye Yönetim Paneli</h1>
+                            <h1><i data-lucide="users" style="width:20px;height:20px;vertical-align:-2px;margin-right:8px;"></i> Üye Yönetim Paneli</h1>
                         </div>
                         <a href="#settings" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Ayarlara Dön</a>
                     </div>
@@ -1592,7 +1653,7 @@ create policy "Users can delete own shared routes" on public.shared_routes
                     <!-- PIN Security Gate (Shown when route has PIN protection) -->
                     <div id="share-pin-gate" class="pin-gate-overlay hidden">
                         <div class="pin-gate-card card glass text-center">
-                            <div class="pin-gate-icon">🔒</div>
+                            <div class="pin-gate-icon"><i data-lucide="lock" style="width:36px;height:36px;color:var(--accent);"></i></div>
                             <h2>Güvenli Rota Paylaşımı</h2>
                             <p class="text-muted" style="margin-top: 8px; line-height: 1.5;">
                                 Bu seyahat rotası sahibi tarafından <strong>4 haneli PIN kodu</strong> ile korunmaktadır.<br>
@@ -1610,7 +1671,7 @@ create policy "Users can delete own shared routes" on public.shared_routes
                             </div>
 
                             <button type="button" id="btn-submit-share-pin" class="btn btn-primary btn-block margin-top-24" style="padding: 14px; font-size: 16px;">
-                                🔓 Rotayı Aç
+                                <i data-lucide="unlock" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Rotayı Aç
                             </button>
                         </div>
                     </div>
@@ -1622,23 +1683,66 @@ create policy "Users can delete own shared routes" on public.shared_routes
                             <div class="share-hero-top">
                                 <div>
                                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                        <h1 id="share-trip-title" style="margin: 0; font-size: 26px;">🏛️ Seyahat Rotası</h1>
-                                        <span class="badge-guest-pill">👁️ Misafir Görünümü (Salt-Okunur)</span>
+                                        <h1 id="share-trip-title" style="margin: 0; font-size: 24px;">Seyahat Rotası</h1>
+                                        <span class="badge-guest-pill">Grup Görünümü</span>
                                     </div>
-                                    <p id="share-trip-dates" class="text-muted margin-top-6">📅 Seyahat Günleri</p>
+                                    <p id="share-trip-dates" class="text-muted margin-top-6">Seyahat Günleri</p>
                                 </div>
-                                <div class="share-hero-stats">
-                                    <span class="stat-pill" id="share-trip-place-count">📍 0 Gezi Noktası</span>
-                                    <span class="stat-pill pill-planned" id="share-trip-total-distance">🚶 Toplam Güzergah: -</span>
+                                <div class="share-hero-stats" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span class="stat-pill" id="share-trip-place-count">0 Gezi Noktası</span>
+                                    <span class="stat-pill pill-planned" id="share-trip-total-distance">Toplam Güzergah: -</span>
+                                    <button type="button" id="btn-guest-suggest-place" class="btn btn-primary btn-sm">
+                                        <i data-lucide="plus"></i> Mekan Öner
+                                    </button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Guest Suggest Place Modal -->
+                        <div id="modal-guest-suggest-place" class="modal hidden">
+                            <div class="modal-content glass" style="max-width: 460px;">
+                                <div class="modal-header">
+                                    <h3 style="margin: 0; font-size: 17px;">Gruba Mekan Öner</h3>
+                                    <button type="button" class="btn-close-modal" id="btn-close-guest-suggest">&times;</button>
+                                </div>
+                                <form id="guest-suggest-form" class="margin-top-12">
+                                    <div class="form-group">
+                                        <label for="guest-suggest-name">Mekan veya Konum Adı</label>
+                                        <input type="text" id="guest-suggest-name" required placeholder="Örn: Moda Çay Bahçesi" class="text-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="guest-suggest-category">Kategori</label>
+                                        <select id="guest-suggest-category" class="select-input">
+                                            <option value="cafe">Kafe & Kahve</option>
+                                            <option value="food">Restoran & Yemek</option>
+                                            <option value="bar">Bar & Gece</option>
+                                            <option value="bakery">Fırın & Tatlı</option>
+                                            <option value="viewpoint">Park & Manzara</option>
+                                            <option value="museum">Müze & Sanat</option>
+                                            <option value="other">Diğer</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="guest-suggest-author">İsminiz (Opsiyonel)</label>
+                                        <input type="text" id="guest-suggest-author" placeholder="Örn: Ayşe" class="text-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="guest-suggest-notes">Neden Gitmeliyiz? / Tavsiye</label>
+                                        <textarea id="guest-suggest-notes" rows="2" class="textarea-input" placeholder="Örn: Gün batımı çok güzel, kahvesi iyi."></textarea>
+                                    </div>
+                                    <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+                                        <button type="button" class="btn btn-secondary" id="btn-cancel-guest-suggest">Vazgeç</button>
+                                        <button type="submit" class="btn btn-primary" id="btn-save-guest-suggest">Öneriyi Ekle</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
 
                         <!-- Upper Half: Interactive Leaflet Map with Numbered Pins & Polyline -->
                         <div class="card glass map-card-container margin-top-20">
                             <div class="map-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="map-tip"><i data-lucide="info"></i> Haritaya yakınlaştığınızda (zoom in) mekan adları pinlerin altında otomatik olarak belirir.</span>
-                                <span class="badge-pill">🗺️ Numaralı Güzergah Haritası</span>
+                                <span class="map-tip"><i data-lucide="info"></i> Haritaya yakınlaştığınızda mekan adları pinlerin altında otomatik olarak belirir.</span>
+                                <span class="badge-pill">Numaralı Güzergah Haritası</span>
                             </div>
                             <div id="share-map" class="places-leaflet-map" style="min-height: 480px;"></div>
                         </div>
@@ -1647,7 +1751,7 @@ create policy "Users can delete own shared routes" on public.shared_routes
                         <div class="share-places-section margin-top-30">
                             <div class="section-title-row">
                                 <div>
-                                    <h2>📍 Rota Sırası ve Gezi Rehberi</h2>
+                                    <h2>Rota Sırası ve Gezi Rehberi</h2>
                                     <p class="subtitle">Haritadaki numaralandırma sırasına göre gezilecek yerler, notlar ve yol tarifleri.</p>
                                 </div>
                             </div>

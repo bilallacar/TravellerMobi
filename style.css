@@ -8,24 +8,24 @@
     /* Fonts */
     --font-sans: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     
-    /* Default Dark Theme Settings */
-    --bg-primary: #0a0d14;
-    --bg-secondary: #121824;
-    --bg-glass: rgba(18, 24, 36, 0.7);
+    /* Default Dark Theme Settings - Deep Carbon Modern Minimalist */
+    --bg-primary: #090a0f;
+    --bg-secondary: #11131a;
+    --bg-glass: rgba(17, 19, 26, 0.88);
     --border-color: rgba(255, 255, 255, 0.08);
-    --text-primary: #f3f4f6;
-    --text-secondary: #9ca3af;
-    --text-muted: #6b7280;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
     
-    --color-primary: #6366f1; /* Indigo */
-    --color-primary-hover: #4f46e5;
-    --color-primary-light: rgba(99, 102, 241, 0.15);
+    --color-primary: #4f46e5; /* Executive Indigo */
+    --color-primary-hover: #4338ca;
+    --color-primary-light: rgba(79, 70, 229, 0.12);
     
     --color-success: #10b981; /* Emerald */
-    --color-success-light: rgba(16, 185, 129, 0.15);
+    --color-success-light: rgba(16, 185, 129, 0.12);
     
     --color-warning: #f59e0b; /* Amber */
-    --color-warning-light: rgba(245, 158, 11, 0.15);
+    --color-warning-light: rgba(245, 158, 11, 0.12);
     
     --color-danger: #ef4444; /* Rose */
     --color-danger-light: rgba(239, 68, 68, 0.15);
@@ -137,21 +137,34 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 40px;
-    padding-left: 8px;
+    margin-bottom: 36px;
+    padding-left: 6px;
 }
 
-.sidebar-logo .logo-icon {
-    font-size: 28px;
+.sidebar-logo .logo-mark, .mobile-logo .logo-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    flex-shrink: 0;
 }
 
-.sidebar-logo .logo-text {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #a5b4fc, #6366f1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.sidebar-logo .logo-mark svg, .mobile-logo .logo-mark svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.2;
+}
+
+.sidebar-logo .logo-text, .mobile-logo .logo-text {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
 }
 
 .sidebar-nav {
@@ -258,19 +271,7 @@ a:hover {
 .mobile-logo {
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.mobile-logo .logo-icon {
-    font-size: 22px;
-}
-
-.mobile-logo .logo-text {
-    font-size: 16px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #a5b4fc, #6366f1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    gap: 10px;
 }
 
 .mobile-sync-status {
@@ -3547,16 +3548,205 @@ select:-webkit-autofill:focus {
     display: inline-block;
 }
 
-/* Place Card Badges */
+/* Place Card Rating Badge (Executive / Official Style) */
 .pill-rating {
-    background: rgba(245, 158, 11, 0.15);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(245, 158, 11, 0.12);
     color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    font-size: 11px;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    font-size: 11.5px;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 2px 7px;
     border-radius: 6px;
+    letter-spacing: -0.01em;
 }
+
+/* 1-Click Link Import Component */
+.link-import-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: var(--border-radius-md);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.link-import-card:focus-within, .link-import-card:hover {
+    border-color: var(--color-primary);
+    background: rgba(79, 70, 229, 0.03);
+}
+
+.link-import-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.link-import-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.link-import-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Foodie & Gourmet Notebook Styles */
+.place-must-try-box {
+    margin: 8px 0;
+    padding: 7px 10px;
+    background: rgba(99, 102, 241, 0.07);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 8px;
+    font-size: 12px;
+    color: #c7d2fe;
+    line-height: 1.4;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.place-must-try-box .must-try-label {
+    font-weight: 700;
+    color: #818cf8;
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    padding-top: 1px;
+}
+
+.place-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 4px 0;
+}
+
+.place-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Quick Tags Selector inside Place Modal */
+.quick-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 8px;
+}
+
+.tag-chip {
+    padding: 5px 11px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.18s ease;
+}
+
+.tag-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+.tag-chip.active {
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+/* Radar Proximity Filter Pill */
+.filter-pill[data-filter="radar"] {
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+.filter-pill[data-filter="radar"]:hover,
+.filter-pill[data-filter="radar"].active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+}
+
+.radar-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: #bfdbfe;
+    margin-bottom: 12px;
+}
+
+/* WhatsApp Settlement Copy Button & Layout */
+.settlement-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.btn-whatsapp-copy {
+    background: #15803d;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-whatsapp-copy:hover {
+    background: #16a34a;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+/* Group Suggestion Badge */
+.badge-group-suggested {
+    background: rgba(168, 85, 247, 0.12);
+    color: #d8b4fe;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
 
 
 

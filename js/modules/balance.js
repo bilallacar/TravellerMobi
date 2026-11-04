@@ -148,31 +148,73 @@ export function renderBalanceSheet() {
         if (Math.abs(creditor.balance) < 0.01) {
             cIdx++;
         }
-    }
+let lastCalculatedTransactions = [];
+let lastTripName = '';
+let lastTripCurrency = 'TRY';
+
+    lastCalculatedTransactions = transactions;
+    lastTripName = trip.name || 'Seyahat';
+    lastTripCurrency = tripCurrency;
 
     // Render suggested payments
     if (transactions.length === 0) {
         settlementsListEl.innerHTML = `
-            <div class="info-alert text-center" style="padding: 15px; font-weight: 500; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success);">
-                🎉 Harika! Tüm hesaplar dengede, kimsenin kimseye borcu bulunmamaktadır.
+            <div class="info-alert text-center" style="padding: 15px; font-weight: 500; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success);">
+                Tüm hesaplar dengede, kimsenin kimseye borcu bulunmamaktadır.
             </div>
         `;
     } else {
         settlementsListEl.innerHTML = transactions.map(t => `
-            <div class="settlement-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border:1px solid rgba(255,255,255,0.05); border-radius:10px; background:rgba(255,255,255,0.02);">
+            <div class="settlement-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border:1px solid rgba(255,255,255,0.06); border-radius:10px; background:rgba(255,255,255,0.02);">
                 <div style="font-size:14px; color:var(--text-color);">
                     <strong>${escapeHTML(t.from)}</strong>, 
                     <strong>${escapeHTML(t.to)}</strong> kişisine ödeme yapmalı.
                 </div>
-                <div style="font-weight:bold; font-size:16px; color:var(--color-primary);">
+                <div style="font-weight:700; font-size:15px; color:#38bdf8;">
                     ${t.amount.toFixed(2)} ${tripCurrency}
                 </div>
             </div>
         `).join('');
     }
     
+    // Wire copy button
+    const copyBtn = document.getElementById('btn-copy-settlements-whatsapp');
+    if (copyBtn) {
+        copyBtn.onclick = () => copySettlementsForWhatsApp();
+    }
+
     if (window.lucide) window.lucide.createIcons();
 }
+
+/**
+ * 1-Click WhatsApp Debt Settlement Text Generator
+ */
+export function copySettlementsForWhatsApp() {
+    if (!lastCalculatedTransactions || lastCalculatedTransactions.length === 0) {
+        showToast("Kopyalanacak açık borç kaydı bulunmuyor (Hesaplar dengede).", "info");
+        return;
+    }
+
+    let text = `TravellerMobi — Seyahat Borç ve Hesaplaşma Özeti\n`;
+    text += `Rotamız: ${lastTripName || 'Seyahat'}\n`;
+    text += `---------------------------------------------\n`;
+    lastCalculatedTransactions.forEach(t => {
+        text += `• ${t.from}, ${t.to} kişisine ${t.amount.toFixed(2)} ${lastTripCurrency} ödemeli\n`;
+    });
+    text += `---------------------------------------------\n`;
+    text += `Bu transferler yapıldığında tüm seyahat hesapları eşitlenmiş olur.`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("Borç özeti panoya kopyalandı! WhatsApp'a yapıştırabilirsiniz.", "success");
+        }).catch(() => {
+            prompt("Borç özetini kopyalayın:", text);
+        });
+    } else {
+        prompt("Borç özetini kopyalayın:", text);
+    }
+}
+window.copySettlementsForWhatsApp = copySettlementsForWhatsApp;
 
 function escapeHTML(str) {
     if (!str) return '';
