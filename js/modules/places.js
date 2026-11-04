@@ -152,6 +152,31 @@ export function initPlacesEvents() {
     if (placeForm) {
         placeForm.addEventListener('submit', handlePlaceFormSubmit);
     }
+
+    // Location Permission Modal Controls
+    const locModal = document.getElementById('modal-location-permission');
+    const btnCloseLocModal = document.getElementById('btn-close-location-modal');
+    const btnDismissLocModal = document.getElementById('btn-dismiss-location-modal');
+    const btnRetryLocation = document.getElementById('btn-retry-location-permission');
+    if (locModal) {
+        locModal.addEventListener('click', (e) => {
+            if (e.target === locModal) closeLocationPermissionModal();
+        });
+    }
+    if (btnCloseLocModal) btnCloseLocModal.addEventListener('click', closeLocationPermissionModal);
+    if (btnDismissLocModal) btnDismissLocModal.addEventListener('click', closeLocationPermissionModal);
+
+    const tabBtnIos = document.getElementById('tab-btn-ios');
+    const tabBtnAndroid = document.getElementById('tab-btn-android');
+    const tabBtnPc = document.getElementById('tab-btn-pc');
+
+    if (tabBtnIos) tabBtnIos.addEventListener('click', () => switchLocationTab('ios'));
+    if (tabBtnAndroid) tabBtnAndroid.addEventListener('click', () => switchLocationTab('android'));
+    if (tabBtnPc) tabBtnPc.addEventListener('click', () => switchLocationTab('pc'));
+
+    if (btnRetryLocation) {
+        btnRetryLocation.addEventListener('click', () => requestLocationFromPermissionModal());
+    }
 }
 
 /**
@@ -327,8 +352,28 @@ function initOrUpdateMap() {
 /**
  * Handle GPS location request via browser Geolocation API
  */
-function handleUserLocationRequest() {
+async function handleUserLocationRequest() {
     if (!mapInstance) return;
+
+    // If we already have user coordinates, pan smoothly immediately
+    if (currentUserCoords) {
+        mapInstance.setView([currentUserCoords.lat, currentUserCoords.lng], 16);
+        showToast("Mevcut konumunuza odaklanıldı", "info");
+    }
+
+    // Check modern navigator.permissions if available
+    if (navigator.permissions && navigator.permissions.query) {
+        try {
+            const status = await navigator.permissions.query({ name: 'geolocation' });
+            if (status.state === 'denied') {
+                openLocationPermissionModal({ code: 1 });
+                return;
+            }
+        } catch (_) {
+            // permissions.query may fail in some WebViews/browsers, proceed to locate
+        }
+    }
+
     showToast("GPS konumu tespit ediliyor...", "info");
     mapInstance.locate({
         setView: true,
@@ -374,8 +419,140 @@ function onLocationFound(e) {
 
 function onLocationError(e) {
     console.warn("Location error:", e.message);
-    showToast("Konumunuz alınamadı. Lütfen tarayıcı konum izinlerini ve cihaz GPS'ini kontrol edin.", "warning");
+    openLocationPermissionModal(e);
 }
+
+/**
+ * Switch active OS guide tab in the location permission modal
+ */
+export function switchLocationTab(tab) {
+    const tabs = ['ios', 'android', 'pc'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const guide = document.getElementById(`loc-guide-${t}`);
+        if (btn) {
+            if (t === tab) btn.classList.add('active-loc-tab');
+            else btn.classList.remove('active-loc-tab');
+        }
+        if (guide) {
+            if (t === tab) guide.classList.remove('hidden');
+            else guide.classList.add('hidden');
+        }
+    });
+}
+window.switchLocationTab = switchLocationTab;
+
+/**
+ * Open Location Permission Guidance Modal
+ */
+export function openLocationPermissionModal(err = null) {
+    const modal = document.getElementById('modal-location-permission');
+    if (!modal) return;
+
+    // Detect device OS to auto-select relevant tab
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    if (isIOS) switchLocationTab('ios');
+    else if (isAndroid) switchLocationTab('android');
+    else switchLocationTab('pc');
+
+    // Display error context if provided
+    const alertBox = document.getElementById('location-modal-alert');
+    if (alertBox) {
+        if (err) {
+            let message = "⚠️ Tarayıcı konum erişimini kısıtladı veya izin verilmedi.";
+            if (err.code === 1 || err.PERMISSION_DENIED) {
+                message = "🚫 <strong>Konum İzni Reddedildi:</strong> Tarayıcınızda veya cihazınızda bu site için konum erişimi engellenmiş görünüyor. Lütfen aşağıdaki 2 adımlık rehberi uygulayın.";
+            } else if (err.code === 2) {
+                message = "📡 <strong>GPS Sinyali Alınamadı:</strong> Cihazınızın Konum / GPS servisinin açık olduğundan emin olun.";
+            } else if (err.code === 3) {
+                message = "⏳ <strong>Zaman Aşımı:</strong> Konum tespiti çok uzun sürdü. Lütfen tekrar deneyin.";
+            } else if (err.message) {
+                message = `⚠️ ${err.message}`;
+            }
+            alertBox.innerHTML = message;
+            alertBox.classList.remove('hidden');
+        } else {
+            alertBox.classList.add('hidden');
+        }
+    }
+
+    modal.classList.remove('hidden');
+}
+window.openLocationPermissionModal = openLocationPermissionModal;
+
+/**
+ * Close Location Permission Guidance Modal
+ */
+export function closeLocationPermissionModal() {
+    const modal = document.getElementById('modal-location-permission');
+    if (modal) modal.classList.add('hidden');
+}
+window.closeLocationPermissionModal = closeLocationPermissionModal;
+
+/**
+ * Single-tap retry button inside modal: Triggers browser geolocation request immediately
+ */
+export async function requestLocationFromPermissionModal() {
+    const btn = document.getElementById('btn-retry-location-permission');
+    const alertBox = document.getElementById('location-modal-alert');
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;">⏳ Konum Alınıyor...</span>`;
+    }
+
+    if (!navigator.geolocation) {
+        if (alertBox) {
+            alertBox.innerHTML = "❌ Tarayıcınız konum servisini desteklemiyor.";
+            alertBox.classList.remove('hidden');
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = "📍 Konumu Şimdi Al (Tek Tıkla)";
+        }
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = "📍 Konumu Şimdi Al (Tek Tıkla)";
+            }
+            closeLocationPermissionModal();
+
+            const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            if (mapInstance) {
+                mapInstance.setView([latlng.lat, latlng.lng], 16);
+            }
+            onLocationFound({
+                latlng: latlng,
+                accuracy: pos.coords.accuracy || 15
+            });
+            showToast("Harika! Konumunuz başarıyla alındı.", "success");
+        },
+        (err) => {
+            console.warn("Permission modal retry failed:", err);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = "🔄 Tekrar Dene";
+            }
+            if (alertBox) {
+                alertBox.innerHTML = "❌ <strong>İzin Hâlâ Kapalı:</strong> Lütfen yukarıdaki adımları tarayıcının adres çubuğundan tamamlayıp tekrar 'Tekrar Dene' butonuna dokunun.";
+                alertBox.classList.remove('hidden');
+            }
+            showToast("Konum izni henüz verilmedi.", "warning");
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+window.requestLocationFromPermissionModal = requestLocationFromPermissionModal;
 
 /**
  * Toggle map container class when zoom >= 14 to show place name labels under pins

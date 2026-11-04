@@ -767,6 +767,89 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Location Permission Guide Modal -->
+                    <div id="modal-location-permission" class="modal hidden">
+                        <div class="modal-content glass" style="max-width: 460px; padding: 22px; border-radius: 24px;">
+                            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 26px;">📍</span>
+                                    <h2 style="font-size: 18px; margin: 0; font-weight: 700;">Konum İzni Gerekli</h2>
+                                </div>
+                                <button type="button" class="btn-close-modal" id="btn-close-location-modal">&times;</button>
+                            </div>
+
+                            <div class="margin-top-16">
+                                <p class="text-sm text-muted" style="line-height: 1.5; margin-bottom: 14px;">
+                                    Haritada anlık yerinizi görmek, en yakın mekanları sıralamak ve yürüyüş mesafesini hesaplamak için konum erişimine ihtiyaç var.
+                                </p>
+
+                                <div id="location-modal-alert" class="card hidden margin-bottom-14" style="padding: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; font-size: 13px; line-height: 1.4; color: #fca5a5;">
+                                </div>
+
+                                <!-- Device Instructions Tabs -->
+                                <div class="location-tabs-nav" style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                    <button type="button" id="tab-btn-ios" class="btn btn-sm btn-secondary active-loc-tab" style="flex: 1; padding: 8px 10px; font-size: 12px;">
+                                        🍎 iPhone (Safari)
+                                    </button>
+                                    <button type="button" id="tab-btn-android" class="btn btn-sm btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 12px;">
+                                        🤖 Android (Chrome)
+                                    </button>
+                                    <button type="button" id="tab-btn-pc" class="btn btn-sm btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 12px;">
+                                        💻 Bilgisayar
+                                    </button>
+                                </div>
+
+                                <!-- iOS Guide -->
+                                <div id="loc-guide-ios" class="loc-guide-box card glass" style="padding: 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.25);">
+                                    <div style="font-weight: 600; margin-bottom: 6px; color: #a5b4fc;">iPhone / Safari'de 2 Adımda Açın:</div>
+                                    <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
+                                        <span class="badge-pill pill-planned" style="padding: 2px 7px; font-weight: 700;">1</span>
+                                        <span>Adres çubuğundaki sol tarafta yer alan <strong>aA</strong> (veya sayfa ayarları) simgesine dokunun.</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
+                                        <span class="badge-pill pill-planned" style="padding: 2px 7px; font-weight: 700;">2</span>
+                                        <span><strong>Web Sitesi Ayarları</strong> bölümüne dokunup <strong>Konum</strong> seçeneğini <strong>"İzin Ver"</strong> yapın.</span>
+                                    </div>
+                                    <div class="text-xs text-muted" style="margin-top: 8px;">
+                                        💡 <em>(Veya iPhone Ayarlar > Gizlilik ve Güvenlik > Konum Servisleri > Safari'ye izin verin)</em>
+                                    </div>
+                                </div>
+
+                                <!-- Android Guide -->
+                                <div id="loc-guide-android" class="loc-guide-box card glass hidden" style="padding: 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25);">
+                                    <div style="font-weight: 600; margin-bottom: 6px; color: #6ee7b7;">Android / Chrome'da 2 Adımda Açın:</div>
+                                    <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
+                                        <span class="badge-pill pill-visited" style="padding: 2px 7px; font-weight: 700;">1</span>
+                                        <span>Adres çubuğundaki <strong>Kilit (🔒)</strong> veya ayarlar simgesine dokunun.</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;">
+                                        <span class="badge-pill pill-visited" style="padding: 2px 7px; font-weight: 700;">2</span>
+                                        <span><strong>İzinler</strong> > <strong>Konum</strong> seçeneğini açıp <strong>"İzin Ver"</strong> yapın.</span>
+                                    </div>
+                                </div>
+
+                                <!-- Desktop Guide -->
+                                <div id="loc-guide-pc" class="loc-guide-box card glass hidden" style="padding: 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.25);">
+                                    <div style="font-weight: 600; margin-bottom: 6px; color: #93c5fd;">Bilgisayar Tarayıcısında:</div>
+                                    <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                        <span class="badge-pill pill-planned" style="padding: 2px 7px; font-weight: 700;">1</span>
+                                        <span>Adres çubuğunun solundaki kilit (🔒) ikonuna tıklayın ve Konum iznini <strong>"İzin Ver"</strong> yapın.</span>
+                                    </div>
+                                </div>
+
+                                <!-- Primary Action: One Tap Retry Button -->
+                                <div class="margin-top-20" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <button type="button" id="btn-retry-location-permission" class="btn btn-primary btn-block" style="padding: 14px; font-size: 15px; font-weight: 700; border-radius: 14px;">
+                                        📍 Konumu Şimdi Al (Tek Tıkla)
+                                    </button>
+                                    <button type="button" id="btn-dismiss-location-modal" class="btn btn-secondary btn-block" style="padding: 10px; font-size: 13px;">
+                                        Şimdilik Kapat
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- 6. EXPENSES VIEW -->

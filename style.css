@@ -767,39 +767,55 @@ select:-webkit-autofill:focus {
 /* Toast System */
 .toast-container {
     position: fixed;
-    top: 24px;
-    right: 24px;
-    z-index: 300;
+    top: max(env(safe-area-inset-top, 16px) + 8px, 16px);
+    right: 16px;
+    z-index: 9999;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    max-width: 380px;
-    width: calc(100% - 48px);
+    gap: 8px;
+    max-width: min(380px, calc(100vw - 32px));
+    width: 100%;
+    pointer-events: none;
 }
 
 .toast {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 16px 20px;
+    padding: 13px 18px;
     border-radius: var(--border-radius-md);
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     border-left: 4px solid var(--color-primary);
-    box-shadow: var(--shadow-premium);
-    transform: translateX(120%);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    font-size: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    transform: translateY(-16px);
+    opacity: 0;
+    transition: all 0.25s ease-out;
+    font-size: 13.5px;
     font-weight: 500;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .toast.show {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 1;
 }
 
-.toast.success { border-left-color: var(--color-success); }
-.toast.warning { border-left-color: var(--color-warning); }
-.toast.danger { border-left-color: var(--color-danger); }
+.toast.success { border-left: 4px solid var(--color-success); }
+.toast.warning { border-left: 4px solid var(--color-warning); }
+.toast.danger { border-left: 4px solid var(--color-danger); }
+
+.active-loc-tab {
+    background: var(--color-primary) !important;
+    color: #ffffff !important;
+    border-color: var(--color-primary) !important;
+    font-weight: 700 !important;
+}
 
 /* Compact Selects */
 .compact-select {

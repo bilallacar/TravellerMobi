@@ -7,6 +7,11 @@ export function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
+    // Limit active toasts to max 2 on mobile to avoid covering the map
+    while (container.children.length >= 2) {
+        container.removeChild(container.firstChild);
+    }
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     
@@ -25,6 +30,13 @@ export function showToast(message, type = 'info') {
 
     toast.appendChild(icon);
     toast.appendChild(span);
+
+    // Dismiss on click/tap
+    toast.addEventListener('click', () => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 250);
+    });
+
     container.appendChild(toast);
     
     // Trigger Lucide icon parsing for this new toast
@@ -33,11 +45,13 @@ export function showToast(message, type = 'info') {
     // Force reflow and animate in
     setTimeout(() => toast.classList.add('show'), 10);
 
-    // Fade out and remove after 4 seconds
+    // Fade out and remove after 3.5 seconds
     setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+        if (toast.parentNode) {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 250);
+        }
+    }, 3500);
 }
 
 // Convert currencies dynamically using API rates
