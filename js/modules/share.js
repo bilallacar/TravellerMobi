@@ -16,8 +16,10 @@ let pendingSharePayload = null;
 let pendingSharePinHash = null;
 let pendingShareTripName = null;
 let activeModalSlug = null;
+let currentModalPin = null;
 let isOpeningShareModal = false;
 let sharePreviewSeq = 0;
+let pinInputDebounceTimer = null;
 
 /**
  * Initialize event listeners for share system
@@ -61,17 +63,36 @@ export function initShareEvents() {
         });
     }
 
-    // PIN input change
+    // PIN input change with debounce
     const pinInput = document.getElementById('share-pin-code');
     if (pinInput) {
-        pinInput.addEventListener('input', async (e) => {
-            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+        pinInput.addEventListener('input', (e) => {
+            const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+            e.target.value = val;
             const pinBadgeEl = document.getElementById('share-pin-display-badge');
-            if (pinBadgeEl && e.target.value.length === 4) {
-                pinBadgeEl.textContent = `PIN: ${e.target.value}`;
-                pinBadgeEl.style.display = 'inline-block';
+            if (pinBadgeEl) {
+                if (val.length === 4) {
+                    pinBadgeEl.textContent = `PIN: ${val}`;
+                    pinBadgeEl.style.display = 'inline-block';
+                } else {
+                    pinBadgeEl.style.display = 'none';
+                }
             }
-            await updateShareLinkPreview();
+            clearTimeout(pinInputDebounceTimer);
+            if (val.length === 4) {
+                pinInputDebounceTimer = setTimeout(async () => {
+                    currentModalPin = val;
+                    if (state.activeTripId && activeModalSlug) {
+                        try {
+                            localStorage.setItem(`trip_share_${state.activeTripId}`, JSON.stringify({
+                                slug: activeModalSlug,
+                                pin: currentModalPin
+                            }));
+                        } catch (err) {}
+                    }
+                    await updateShareLinkPreview();
+                }, 250);
+            }
         });
     }
 
@@ -127,10 +148,28 @@ export async function openShareModal() {
 
         const currentTrip = state.tripsList.find(t => t.id === state.activeTripId) || { name: 'Seyahat Rotası' };
 
-        // Fresh unique slug for this share session: e.g. atina-4821
-        const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
-        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-        activeModalSlug = `${slugBase}-${randomSuffix}`;
+        // Check if there is an existing cached share session for this trip
+        let savedShare = null;
+        try {
+            const raw = localStorage.getItem(`trip_share_${state.activeTripId}`);
+            if (raw) savedShare = JSON.parse(raw);
+        } catch (e) {}
+
+        if (savedShare && savedShare.slug && savedShare.pin) {
+            activeModalSlug = savedShare.slug;
+            currentModalPin = savedShare.pin;
+        } else {
+            const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            activeModalSlug = `${slugBase}-${randomSuffix}`;
+            currentModalPin = Math.floor(1000 + Math.random() * 9000).toString();
+            try {
+                localStorage.setItem(`trip_share_${state.activeTripId}`, JSON.stringify({
+                    slug: activeModalSlug,
+                    pin: currentModalPin
+                }));
+            } catch (e) {}
+        }
 
         // Set trip title & count
         const tripNameEl = document.getElementById('share-modal-trip-name');
@@ -145,14 +184,13 @@ export async function openShareModal() {
         if (pinCheckbox) pinCheckbox.checked = true;
         if (pinContainer) pinContainer.classList.remove('hidden');
 
-        // Generate and sync initial random PIN immediately
-        const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+        // Sync PIN value to input & display badge
         const pinInput = document.getElementById('share-pin-code');
-        if (pinInput) pinInput.value = randomPin;
+        if (pinInput) pinInput.value = currentModalPin;
 
         const pinBadgeEl = document.getElementById('share-pin-display-badge');
         if (pinBadgeEl) {
-            pinBadgeEl.textContent = `PIN: ${randomPin}`;
+            pinBadgeEl.textContent = `PIN: ${currentModalPin}`;
             pinBadgeEl.style.display = 'inline-block';
         }
 
@@ -181,6 +219,7 @@ export function closeShareModal() {
  */
 function generateNewPin() {
     const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+    currentModalPin = randomPin;
     const pinInput = document.getElementById('share-pin-code');
     if (pinInput) pinInput.value = randomPin;
 
@@ -189,11 +228,20 @@ function generateNewPin() {
         pinBadgeEl.textContent = `PIN: ${randomPin}`;
         pinBadgeEl.style.display = 'inline-block';
     }
+
+    if (state.activeTripId && activeModalSlug) {
+        try {
+            localStorage.setItem(`trip_share_${state.activeTripId}`, JSON.stringify({
+                slug: activeModalSlug,
+                pin: randomPin
+            }));
+        } catch (e) {}
+    }
 }
 
 /**
  * Generate share URL:
- * 1. Checks Supabase shared_routes table -> Generates ultra-short URL (e.g. #s=atina-4821)
+ * 1. Checks Supabase shared_routes table -> Generates ultra-short URL (e.g. #s=atina-4821&h=1a4e1b)
  * 2. If table not yet created -> Uses compact URL-safe Base64URL fallback
  */
 async function updateShareLinkPreview() {
@@ -214,7 +262,8 @@ async function updateShareLinkPreview() {
     const slug = activeModalSlug;
 
     const isPinEnabled = pinCheckbox && pinCheckbox.checked;
-    const pin = (isPinEnabled && pinInput) ? pinInput.value.trim() : '';
+    const rawPin = pinInput ? pinInput.value.replace(/\D/g, '').trim() : '';
+    const pin = (isPinEnabled && rawPin.length === 4) ? rawPin : '';
     const pinHash = (isPinEnabled && pin.length === 4) ? hashPin(pin) : '';
 
     if (linkResultInput) linkResultInput.value = "Kısa link oluşturuluyor...";
@@ -261,13 +310,16 @@ async function updateShareLinkPreview() {
     if (currentSeq !== sharePreviewSeq) return;
 
     // 4. Form final URL:
-    // If cloud saved: ULTRA-SHORT link (e.g. https://.../#s=atina-4821)
+    // If cloud saved: ULTRA-SHORT link with fail-safe PIN hash (e.g. https://.../#s=atina-4821&h=1a4e1b)
     // If not: Compact URL-safe Base64URL fallback
     const baseUrl = window.location.origin + window.location.pathname;
     let fullUrl = '';
 
     if (savedToCloud) {
         fullUrl = `${baseUrl}#s=${slug}`;
+        if (isPinEnabled && pinHash) {
+            fullUrl += `&h=${pinHash}`;
+        }
     } else {
         const { payload } = encodeRoutePayload(currentTrip.name, compactPlaces, isPinEnabled ? pin : '');
         let hash = `#share?id=${slug}&d=${payload}`;
@@ -381,14 +433,19 @@ export async function loadShareView(hash) {
     let payload = null;
     let pinHashFromUrl = null;
 
-    if (hash.startsWith('#s=')) {
-        const afterPrefix = hash.substring(3);
-        const [cleanSlug, queryPart] = afterPrefix.split('?');
+    if (hash.startsWith('#s=') || hash.startsWith('#s?')) {
+        const afterPrefix = hash.replace(/^#s[=?]/, '');
+        // Extract slug and any query parameters (like &h=... or ?h=...)
+        const [cleanSlug, queryPart] = afterPrefix.split(/[?&](.+)/);
         slug = cleanSlug ? cleanSlug.replace(/\/+$/, '').trim() : null;
         if (queryPart) {
             const params = new URLSearchParams(queryPart);
             payload = params.get('d');
             pinHashFromUrl = params.get('h');
+        } else if (cleanSlug && cleanSlug.includes('&h=')) {
+            const parts = cleanSlug.split('&h=');
+            slug = parts[0];
+            pinHashFromUrl = parts[1];
         }
     } else {
         const queryString = hash.includes('?') ? hash.substring(hash.indexOf('?') + 1) : '';
@@ -409,7 +466,8 @@ export async function loadShareView(hash) {
                 }
                 pendingShareData = placesData;
                 pendingShareTripName = cloudRoute.trip_name || 'Seyahat Rotası';
-                pendingSharePinHash = cloudRoute.pin_hash ? String(cloudRoute.pin_hash).trim() : null;
+                // Priority: Pin hash from URL parameter, fallback to database record's pin_hash
+                pendingSharePinHash = pinHashFromUrl || (cloudRoute.pin_hash ? String(cloudRoute.pin_hash).trim() : null);
             }
         } catch (e) {
             console.warn("Could not load from cloud table:", e);
@@ -428,7 +486,7 @@ export async function loadShareView(hash) {
                 }
                 pendingShareData = placesData;
                 pendingShareTripName = parsed.tripName;
-                pendingSharePinHash = parsed.pinHash ? String(parsed.pinHash).trim() : null;
+                pendingSharePinHash = pinHashFromUrl || (parsed.pinHash ? String(parsed.pinHash).trim() : null);
             }
         } catch (e) {}
     }
@@ -470,6 +528,10 @@ export async function loadShareView(hash) {
         if (pinGate) pinGate.classList.add('hidden');
         if (shareContent) shareContent.classList.remove('hidden');
         renderInfographicShareContent(routeData);
+
+        setTimeout(() => {
+            if (shareMapInstance) shareMapInstance.invalidateSize();
+        }, 200);
     } catch (err) {
         console.error("Failed to decode share data:", err);
         showToast("Rota yüklenemedi: " + err.message, "danger");
@@ -477,58 +539,67 @@ export async function loadShareView(hash) {
 }
 
 /**
- * Setup 4-digit PIN Gate inputs with auto-advance, backspace and multi-digit paste/type
+ * Setup 4-digit PIN Gate inputs (Unified input + reactive visual digit boxes)
  */
 function setupPinGateInputs() {
-    const inputs = document.querySelectorAll('.pin-digit-box');
+    const unifiedInput = document.getElementById('pin-unified-input');
+    const digitBoxes = document.querySelectorAll('.pin-digit-box');
     const submitBtn = document.getElementById('btn-submit-share-pin');
+    const container = document.getElementById('pin-boxes-container');
 
-    inputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            const rawVal = e.target.value.replace(/\D/g, '');
-            if (!rawVal) {
-                e.target.value = '';
-                return;
-            }
+    if (container && unifiedInput) {
+        container.addEventListener('click', () => {
+            unifiedInput.focus();
+        });
+    }
 
-            // Distribute multi-digit input (from paste, autofill, or fast typing)
-            if (rawVal.length > 1) {
-                for (let k = 0; k < rawVal.length && (index + k) < inputs.length; k++) {
-                    inputs[index + k].value = rawVal[k];
-                }
-                const nextIndex = Math.min(index + rawVal.length, inputs.length - 1);
-                inputs[nextIndex].focus();
-            } else {
-                e.target.value = rawVal;
-                if (index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                }
+    if (unifiedInput) {
+        unifiedInput.addEventListener('input', (e) => {
+            const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+            e.target.value = raw;
+            updateVisualDigitBoxes(raw);
+            if (raw.length === 4) {
+                handlePinGateSubmit();
             }
-            checkAutoSubmitPin();
         });
 
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                inputs[index - 1].focus();
-            } else if (e.key === 'Enter') {
+        unifiedInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
                 e.preventDefault();
                 handlePinGateSubmit();
             }
         });
 
-        // Paste full PIN handling
-        input.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim().replace(/\D/g, '');
-            if (pasteData.length > 0) {
-                for (let k = 0; k < pasteData.length && (index + k) < inputs.length; k++) {
-                    inputs[index + k].value = pasteData[k];
-                }
-                const nextIndex = Math.min(index + pasteData.length, inputs.length - 1);
-                inputs[nextIndex].focus();
-                checkAutoSubmitPin();
-            }
+        unifiedInput.addEventListener('focus', () => {
+            updateVisualDigitBoxes(unifiedInput.value);
         });
+
+        unifiedInput.addEventListener('blur', () => {
+            digitBoxes.forEach(b => b.classList.remove('active'));
+        });
+    }
+
+    // Fallback if legacy separate inputs are present in DOM
+    digitBoxes.forEach((box, index) => {
+        if (box.tagName === 'INPUT') {
+            box.addEventListener('input', (e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                e.target.value = val ? val[0] : '';
+                if (val && index < digitBoxes.length - 1) {
+                    digitBoxes[index + 1].focus();
+                }
+                checkAutoSubmitPin();
+            });
+
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    digitBoxes[index - 1].focus();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handlePinGateSubmit();
+                }
+            });
+        }
     });
 
     if (submitBtn) {
@@ -536,22 +607,63 @@ function setupPinGateInputs() {
     }
 }
 
+function updateVisualDigitBoxes(val) {
+    const digitBoxes = document.querySelectorAll('.pin-digit-box');
+    const clean = String(val || '').replace(/\D/g, '').slice(0, 4);
+    digitBoxes.forEach((box, i) => {
+        const char = clean[i] || '';
+        box.textContent = char;
+        if (char) {
+            box.classList.add('filled');
+        } else {
+            box.classList.remove('filled');
+        }
+        if (i === Math.min(clean.length, 3)) {
+            box.classList.add('active');
+        } else {
+            box.classList.remove('active');
+        }
+    });
+}
+
 function clearPinGateInputs() {
-    const inputs = document.querySelectorAll('.pin-digit-box');
-    inputs.forEach(input => input.value = '');
+    const unifiedInput = document.getElementById('pin-unified-input');
+    if (unifiedInput) {
+        unifiedInput.value = '';
+    }
+    const digitBoxes = document.querySelectorAll('.pin-digit-box');
+    digitBoxes.forEach(box => {
+        if (box.tagName === 'INPUT') box.value = '';
+        else box.textContent = '';
+        box.classList.remove('filled');
+        box.classList.remove('active');
+    });
+    if (digitBoxes[0]) digitBoxes[0].classList.add('active');
 }
 
 function focusFirstPinInput() {
     setTimeout(() => {
+        const unified = document.getElementById('pin-unified-input');
+        if (unified) {
+            unified.focus();
+            updateVisualDigitBoxes(unified.value);
+            return;
+        }
         const first = document.querySelector('.pin-digit-box');
-        if (first) first.focus();
-    }, 200);
+        if (first && first.focus) first.focus();
+    }, 150);
 }
 
 function checkAutoSubmitPin() {
-    const inputs = document.querySelectorAll('.pin-digit-box');
+    const unifiedInput = document.getElementById('pin-unified-input');
     let pin = '';
-    inputs.forEach(input => pin += input.value.trim());
+    if (unifiedInput) {
+        pin = unifiedInput.value.replace(/\D/g, '').trim();
+    } else {
+        const inputs = document.querySelectorAll('.pin-digit-box');
+        inputs.forEach(input => pin += (input.value || input.textContent || '').trim());
+        pin = pin.replace(/\D/g, '').trim();
+    }
     if (pin.length === 4) {
         handlePinGateSubmit();
     }
@@ -562,9 +674,15 @@ let isSubmittingPin = false;
 function handlePinGateSubmit() {
     if (isSubmittingPin) return;
 
-    const inputs = document.querySelectorAll('.pin-digit-box');
+    const unifiedInput = document.getElementById('pin-unified-input');
     let pin = '';
-    inputs.forEach(input => pin += input.value.trim());
+    if (unifiedInput) {
+        pin = unifiedInput.value.replace(/\D/g, '').trim();
+    } else {
+        const inputs = document.querySelectorAll('.pin-digit-box');
+        inputs.forEach(input => pin += (input.value || input.textContent || '').trim());
+        pin = pin.replace(/\D/g, '').trim();
+    }
 
     if (pin.length !== 4) {
         showToast("Lütfen 4 haneli PIN kodunu eksiksiz girin", "warning");
@@ -575,8 +693,10 @@ function handlePinGateSubmit() {
     const enteredHash = hashPin(pin).toLowerCase();
     const expectedHash = String(pendingSharePinHash || '').trim().toLowerCase();
 
+    console.log("Verifying PIN Gate:", { pin, enteredHash, expectedHash });
+
     if (expectedHash && enteredHash !== expectedHash) {
-        showToast("Hatalı PIN kodu! Lütfen tekrar deneyiniz.", "danger");
+        showToast("Hatalı PIN kodu! Lütfen size iletilen 4 haneli PIN kodunu kontrol ediniz.", "danger");
         const box = document.getElementById('pin-boxes-container');
         if (box) {
             box.classList.add('shake-error');
@@ -597,7 +717,7 @@ function handlePinGateSubmit() {
         }
 
         if (!routeData) {
-            throw new Error("Rota verisi çözülemedi.");
+            throw new Error("Rota verisi çözülemedi veya rota boş.");
         }
 
         currentDecodedShareData = routeData;
@@ -614,6 +734,18 @@ function handlePinGateSubmit() {
             console.error("Error rendering infographic content:", renderErr);
             showToast("Rota içeriği gösterilirken bir hata oluştu: " + renderErr.message, "warning");
         }
+
+        // Force Leaflet map resize after container becomes visible
+        setTimeout(() => {
+            if (shareMapInstance) {
+                shareMapInstance.invalidateSize();
+            }
+        }, 150);
+        setTimeout(() => {
+            if (shareMapInstance) {
+                shareMapInstance.invalidateSize();
+            }
+        }, 500);
     } catch (err) {
         console.error("PIN check failed:", err);
         showToast("Rota açılamadı: " + err.message, "danger");
@@ -975,7 +1107,7 @@ window.focusShareMapAction = function(lat, lng) {
 
 export function hashPin(pin) {
     let hash = 0;
-    const str = String(pin || '').trim();
+    const str = String(pin || '').replace(/\D/g, '').trim();
     for (let i = 0; i < str.length; i++) {
         hash = ((hash << 5) - hash) + str.charCodeAt(i);
         hash |= 0;
@@ -1010,7 +1142,8 @@ function binaryStringToUtf8(binStr) {
 
 function xorCipher(binStr, pin) {
     if (!pin) return binStr;
-    const key = String(pin);
+    const key = String(pin).replace(/\D/g, '').trim();
+    if (!key) return binStr;
     let out = '';
     for (let i = 0; i < binStr.length; i++) {
         out += String.fromCharCode(binStr.charCodeAt(i) ^ key.charCodeAt(i % key.length));
@@ -1039,8 +1172,8 @@ export function encodeRoutePayload(tripName, places, pin = '') {
     let pinHash = '';
     let payload = '';
 
-    if (pin && pin.trim().length === 4) {
-        const cleanPin = pin.trim();
+    const cleanPin = String(pin || '').replace(/\D/g, '').trim();
+    if (cleanPin.length === 4) {
         pinHash = hashPin(cleanPin);
         const cipherBin = xorCipher(binStr, cleanPin);
         payload = toBase64Url(cipherBin);
@@ -1052,8 +1185,9 @@ export function encodeRoutePayload(tripName, places, pin = '') {
 }
 
 export function decodeRoutePayload(payload, pin = '', expectedPinHash = '') {
+    const cleanPin = String(pin || '').replace(/\D/g, '').trim();
     if (expectedPinHash) {
-        if (!pin || hashPin(pin) !== expectedPinHash) {
+        if (!cleanPin || hashPin(cleanPin) !== String(expectedPinHash).trim().toLowerCase()) {
             throw new Error("Geçersiz veya hatalı PIN kodu!");
         }
     }

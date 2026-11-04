@@ -1258,6 +1258,14 @@ export async function saveSharedRoute(slug, tripName, places, pinHash = '') {
         const client = await getSupabase();
         if (!client) return null;
 
+        // Ensure user ID is up to date if user is logged in
+        if (!currentCachedUserId && client.auth) {
+            try {
+                const { data: { user } } = await client.auth.getUser();
+                if (user) currentCachedUserId = user.id;
+            } catch (e) {}
+        }
+
         const record = {
             id: slug,
             user_id: currentCachedUserId || null,

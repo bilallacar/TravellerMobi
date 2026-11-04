@@ -3056,6 +3056,13 @@ select:-webkit-autofill:focus {
     margin-bottom: 12px;
 }
 
+.pin-boxes-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    cursor: pointer;
+}
+
 .pin-boxes-row {
     display: flex;
     justify-content: center;
@@ -3065,6 +3072,9 @@ select:-webkit-autofill:focus {
 .pin-digit-box {
     width: 54px;
     height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     font-size: 26px;
     font-weight: 800;
@@ -3074,12 +3084,20 @@ select:-webkit-autofill:focus {
     color: #ffffff;
     transition: all 0.2s ease;
     outline: none;
+    user-select: none;
 }
 
+.pin-digit-box.active,
 .pin-digit-box:focus {
     border-color: #6366f1;
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35);
     transform: scale(1.05);
+}
+
+.pin-digit-box.filled {
+    border-color: rgba(99, 102, 241, 0.7);
+    background: rgba(99, 102, 241, 0.18);
+    color: #a5b4fc;
 }
 
 .shake-error {
