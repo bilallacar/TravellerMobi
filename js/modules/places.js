@@ -11,16 +11,21 @@ let routePolylineLayer = null;
 let showRouteLine = true;
 let userLocationMarker = null;
 let userLocationCircle = null;
+let currentUserCoords = null; // { lat, lng }
+let isFullscreenMap = false;
 
-// Category icons and colors
+// Expanded Category icons and colors (Google Maps / Mapstr / Wanderlog inspired)
 export const PLACE_CATEGORIES = {
-    hotel: { name: 'Otel / Konaklama', icon: 'home', emoji: '🏨', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)' },
-    museum: { name: 'Müze / Sergi', icon: 'landmark', emoji: '🏛️', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.2)' },
-    historical: { name: 'Tarihi / Antik Alan', icon: 'monument', emoji: '🗿', color: '#d97706', bg: 'rgba(217, 119, 6, 0.2)' },
-    food: { name: 'Restoran / Kafe', icon: 'utensils', emoji: '🍽️', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)' },
-    viewpoint: { name: 'Manzara / Park', icon: 'compass', emoji: '🌳', color: '#10b981', bg: 'rgba(16, 185, 129, 0.2)' },
-    shopping: { name: 'Alışveriş / Çarşı', icon: 'shopping-bag', emoji: '🛍️', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.2)' },
-    other: { name: 'Diğer Nokta', icon: 'map-pin', emoji: '📍', color: '#6b7280', bg: 'rgba(107, 114, 128, 0.2)' }
+    cafe: { name: 'Kafe & Kahve', icon: 'coffee', emoji: '☕', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.2)' },
+    food: { name: 'Restoran & Yemek', icon: 'utensils', emoji: '🍽️', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)' },
+    bar: { name: 'Bar & Gece Hayatı', icon: 'glass-water', emoji: '🍸', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.2)' },
+    bakery: { name: 'Fırın & Tatlı', icon: 'croissant', emoji: '🥐', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.2)' },
+    viewpoint: { name: 'Park & Manzara', icon: 'trees', emoji: '🌳', color: '#10b981', bg: 'rgba(16, 185, 129, 0.2)' },
+    museum: { name: 'Müze & Sanat', icon: 'landmark', emoji: '🏛️', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)' },
+    historical: { name: 'Tarihi Alan & Anıt', icon: 'monument', emoji: '🗿', color: '#d97706', bg: 'rgba(217, 119, 6, 0.2)' },
+    shopping: { name: 'Alışveriş & Butik', icon: 'shopping-bag', emoji: '🛍️', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.2)' },
+    hotel: { name: 'Otel & Konaklama', icon: 'home', emoji: '🏨', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.2)' },
+    other: { name: 'Favori Nokta / Diğer', icon: 'map-pin', emoji: '📍', color: '#64748b', bg: 'rgba(100, 116, 139, 0.2)' }
 };
 
 /**
@@ -32,7 +37,6 @@ export function initPlacesEvents() {
     if (btnAdd) {
         btnAdd.addEventListener('click', () => openPlaceModal());
     }
-
 
     // Modal Close and Cancel
     const btnClose = document.getElementById('btn-close-place-modal');
@@ -49,7 +53,16 @@ export function initPlacesEvents() {
         });
     }
 
-    // Filter Buttons
+    // Search Input Real-Time Filter
+    const searchInput = document.getElementById('places-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            renderPlacesList();
+            renderMapMarkers();
+        });
+    }
+
+    // Category & Status Filter Buttons
     const filterContainer = document.getElementById('places-filter-bar');
     if (filterContainer) {
         filterContainer.addEventListener('click', (e) => {
@@ -63,6 +76,26 @@ export function initPlacesEvents() {
         });
     }
 
+    // Fullscreen Map Toggle Button
+    const btnToggleFullscreen = document.getElementById('btn-toggle-fullscreen-map');
+    const mapCardContainer = document.querySelector('.map-card-container');
+    const fullscreenMapText = document.getElementById('fullscreen-map-text');
+    if (btnToggleFullscreen && mapCardContainer) {
+        btnToggleFullscreen.addEventListener('click', () => {
+            isFullscreenMap = !isFullscreenMap;
+            if (isFullscreenMap) {
+                mapCardContainer.classList.add('map-fullscreen');
+                if (fullscreenMapText) fullscreenMapText.textContent = 'Küçült';
+            } else {
+                mapCardContainer.classList.remove('map-fullscreen');
+                if (fullscreenMapText) fullscreenMapText.textContent = 'Tam Ekran';
+            }
+            setTimeout(() => {
+                if (mapInstance) mapInstance.invalidateSize();
+            }, 250);
+        });
+    }
+
     // Route Polyline Toggle Button
     const btnToggleRoute = document.getElementById('btn-toggle-route-line');
     const routeStatusText = document.getElementById('route-line-status-text');
@@ -70,7 +103,7 @@ export function initPlacesEvents() {
         btnToggleRoute.addEventListener('click', () => {
             showRouteLine = !showRouteLine;
             if (routeStatusText) {
-                routeStatusText.textContent = showRouteLine ? 'Rota Çizgisi: Açık' : 'Rota Çizgisi: Kapalı';
+                routeStatusText.textContent = showRouteLine ? 'Rota: Açık' : 'Rota: Kapalı';
             }
             if (showRouteLine) {
                 btnToggleRoute.classList.remove('btn-secondary');
@@ -82,6 +115,12 @@ export function initPlacesEvents() {
             renderRoutePolyline();
         });
     }
+
+    // Bottom Sheet Close Button & Backdrop
+    const btnCloseSheet = document.getElementById('btn-close-bottom-sheet');
+    const sheetBackdrop = document.getElementById('bottom-sheet-backdrop');
+    if (btnCloseSheet) btnCloseSheet.addEventListener('click', closePlaceBottomSheet);
+    if (sheetBackdrop) sheetBackdrop.addEventListener('click', closePlaceBottomSheet);
 
     // Modal Delete Place Button
     const btnDeleteModal = document.getElementById('btn-delete-place-modal');
@@ -116,40 +155,51 @@ export function initPlacesEvents() {
 }
 
 /**
- * Load Places Data for currently selected trip
+ * Helper to determine mobile viewport
+ */
+function isMobileScreen() {
+    return window.innerWidth <= 768;
+}
+
+/**
+ * Load Places Data for currently selected trip or City Guide
  */
 export async function loadPlacesData() {
     const tripSelector = document.getElementById('places-trip-selector');
     
-    // Ensure trips are available in dropdown
+    // Ensure trips and everyday city guide options are available in dropdown
     if (tripSelector) {
         tripSelector.innerHTML = '';
-        if (state.tripsList.length === 0) {
-            tripSelector.innerHTML = '<option value="">(Önce bir seyahat oluşturmalısınız)</option>';
-            state.placesList = [];
-            renderEmptyState();
-            return;
-        }
 
+        // Everyday Saved Places (City Guide) Option
+        const optCityGuide = document.createElement('option');
+        optCityGuide.value = 'city-guide';
+        optCityGuide.textContent = '🌟 Şehir Rehberim & Günlük Kayıtlar';
+        tripSelector.appendChild(optCityGuide);
+
+        // All Places Global Map Option
+        const optAllPlaces = document.createElement('option');
+        optAllPlaces.value = 'all-places';
+        optAllPlaces.textContent = '🌐 Tüm Kayıtlı Mekanlarım (Genel Harita)';
+        tripSelector.appendChild(optAllPlaces);
+
+        // Add Active Trips
         state.tripsList.forEach(trip => {
             const opt = document.createElement('option');
             opt.value = trip.id;
-            opt.textContent = `${trip.name} (${trip.currency || 'TRY'})`;
-            if (state.activeTripId === trip.id) opt.selected = true;
+            opt.textContent = `✈️ ${trip.name} (${trip.currency || 'TRY'})`;
             tripSelector.appendChild(opt);
         });
 
-        if (!state.activeTripId && state.tripsList.length > 0) {
-            state.activeTripId = state.tripsList[0].id;
-            tripSelector.value = state.activeTripId;
+        // Set active selection
+        if (!state.activeTripId) {
+            state.activeTripId = state.tripsList.length > 0 ? state.tripsList[0].id : 'city-guide';
         }
+        tripSelector.value = state.activeTripId;
     }
-
-    if (!state.activeTripId) return;
 
     try {
         const places = await db.getPlaces(state.activeTripId);
-        // Sanitize places data to avoid any null/undefined element crashes
         state.placesList = (places || []).filter(p => p && typeof p === 'object' && p.id);
         
         try {
@@ -179,19 +229,20 @@ function initOrUpdateMap() {
 
     if (!mapInstance) {
         // Create Leaflet instance
-        // Default center: Athens, Greece [37.9838, 23.7275]
+        // Default center: Istanbul / Athens corridor [41.0082, 28.9784]
         mapInstance = L.map('places-map', {
             zoomControl: true,
-            scrollWheelZoom: true
-        }).setView([37.9838, 23.7275], 13);
+            scrollWheelZoom: true,
+            tap: false // Disables 300ms mobile touch delay
+        }).setView([41.0082, 28.9784], 13);
 
-        // Esri World Light Gray Canvas (Minimalist, pale, distraction-free with English/Latin labels, NO API KEY, NO WATERMARK)
+        // Minimalist Esri Canvas Tile Layer (Distraction-free, fast, no watermark)
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
         }).addTo(mapInstance);
 
-        // English Reference Labels overlay
+        // Reference Labels overlay
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19
         }).addTo(mapInstance);
@@ -201,12 +252,12 @@ function initOrUpdateMap() {
 
         routePolylineLayer = L.layerGroup().addTo(mapInstance);
 
-        // MarkerCluster Layer (Clusters close pins and avoids overlap)
+        // MarkerCluster Layer
         if (typeof L.markerClusterGroup !== 'undefined') {
             try {
                 markersLayer = L.markerClusterGroup({
-                    maxClusterRadius: 40,
-                    spiderfyOnMaxZoom: true,
+                    maxClusterRadius: isMobileScreen() ? 30 : 40,
+                    spiderfyOnMaxZoom: !isMobileScreen(), // Disable spiderfy jumping on mobile
                     showCoverageOnHover: false,
                     zoomToBoundsOnClick: true
                 }).addTo(mapInstance);
@@ -242,17 +293,21 @@ function initOrUpdateMap() {
             });
             mapInstance.addControl(new LocateControl());
 
-            // Listen for GPS location events
             mapInstance.on('locationfound', onLocationFound);
             mapInstance.on('locationerror', onLocationError);
         } catch (ctrlErr) {
             console.warn("LocateControl init error:", ctrlErr);
         }
 
-        // Click on map to add draft pin and trigger modal
+        // Click on map listener:
+        // On mobile: closes the bottom sheet without accidentally opening the add modal.
+        // On desktop: allows clicking to drop a pin.
         mapInstance.on('click', (e) => {
-            const { lat, lng } = e.latlng;
-            openPlaceModalWithCoords(lat, lng);
+            closePlaceBottomSheet();
+            if (!isMobileScreen()) {
+                const { lat, lng } = e.latlng;
+                openPlaceModalWithCoords(lat, lng);
+            }
         });
 
         // Trigger map resize fix after layout rendering
@@ -284,6 +339,8 @@ function handleUserLocationRequest() {
 
 function onLocationFound(e) {
     const radius = Math.round(e.accuracy);
+    currentUserCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+
     if (userLocationMarker && mapInstance) mapInstance.removeLayer(userLocationMarker);
     if (userLocationCircle && mapInstance) mapInstance.removeLayer(userLocationCircle);
 
@@ -300,8 +357,7 @@ function onLocationFound(e) {
 
     userLocationMarker = L.marker(e.latlng, { icon: userIcon })
         .addTo(mapInstance)
-        .bindPopup(`<b>📍 Şu an buradasınız!</b><br><small>Hassasiyet: ~${radius} metre</small>`)
-        .openPopup();
+        .bindPopup(`<b>📍 Şu an buradasınız!</b><br><small>Hassasiyet: ~${radius} metre</small>`);
 
     userLocationCircle = L.circle(e.latlng, {
         radius: radius,
@@ -312,6 +368,8 @@ function onLocationFound(e) {
     }).addTo(mapInstance);
 
     showToast(`Konumunuz bulundu (Hassasiyet: ~${radius}m)`, "success");
+    // Re-render list & markers to reflect real-time user distances
+    renderPlacesList();
 }
 
 function onLocationError(e) {
@@ -344,7 +402,35 @@ export function getSortedPlaces(places) {
 }
 
 /**
- * Render Numbered Markers on the map (1, 2, 3...) with Zoom-Level Visibility Labels
+ * Filter helper supporting categories, status, and instant text search
+ */
+function getFilteredPlaces() {
+    let filtered = [...state.placesList];
+
+    // Category / Status Filter
+    const filter = state.activePlaceFilter || 'all';
+    if (filter === 'planned') filtered = filtered.filter(p => p.status === 'planned');
+    else if (filter === 'visited') filtered = filtered.filter(p => p.status === 'visited');
+    else if (filter !== 'all') filtered = filtered.filter(p => p.category === filter);
+
+    // Instant Text Search
+    const searchInput = document.getElementById('places-search-input');
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    if (query) {
+        filtered = filtered.filter(p => {
+            const name = (p.name || '').toLowerCase();
+            const address = (p.address || '').toLowerCase();
+            const notes = (p.notes || '').toLowerCase();
+            const catName = (PLACE_CATEGORIES[p.category]?.name || '').toLowerCase();
+            return name.includes(query) || address.includes(query) || notes.includes(query) || catName.includes(query);
+        });
+    }
+
+    return filtered;
+}
+
+/**
+ * Render Numbered Markers on the map with Mobile Bottom Sheet Integration
  */
 function renderMapMarkers() {
     if (!mapInstance || !markersLayer) return;
@@ -362,8 +448,6 @@ function renderMapMarkers() {
     }
 
     const sorted = getSortedPlaces(filtered);
-
-    // Find active hotel for distance reference
     const hotel = state.placesList.find(p => p.category === 'hotel');
     const latLngBounds = [];
 
@@ -374,15 +458,6 @@ function renderMapMarkers() {
         const isVisited = place.status === 'visited';
         const catInfo = PLACE_CATEGORIES[place.category] || PLACE_CATEGORIES.other;
         
-        // Distance from hotel
-        let distanceHtml = '';
-        if (hotel && hotel.id !== place.id) {
-            const distMeters = calculateDistance(hotel.latitude, hotel.longitude, place.latitude, place.longitude);
-            const distText = distMeters >= 1000 ? `${(distMeters / 1000).toFixed(1)} km` : `${Math.round(distMeters)} m`;
-            const walkMin = Math.round(distMeters / 80); // ~80m per min
-            distanceHtml = `<div class="popup-distance">🏨 Otele <strong>${distText}</strong> (~${walkMin} dk yürüme)</div>`;
-        }
-
         // Custom Numbered HTML Marker Icon with Zoom-Sensitive Label
         const markerHtml = `
             <div class="custom-marker-wrapper ${isVisited ? 'marker-visited' : 'marker-planned'} category-${place.category}">
@@ -403,69 +478,26 @@ function renderMapMarkers() {
             popupAnchor: [0, -40]
         });
 
-        const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
+        const marker = L.marker([place.latitude, place.longitude], { icon });
 
-        const popupContent = `
-            <div class="place-popup-card">
-                <div class="popup-header">
-                    <span class="popup-number-badge">#${placeNumber}</span>
-                    <span class="popup-category-badge" style="background: ${catInfo.bg}; color: ${catInfo.color};">
-                        ${catInfo.emoji} ${catInfo.name}
-                    </span>
-                    <span class="popup-status-badge ${isVisited ? 'status-visited' : 'status-planned'}">
-                        ${isVisited ? '✓ Gezildi' : '🟢 Gidilecek'}
-                    </span>
-                </div>
-                <h4 class="popup-title">${escapeHtml(place.name)}</h4>
-                ${place.address ? `<p class="popup-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</p>` : ''}
-                ${distanceHtml}
-                ${place.notes ? `<p class="popup-notes">${escapeHtml(place.notes)}</p>` : ''}
-                ${place.estimated_cost > 0 ? `<div class="popup-cost">Tahmini Giriş/Masraf: <strong>${place.estimated_cost} ${place.currency || 'EUR'}</strong></div>` : ''}
-                
-                <div class="popup-actions">
-                    <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-sm btn-block">
-                        🗺️ Google Haritalar'da Yol Tarifi
-                    </a>
-                    <button type="button" class="btn btn-secondary btn-sm btn-block btn-toggle-status" data-id="${place.id}">
-                        ${isVisited ? 'Gidilecek Olarak İşaretle' : '✓ Gidildi Olarak İşaretle'}
-                    </button>
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button type="button" class="btn btn-secondary btn-sm btn-edit-place" data-id="${place.id}" style="flex: 1;">
-                            ✏️ Düzenle
-                        </button>
-                        <button type="button" class="btn btn-sm btn-delete-popup" data-id="${place.id}" style="flex: 1;">
-                            🗑️ Sil
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Tapping/Clicking a marker:
+        marker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
 
-        const marker = L.marker([place.latitude, place.longitude], { icon })
-            .bindPopup(popupContent, { maxWidth: 320, className: 'glass-popup' });
+            if (isMobileScreen()) {
+                // On mobile: smoothly center map with offset and open Bottom Sheet!
+                mapInstance.setView([place.latitude, place.longitude], Math.max(mapInstance.getZoom(), 15), {
+                    animate: true
+                });
+                // Slight upward pan so pin is clearly visible above drawer
+                setTimeout(() => {
+                    mapInstance.panBy([0, -100], { animate: true });
+                }, 150);
 
-        marker.on('popupopen', () => {
-            if (window.lucide) window.lucide.createIcons();
-            const popupEl = marker.getPopup().getElement();
-            if (popupEl) {
-                const btnToggle = popupEl.querySelector('.btn-toggle-status');
-                if (btnToggle) {
-                    btnToggle.onclick = () => togglePlaceStatus(place.id);
-                }
-                const btnEdit = popupEl.querySelector('.btn-edit-place');
-                if (btnEdit) {
-                    btnEdit.onclick = () => {
-                        mapInstance.closePopup();
-                        openPlaceModal(place);
-                    };
-                }
-                const btnDelete = popupEl.querySelector('.btn-delete-popup');
-                if (btnDelete) {
-                    btnDelete.onclick = () => {
-                        mapInstance.closePopup();
-                        window.deletePlaceAction(place.id);
-                    };
-                }
+                openPlaceBottomSheet(place, placeNumber);
+            } else {
+                // On desktop: open standard popup
+                openDesktopPopup(marker, place, placeNumber, hotel, catInfo);
             }
         });
 
@@ -483,12 +515,194 @@ function renderMapMarkers() {
 }
 
 /**
+ * Desktop Popup Card Renderer
+ */
+function openDesktopPopup(marker, place, placeNumber, hotel, catInfo) {
+    const isVisited = place.status === 'visited';
+    let distanceHtml = '';
+    if (hotel && hotel.id !== place.id) {
+        const distMeters = calculateDistance(hotel.latitude, hotel.longitude, place.latitude, place.longitude);
+        const distText = distMeters >= 1000 ? `${(distMeters / 1000).toFixed(1)} km` : `${Math.round(distMeters)} m`;
+        const walkMin = Math.round(distMeters / 80);
+        distanceHtml = `<div class="popup-distance">🏨 Otele <strong>${distText}</strong> (~${walkMin} dk yürüme)</div>`;
+    }
+
+    const ratingStars = place.rating > 0 ? `<div class="rating-stars margin-bottom-6">${'⭐'.repeat(place.rating)}</div>` : '';
+    const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
+
+    const popupContent = `
+        <div class="place-popup-card">
+            <div class="popup-header">
+                <span class="popup-number-badge">#${placeNumber}</span>
+                <span class="popup-category-badge" style="background: ${catInfo.bg}; color: ${catInfo.color};">
+                    ${catInfo.emoji} ${catInfo.name}
+                </span>
+                <span class="popup-status-badge ${isVisited ? 'status-visited' : 'status-planned'}">
+                    ${isVisited ? '✓ Gezildi' : '🟢 Gidilecek'}
+                </span>
+            </div>
+            <h4 class="popup-title">${escapeHtml(place.name)}</h4>
+            ${ratingStars}
+            ${place.address ? `<p class="popup-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</p>` : ''}
+            ${distanceHtml}
+            ${place.notes ? `<p class="popup-notes">${escapeHtml(place.notes)}</p>` : ''}
+            ${place.estimated_cost > 0 ? `<div class="popup-cost">Tahmini Masraf: <strong>${place.estimated_cost} ${place.currency || 'EUR'}</strong></div>` : ''}
+            
+            <div class="popup-actions">
+                <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-sm btn-block">
+                    🗺️ Google Haritalar'da Yol Tarifi
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm btn-block btn-toggle-status" data-id="${place.id}">
+                    ${isVisited ? 'Gidilecek Olarak İşaretle' : '✓ Gidildi Olarak İşaretle'}
+                </button>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button type="button" class="btn btn-secondary btn-sm btn-edit-place" data-id="${place.id}" style="flex: 1;">
+                        ✏️ Düzenle
+                    </button>
+                    <button type="button" class="btn btn-sm btn-delete-popup" data-id="${place.id}" style="flex: 1;">
+                        🗑️ Sil
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    marker.bindPopup(popupContent, { maxWidth: 320, className: 'glass-popup' }).openPopup();
+
+    setTimeout(() => {
+        if (window.lucide) window.lucide.createIcons();
+        const popupEl = marker.getPopup()?.getElement();
+        if (popupEl) {
+            const btnToggle = popupEl.querySelector('.btn-toggle-status');
+            if (btnToggle) btnToggle.onclick = () => togglePlaceStatus(place.id);
+            const btnEdit = popupEl.querySelector('.btn-edit-place');
+            if (btnEdit) btnEdit.onclick = () => {
+                mapInstance.closePopup();
+                openPlaceModal(place);
+            };
+            const btnDelete = popupEl.querySelector('.btn-delete-popup');
+            if (btnDelete) btnDelete.onclick = () => {
+                mapInstance.closePopup();
+                window.deletePlaceAction(place.id);
+            };
+        }
+    }, 50);
+}
+
+/**
+ * Open Mobile Bottom Sheet (Native Map Drawer)
+ */
+export function openPlaceBottomSheet(place, placeNumber) {
+    const sheet = document.getElementById('place-bottom-sheet');
+    const sheetBody = document.getElementById('bottom-sheet-body');
+    if (!sheet || !sheetBody) return;
+
+    const catInfo = PLACE_CATEGORIES[place.category] || PLACE_CATEGORIES.other;
+    const isVisited = place.status === 'visited';
+    const hotel = state.placesList.find(p => p.category === 'hotel');
+
+    // Calculate real-time distances
+    let userDistText = '';
+    if (currentUserCoords) {
+        const distUser = calculateDistance(currentUserCoords.lat, currentUserCoords.lng, place.latitude, place.longitude);
+        const distStr = distUser >= 1000 ? `${(distUser / 1000).toFixed(1)} km` : `${Math.round(distUser)} m`;
+        userDistText = `<span class="distance-pill">📍 Sizden ${distStr}</span>`;
+    }
+
+    let hotelDistText = '';
+    if (hotel && hotel.id !== place.id) {
+        const distHotel = calculateDistance(hotel.latitude, hotel.longitude, place.latitude, place.longitude);
+        const distStr = distHotel >= 1000 ? `${(distHotel / 1000).toFixed(1)} km` : `${Math.round(distHotel)} m`;
+        hotelDistText = `<span class="distance-pill hotel-dist">🏨 Otele ${distStr}</span>`;
+    }
+
+    const ratingStars = place.rating > 0 ? `<div class="rating-stars">${'⭐'.repeat(place.rating)}</div>` : '';
+    const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
+
+    sheetBody.innerHTML = `
+        <div class="bottom-sheet-header-badges">
+            <span class="popup-number-badge">#${placeNumber}</span>
+            <span class="popup-category-badge" style="background: ${catInfo.bg}; color: ${catInfo.color};">
+                ${catInfo.emoji} ${catInfo.name}
+            </span>
+            <span class="popup-status-badge ${isVisited ? 'status-visited' : 'status-planned'}">
+                ${isVisited ? '✓ Gezildi' : '🟢 Gitmek İstiyorum'}
+            </span>
+            ${ratingStars}
+        </div>
+
+        <h3 class="bottom-sheet-title">${escapeHtml(place.name)}</h3>
+        ${place.address ? `<div class="bottom-sheet-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</div>` : ''}
+
+        ${(userDistText || hotelDistText) ? `<div class="bottom-sheet-distances">${userDistText}${hotelDistText}</div>` : ''}
+
+        ${place.notes ? `<div class="bottom-sheet-notes">${escapeHtml(place.notes)}</div>` : ''}
+        ${place.estimated_cost > 0 ? `<div class="text-sm margin-bottom-8">💰 Tahmini Masraf: <strong>${place.estimated_cost} ${place.currency || 'EUR'}</strong></div>` : ''}
+
+        <div class="bottom-sheet-actions">
+            <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn-directions-primary">
+                <i data-lucide="navigation"></i> Google Haritalar'da Yol Tarifi
+            </a>
+
+            <div class="bottom-sheet-sub-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-sheet-toggle-status" style="flex: 2;">
+                    ${isVisited ? 'Gidilecek Olarak İşaretle' : '✓ Gidildi Olarak İşaretle'}
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-sheet-edit" style="flex: 1;">
+                    ✏️ Düzenle
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-delete-popup" id="btn-sheet-delete" style="flex: 1;">
+                    🗑️ Sil
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Wire up buttons inside bottom sheet
+    const btnToggle = sheetBody.querySelector('#btn-sheet-toggle-status');
+    if (btnToggle) {
+        btnToggle.onclick = async () => {
+            await togglePlaceStatus(place.id);
+            closePlaceBottomSheet();
+        };
+    }
+    const btnEdit = sheetBody.querySelector('#btn-sheet-edit');
+    if (btnEdit) {
+        btnEdit.onclick = () => {
+            closePlaceBottomSheet();
+            openPlaceModal(place);
+        };
+    }
+    const btnDelete = sheetBody.querySelector('#btn-sheet-delete');
+    if (btnDelete) {
+        btnDelete.onclick = async () => {
+            closePlaceBottomSheet();
+            await window.deletePlaceAction(place.id);
+        };
+    }
+
+    sheet.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+}
+
+/**
+ * Close Mobile Bottom Sheet
+ */
+export function closePlaceBottomSheet() {
+    const sheet = document.getElementById('place-bottom-sheet');
+    if (sheet) sheet.classList.add('hidden');
+}
+
+/**
  * Render Polyline connecting Numbered Points (1 -> 2 -> 3...) with Segment Distance Badges
  */
 function renderRoutePolyline() {
     if (!mapInstance || !routePolylineLayer) return;
     routePolylineLayer.clearLayers();
     if (!showRouteLine) return;
+
+    // Only draw route line if inside a trip (not general city guide with scattered places across towns)
+    if (state.activeTripId === 'all-places') return;
 
     const sorted = getSortedPlaces(getFilteredPlaces().filter(p => p.latitude && p.longitude));
     if (sorted.length < 2) return;
@@ -544,18 +758,6 @@ function renderRoutePolyline() {
 }
 
 /**
- * Filter helper
- */
-function getFilteredPlaces() {
-    const filter = state.activePlaceFilter || 'all';
-    if (filter === 'all') return state.placesList;
-    if (filter === 'planned') return state.placesList.filter(p => p.status === 'planned');
-    if (filter === 'visited') return state.placesList.filter(p => p.status === 'visited');
-    if (filter === 'hotel') return state.placesList.filter(p => p.category === 'hotel');
-    return state.placesList.filter(p => p.category === filter);
-}
-
-/**
  * Render places list / cards below the map with matching Number Badges (#1, #2, #3...)
  */
 function renderPlacesList() {
@@ -571,8 +773,8 @@ function renderPlacesList() {
     if (statsEl) {
         statsEl.innerHTML = `
             <div class="stat-pill"><strong>${total}</strong> Toplam Mekan</div>
-            <div class="stat-pill pill-planned">🟢 <strong>${plannedCount}</strong> Gidilecek</div>
-            <div class="stat-pill pill-visited">⚪ <strong>${visitedCount}</strong> Gezildi</div>
+            <div class="stat-pill pill-planned">🟢 <strong>${plannedCount}</strong> Gitmek İstediğim</div>
+            <div class="stat-pill pill-visited">⚪ <strong>${visitedCount}</strong> Ziyaret Edilen</div>
             ${hotel ? `<div class="stat-pill pill-hotel">🏨 Otel: <strong>${escapeHtml(hotel.name)}</strong></div>` : ''}
         `;
     }
@@ -580,11 +782,16 @@ function renderPlacesList() {
     const filtered = getFilteredPlaces();
 
     if (filtered.length === 0) {
+        const isCityGuide = state.activeTripId === 'city-guide';
         listContainer.innerHTML = `
             <div class="empty-places-card card glass">
                 <i data-lucide="map-pin-off" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 12px;"></i>
-                <h3>Henüz Mekan Eklenmemiş</h3>
-                <p class="text-muted">Bu seyahat için gezilecek yerler, müzeler ve otelinizi haritaya ekleyin.</p>
+                <h3>${isCityGuide ? 'Şehir Rehberinizde Mekan Yok' : 'Henüz Mekan Eklenmemiş'}</h3>
+                <p class="text-muted">
+                    ${isCityGuide 
+                        ? 'Günlük hayatınızda gitmek istediğiniz 3. dalga kahvecileri, restoranları ve keyifli parkları haritanıza kaydedin!' 
+                        : 'Bu rota için gezilecek yerleri, otelinizi ve mekanları haritaya ekleyin.'}
+                </p>
                 <button type="button" class="btn btn-primary margin-top-12" id="btn-empty-add-place">
                     + İlk Mekanı Ekle
                 </button>
@@ -603,9 +810,13 @@ function renderPlacesList() {
         const catInfo = PLACE_CATEGORIES[place.category] || PLACE_CATEGORIES.other;
         const isVisited = place.status === 'visited';
 
-        // Distance from hotel
+        // Distance from hotel or from user GPS
         let distanceBadge = '';
-        if (hotel && hotel.id !== place.id) {
+        if (currentUserCoords) {
+            const distUser = calculateDistance(currentUserCoords.lat, currentUserCoords.lng, place.latitude, place.longitude);
+            const distStr = distUser >= 1000 ? `${(distUser / 1000).toFixed(1)} km` : `${Math.round(distUser)} m`;
+            distanceBadge = `<span class="place-distance-tag" title="Anlık Konumunuza Uzaklık">📍 Sizden ${distStr}</span>`;
+        } else if (hotel && hotel.id !== place.id) {
             const distM = calculateDistance(hotel.latitude, hotel.longitude, place.latitude, place.longitude);
             const distStr = distM >= 1000 ? `${(distM / 1000).toFixed(1)} km` : `${Math.round(distM)} m`;
             const walkMin = Math.round(distM / 80);
@@ -614,6 +825,7 @@ function renderPlacesList() {
             distanceBadge = `<span class="place-distance-tag hotel-tag">📍 Ana Konaklama Üssü</span>`;
         }
 
+        const ratingStars = place.rating > 0 ? `<span class="pill-rating">${'⭐'.repeat(place.rating)}</span>` : '';
         const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
 
         return `
@@ -624,12 +836,15 @@ function renderPlacesList() {
 
                 <div class="place-card-content-area">
                     <div class="place-card-header">
-                        <div class="place-category-pill" style="background: ${catInfo.bg}; color: ${catInfo.color};">
-                            ${catInfo.emoji} ${catInfo.name}
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <div class="place-category-pill" style="background: ${catInfo.bg}; color: ${catInfo.color};">
+                                ${catInfo.emoji} ${catInfo.name}
+                            </div>
+                            ${ratingStars}
                         </div>
                         <div class="place-status-wrapper">
                             <button type="button" class="btn-toggle-badge ${isVisited ? 'badge-visited' : 'badge-planned'}" onclick="window.togglePlaceStatusAction('${place.id}')">
-                                ${isVisited ? '✓ Gezildi' : '🟢 Gidilecek'}
+                                ${isVisited ? '✓ Gezildi' : '🟢 Gitmek İstiyorum'}
                             </button>
                         </div>
                     </div>
@@ -639,14 +854,14 @@ function renderPlacesList() {
                         ${place.address ? `<p class="place-address"><i data-lucide="map-pin"></i> ${escapeHtml(place.address)}</p>` : ''}
                         ${distanceBadge ? `<div class="margin-bottom-8">${distanceBadge}</div>` : ''}
                         ${place.notes ? `<p class="place-notes">${escapeHtml(place.notes)}</p>` : ''}
-                        ${place.estimated_cost > 0 ? `<div class="place-cost-tag">Giriş: <strong>${place.estimated_cost} ${place.currency || 'EUR'}</strong></div>` : ''}
+                        ${place.estimated_cost > 0 ? `<div class="place-cost-tag">Tahmini Masraf: <strong>${place.estimated_cost} ${place.currency || 'EUR'}</strong></div>` : ''}
                     </div>
 
                     <div class="place-card-actions">
-                        <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" title="Google Maps Navigasyonu">
+                        <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" title="Google Haritalar'da Aç">
                             <i data-lucide="navigation"></i> Yol Tarifi
                         </a>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.focusPlaceOnMapAction(${place.latitude}, ${place.longitude})" title="Haritada Odaklan">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.focusPlaceOnMapAction(${place.latitude}, ${place.longitude}, '${place.id}', ${placeNumber})" title="Haritada Odaklan">
                             <i data-lucide="crosshair"></i> Haritada Gör
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.editPlaceAction('${place.id}')" title="Düzenle">
@@ -667,10 +882,19 @@ function renderPlacesList() {
 /**
  * Focus map on specific latitude & longitude
  */
-window.focusPlaceOnMapAction = function(lat, lng) {
+window.focusPlaceOnMapAction = function(lat, lng, placeId = null, placeNumber = 1) {
     if (!mapInstance) return;
     mapInstance.setView([lat, lng], 16, { animate: true });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    if (isMobileScreen() && placeId) {
+        const place = state.placesList.find(p => p.id === placeId);
+        if (place) openPlaceBottomSheet(place, placeNumber);
+    }
+
+    const mapCard = document.querySelector('.map-card-container');
+    if (mapCard) {
+        mapCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 };
 
 /**
@@ -688,7 +912,7 @@ export async function togglePlaceStatus(placeId) {
     try {
         await db.updatePlaceStatus(placeId, newStatus);
         place.status = newStatus;
-        showToast(newStatus === 'visited' ? 'Tebrikler! Mekan gezildi olarak işaretlendi.' : 'Mekan gidilecekler listesine alındı.', 'success');
+        showToast(newStatus === 'visited' ? 'Tebrikler! Mekan gezildi / ziyaret edildi olarak işaretlendi.' : 'Mekan gitmek istediklerim listesine alındı.', 'success');
         renderPlacesList();
         renderMapMarkers();
     } catch (err) {
@@ -708,17 +932,27 @@ export function openPlaceModal(place = null) {
 
     form.reset();
 
-    // Populate trips select in modal
+    // Populate trips select in modal (Includes City Guide option)
     const tripSelect = document.getElementById('place-modal-trip-select');
     if (tripSelect) {
         tripSelect.innerHTML = '';
+
+        const optCity = document.createElement('option');
+        optCity.value = 'city-guide';
+        optCity.textContent = '🌟 Şehir Rehberim (Seyahatsiz / Günlük Mekan)';
+        tripSelect.appendChild(optCity);
+
         state.tripsList.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.id;
-            opt.textContent = t.name;
+            opt.textContent = `✈️ ${t.name} (${t.currency || 'TRY'})`;
             if (t.id === state.activeTripId) opt.selected = true;
             tripSelect.appendChild(opt);
         });
+
+        if (state.activeTripId === 'city-guide' || state.activeTripId === 'all-places' || !state.activeTripId) {
+            optCity.selected = true;
+        }
     }
 
     if (place) {
@@ -730,25 +964,35 @@ export function openPlaceModal(place = null) {
         }
         document.getElementById('place-id').value = place.id;
         document.getElementById('place-name').value = place.name;
-        document.getElementById('place-category').value = place.category;
-        document.getElementById('place-status').value = place.status;
+        document.getElementById('place-category').value = place.category || 'cafe';
+        document.getElementById('place-status').value = place.status || 'planned';
+        document.getElementById('place-rating').value = place.rating || 0;
         document.getElementById('place-lat').value = place.latitude;
         document.getElementById('place-lng').value = place.longitude;
         document.getElementById('place-address').value = place.address || '';
         document.getElementById('place-notes').value = place.notes || '';
         document.getElementById('place-cost').value = place.estimated_cost || 0;
-        document.getElementById('place-currency').value = place.currency || 'EUR';
-        if (tripSelect && place.trip_id) tripSelect.value = place.trip_id;
+        document.getElementById('place-currency').value = place.currency || 'TRY';
+
+        if (tripSelect) {
+            tripSelect.value = place.trip_id ? place.trip_id : 'city-guide';
+        }
     } else {
         state.selectedPlaceForEdit = null;
-        if (titleEl) titleEl.textContent = 'Yeni Gezi Noktası / Otel Ekle';
+        if (titleEl) titleEl.textContent = 'Yeni Mekan / Gezi Noktası Ekle';
         if (btnDeleteModal) {
             btnDeleteModal.classList.add('hidden');
             btnDeleteModal.style.display = 'none';
         }
         document.getElementById('place-id').value = '';
-        // If map has a center, pre-fill
-        if (mapInstance) {
+        document.getElementById('place-rating').value = '0';
+        document.getElementById('place-category').value = 'cafe';
+
+        // Pre-fill coordinates with map center or user GPS
+        if (currentUserCoords) {
+            document.getElementById('place-lat').value = currentUserCoords.lat.toFixed(6);
+            document.getElementById('place-lng').value = currentUserCoords.lng.toFixed(6);
+        } else if (mapInstance) {
             const center = mapInstance.getCenter();
             document.getElementById('place-lat').value = center.lat.toFixed(6);
             document.getElementById('place-lng').value = center.lng.toFixed(6);
@@ -784,15 +1028,13 @@ export function closePlaceModal() {
 }
 
 /**
- * Smart Multilingual Location Search
- * Combines OpenStreetMap Nominatim with Turkish Wikipedia/Wikidata Geosearch
- * so users can search in Turkish (e.g. 'Ulusal Arkeoloji Müzesi atina', 'Sintagma', 'Akropolis')
+ * Smart Multilingual Location Search using OpenStreetMap Nominatim + Wikipedia
  */
 async function handleLocationSearch() {
     const queryInput = document.getElementById('place-search-query');
     const query = queryInput ? queryInput.value.trim() : '';
     if (!query) {
-        showToast("Lütfen aranacak yeri yazın (örn: Ulusal Arkeoloji Müzesi veya Acropolis)", "warning");
+        showToast("Lütfen aranacak yeri veya semti yazın (örn: Kadıköy Moda, Petra Gayrettepe veya Akropolis)", "warning");
         return;
     }
 
@@ -833,10 +1075,10 @@ async function handleLocationSearch() {
                 return;
             }
         } catch (nomErr) {
-            console.warn("Nominatim search failed, trying multilingual wiki fallback:", nomErr);
+            console.warn("Nominatim search failed, trying fallback:", nomErr);
         }
 
-        // Step 2: Wikipedia / Wikidata Multilingual Geosearch Fallback (Perfect for Turkish names)
+        // Step 2: Wikipedia / Wikidata Multilingual Geosearch Fallback
         if (!found) {
             try {
                 const wikiUrl = `https://tr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
@@ -878,7 +1120,7 @@ async function handleLocationSearch() {
         }
 
         if (!found) {
-            showToast("Konum bulunamadı. Lütfen şehir adını ekleyin (örn: Ulusal Arkeoloji Müzesi Atina) veya haritaya tıklayarak pini yerleştirin.", "warning");
+            showToast("Konum bulunamadı. Lütfen şehir veya semt adını ekleyin (örn: Petra Kafe Gayrettepe).", "warning");
         }
     } catch (err) {
         console.error("Geocoding failed:", err);
@@ -897,10 +1139,11 @@ async function handleLocationSearch() {
 async function handlePlaceFormSubmit(e) {
     e.preventDefault();
     const placeId = document.getElementById('place-id').value;
-    const tripId = document.getElementById('place-modal-trip-select').value;
+    const tripSelectVal = document.getElementById('place-modal-trip-select').value;
     const name = document.getElementById('place-name').value.trim();
     const category = document.getElementById('place-category').value;
     const status = document.getElementById('place-status').value;
+    const rating = parseInt(document.getElementById('place-rating').value) || 0;
     const lat = parseFloat(document.getElementById('place-lat').value);
     const lng = parseFloat(document.getElementById('place-lng').value);
     const address = document.getElementById('place-address').value.trim();
@@ -908,24 +1151,21 @@ async function handlePlaceFormSubmit(e) {
     const cost = parseFloat(document.getElementById('place-cost').value) || 0;
     const currency = document.getElementById('place-currency').value;
 
-    if (!tripId) {
-        showToast("Lütfen bir seyahat seçin", "danger");
-        return;
-    }
     if (!name) {
         showToast("Mekan adı zorunludur", "danger");
         return;
     }
     if (isNaN(lat) || isNaN(lng)) {
-        showToast("Lütfen geçerli enlem ve boylam koordinatı girin veya haritadan arayın", "danger");
+        showToast("Lütfen geçerli bir konum arayın veya haritadan koordinat seçin", "danger");
         return;
     }
 
     const payload = {
-        trip_id: tripId,
+        trip_id: (tripSelectVal && tripSelectVal !== 'city-guide') ? tripSelectVal : null,
         name,
         category,
         status,
+        rating,
         latitude: lat,
         longitude: lng,
         address,
@@ -946,7 +1186,7 @@ async function handlePlaceFormSubmit(e) {
             showToast("Mekan başarıyla güncellendi!", "success");
         } else {
             await db.createPlace(payload);
-            showToast("Yeni mekan haritaya eklendi!", "success");
+            showToast("Yeni mekan başarıyla kaydedildi!", "success");
         }
 
         closePlaceModal();
@@ -980,6 +1220,7 @@ window.deletePlaceAction = async function(placeId) {
 
     try {
         if (mapInstance) mapInstance.closePopup();
+        closePlaceBottomSheet();
 
         // Optimistic UI update
         state.placesList = state.placesList.filter(p => p.id !== placeId);
@@ -1021,9 +1262,9 @@ function renderEmptyState() {
         list.innerHTML = `
             <div class="empty-places-card card glass">
                 <i data-lucide="compass" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 12px;"></i>
-                <h3>Seyahat Bulunamadı</h3>
-                <p class="text-muted">Haritayı kullanmak için önce "Seyahatlerim" sayfasından en az bir rota (örneğin Atina) oluşturmalısınız.</p>
-                <a href="#trips" class="btn btn-primary margin-top-12">Rotalara Git</a>
+                <h3>Şehir Rehberinize Hoş Geldiniz!</h3>
+                <p class="text-muted">Günlük hayatınızda veya seyahatlerinizde sevdiğiniz mekanları haritaya kaydedin.</p>
+                <button type="button" class="btn btn-primary margin-top-12" onclick="openPlaceModal()">+ İlk Mekanı Ekle</button>
             </div>
         `;
         if (window.lucide) window.lucide.createIcons();

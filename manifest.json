@@ -1,0 +1,35 @@
+{
+  "name": "TravellerMobi - Şehir Rehberi & Gezi Asistanı",
+  "short_name": "TravellerMobi",
+  "description": "Günlük hayatınızda ve seyahatlerinizde mekanlarınızı kaydedin, rotanızı çizin, bütçenizi ve anılarınızı yönetin.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": ["travel", "lifestyle", "navigation"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

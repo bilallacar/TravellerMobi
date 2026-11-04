@@ -119,11 +119,11 @@ create table if not exists memories (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. Gezi Noktaları & Harita Tablosu (Places)
+-- 8. Gezi Noktaları, Mekanlar & Şehir Rehberi Tablosu (Places)
 create table if not exists public.places (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
-  trip_id uuid references trips on delete cascade not null,
+  trip_id uuid references trips on delete cascade, -- Null olabilir: Şehir rehberi & günlük mekanlar
   name text not null,
   category text not null default 'other',
   status text not null default 'planned',
@@ -135,9 +135,14 @@ create table if not exists public.places (
   estimated_cost numeric default 0,
   currency text default 'EUR',
   visit_order integer default 0,
+  rating integer default 0, -- 1-5 yıldız kişisel puan
   visited_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Eski veritabanı kısıtlamalarını güncelleme (Gerekirse NOT NULL kısıtlamasını kaldırır ve sütun ekler)
+alter table public.places alter column trip_id drop not null;
+alter table public.places add column if not exists rating integer default 0;
 
 -- 9. Row Level Security (RLS) Aktifleştirme
 alter table public.profiles enable row level security;

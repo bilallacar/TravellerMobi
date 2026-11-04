@@ -1809,14 +1809,17 @@ select:-webkit-autofill:focus {
 
 .places-leaflet-map {
     width: 100%;
-    height: 440px;
+    height: 480px;
     z-index: 10;
     background: #1a202c;
+    border-radius: var(--border-radius-md);
+    transition: height 0.3s ease;
 }
 
 @media (max-width: 768px) {
     .places-leaflet-map {
-        height: 320px;
+        height: min(60vh, 520px);
+        min-height: 380px;
     }
 }
 
@@ -3207,6 +3210,318 @@ select:-webkit-autofill:focus {
 }
 .light-theme .share-place-card:hover {
     border-color: #6366f1;
+}
+
+/* ==========================================================================
+   PWA & Full Mobile Experience Styling
+   ========================================================================== */
+.pwa-install-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.22) 0%, rgba(139, 92, 246, 0.22) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    border-radius: var(--border-radius-md);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    animation: fadeInDown 0.3s ease;
+    backdrop-filter: blur(8px);
+}
+
+.pwa-install-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pwa-app-icon {
+    font-size: 26px;
+    line-height: 1;
+}
+
+.pwa-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.pwa-text strong {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.pwa-text span {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.pwa-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-close-pwa {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+}
+
+/* Fullscreen Map Mode */
+.map-card-container.map-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1200 !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+.map-card-container.map-fullscreen .places-leaflet-map {
+    height: calc(100vh - 54px) !important;
+    border-radius: 0 !important;
+}
+
+.map-card-container.map-fullscreen .map-card-header {
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Mobile Place Bottom Sheet (Drawer) */
+.place-bottom-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    pointer-events: none;
+    transition: visibility 0.3s ease;
+}
+
+.place-bottom-sheet.hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.bottom-sheet-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: auto;
+}
+
+.place-bottom-sheet:not(.hidden) .bottom-sheet-backdrop {
+    opacity: 1;
+}
+
+.bottom-sheet-content {
+    position: relative;
+    z-index: 10;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    border-radius: 22px 22px 0 0;
+    padding: 12px 18px calc(24px + env(safe-area-inset-bottom, 0px)) 18px;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+    max-height: 80vh;
+    overflow-y: auto;
+    pointer-events: auto;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.place-bottom-sheet:not(.hidden) .bottom-sheet-content {
+    transform: translateY(0);
+}
+
+.bottom-sheet-handle-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding-bottom: 8px;
+}
+
+.bottom-sheet-drag-handle {
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.light-theme .bottom-sheet-drag-handle {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.btn-close-sheet {
+    position: absolute;
+    right: 0;
+    top: -4px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-secondary);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.bottom-sheet-header-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.bottom-sheet-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 4px 0;
+    color: var(--text-primary);
+}
+
+.bottom-sheet-address {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.bottom-sheet-distances {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+}
+
+.distance-pill {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.distance-pill.hotel-dist {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.bottom-sheet-notes {
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    margin: 10px 0;
+    border-left: 3px solid var(--color-primary);
+}
+
+.bottom-sheet-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.btn-directions-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    padding: 14px !important;
+    font-size: 15px !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 12px;
+    text-decoration: none;
+}
+
+.bottom-sheet-sub-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Places Search Bar */
+.places-search-bar {
+    width: 100%;
+}
+
+.places-search-bar .input-icon-wrapper input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px 14px 10px 40px;
+    width: 100%;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.places-search-bar .input-icon-wrapper input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.places-search-bar .input-icon-wrapper svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+}
+
+/* Rating Stars */
+.rating-stars {
+    color: #f59e0b;
+    letter-spacing: 2px;
+    font-size: 13px;
+    display: inline-block;
+}
+
+/* Place Card Badges */
+.pill-rating {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
 }
 
 

@@ -2,9 +2,18 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TravellerMobi - Bulut Destekli Seyahat Günlüğü ve Masraf Takibi</title>
-    <meta name="description" content="Yurt dışı seyahatlerinizde masraflarınızı takip edin, anılarınızı ve fotoğraflarınızı güvenle bulutta saklayın. Çevrimdışı desteğiyle her an yanınızda.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TravellerMobi - Şehir Rehberi & Gezi Günlüğü</title>
+    <meta name="description" content="Günlük hayatınızda ve seyahatlerinizde mekanlarınızı kaydedin, rotanızı çizin, bütçenizi ve anılarınızı yönetin. Çevrimdışı desteğiyle her an yanınızda.">
+    <!-- PWA Web App Manifest & App Icons -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TravellerMobi">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -92,6 +101,21 @@
 
             <!-- Active View Container -->
             <main id="app-content" class="app-content">
+                <!-- PWA Install Prompt Banner -->
+                <div id="pwa-install-banner" class="pwa-install-banner hidden">
+                    <div class="pwa-install-content">
+                        <span class="pwa-app-icon">🌍</span>
+                        <div class="pwa-text">
+                            <strong>TravellerMobi'yi Telefona Yükle</strong>
+                            <span>Hızlı erişim ve tam ekran deneyimi için ana ekrana ekleyin</span>
+                        </div>
+                    </div>
+                    <div class="pwa-actions">
+                        <button type="button" id="btn-pwa-install" class="btn btn-primary btn-sm">Ana Ekrana Ekle</button>
+                        <button type="button" id="btn-pwa-dismiss" class="btn-close-pwa" aria-label="Kapat">&times;</button>
+                    </div>
+                </div>
+
                 <!-- views will be dynamically displayed here via class changes -->
 
                 <!-- 1. AUTH VIEW -->
@@ -102,30 +126,88 @@
                             <p>Anılarınızı ve masraflarınızı bulutta saklayın</p>
                         </div>
 
-                        <div class="auth-tabs">
-                            <button type="button" class="auth-tab active" id="tab-login">Giriş Yap</button>
-                            <button type="button" class="auth-tab" id="tab-register">Kayıt Ol</button>
+                        <!-- Login & Register Container -->
+                        <div id="auth-main-box">
+                            <div class="auth-tabs">
+                                <button type="button" class="auth-tab active" id="tab-login">Giriş Yap</button>
+                                <button type="button" class="auth-tab" id="tab-register">Kayıt Ol</button>
+                            </div>
+
+                            <form id="auth-form" class="auth-form">
+                                <div class="form-group">
+                                    <label for="auth-email">E-posta</label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="mail"></i>
+                                        <input type="email" id="auth-email" required placeholder="ornek@email.com">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="auth-password">Şifre</label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="lock"></i>
+                                        <input type="password" id="auth-password" required placeholder="••••••••">
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+                                        <button type="button" id="btn-show-forgot" style="background:none; border:none; color:var(--color-primary); font-size:12px; cursor:pointer; text-decoration:underline; padding:2px 0;">
+                                            Şifremi Unuttum?
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-block">Giriş Yap</button>
+                            </form>
                         </div>
 
-                        <form id="auth-form" class="auth-form">
-                            <div class="form-group">
-                                <label for="auth-email">E-posta</label>
-                                <div class="input-icon-wrapper">
-                                    <i data-lucide="mail"></i>
-                                    <input type="email" id="auth-email" required placeholder="ornek@email.com">
-                                </div>
+                        <!-- Forgot Password Box -->
+                        <div id="auth-forgot-box" class="hidden" style="margin-top: 10px;">
+                            <div style="text-align: center; margin-bottom: 16px;">
+                                <h3 style="margin: 0; font-size: 18px;">🔐 Şifre Sıfırlama</h3>
+                                <p class="text-xs text-muted" style="margin-top: 6px;">Kayıtlı e-posta adresinizi girin, size şifre yenileme bağlantısı gönderelim.</p>
                             </div>
-                            <div class="form-group">
-                                <label for="auth-password">Şifre</label>
-                                <div class="input-icon-wrapper">
-                                    <i data-lucide="lock"></i>
-                                    <input type="password" id="auth-password" required placeholder="••••••••">
+                            <form id="forgot-password-form">
+                                <div class="form-group">
+                                    <label for="forgot-email">E-posta Adresiniz</label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="mail"></i>
+                                        <input type="email" id="forgot-email" required placeholder="ornek@email.com">
+                                    </div>
                                 </div>
-                            </div>
-                            <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-block">Giriş Yap</button>
-                        </form>
+                                <button type="submit" id="btn-send-reset-link" class="btn btn-primary btn-block">Sıfırlama Bağlantısı Gönder</button>
+                                <button type="button" id="btn-back-to-login" class="btn btn-secondary btn-block margin-top-10">
+                                    ← Giriş Ekranına Dön
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </section>
+
+                <!-- Reset Password Modal (When user clicks email reset link) -->
+                <div id="modal-reset-password" class="modal hidden">
+                    <div class="modal-content glass" style="max-width: 440px;">
+                        <div class="modal-header">
+                            <h2>🔑 Yeni Şifre Belirleyin</h2>
+                        </div>
+                        <p class="text-sm text-muted margin-top-8">Lütfen hesabınız için yeni ve güvenli bir şifre belirleyin.</p>
+                        <form id="reset-password-form" class="margin-top-16">
+                            <div class="form-group">
+                                <label for="reset-new-password">Yeni Şifre</label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="lock"></i>
+                                    <input type="password" id="reset-new-password" required minlength="6" placeholder="En az 6 karakter" class="text-input">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="reset-new-password-confirm">Yeni Şifre (Tekrar)</label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="lock"></i>
+                                    <input type="password" id="reset-new-password-confirm" required minlength="6" placeholder="Şifrenizi tekrar girin" class="text-input">
+                                </div>
+                            </div>
+                            <button type="submit" id="btn-save-new-password" class="btn btn-primary btn-block margin-top-16">
+                                Şifremi Güncelle & Devam Et
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
                 <!-- 2. SETUP/CONFIG VIEW -->
                 <section id="view-setup" class="app-view hidden">
@@ -428,37 +510,67 @@
                         <!-- Loaded dynamically -->
                     </div>
 
+                    <!-- Places Search Bar -->
+                    <div class="places-search-bar margin-bottom-12">
+                        <div class="input-icon-wrapper" style="width: 100%;">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="places-search-input" placeholder="🔍 Mekan adı, semt, tavsiye veya kategori ara... (Örn: Kadıköy, filtre kahve, müze)" class="text-input" style="padding-left: 38px;">
+                        </div>
+                    </div>
+
                     <!-- Category & Status Filter Bar -->
                     <div class="places-filter-bar" id="places-filter-bar">
                         <button type="button" class="filter-pill active" data-filter="all">Tümü</button>
-                        <button type="button" class="filter-pill" data-filter="planned">🟢 Gidilecekler</button>
+                        <button type="button" class="filter-pill" data-filter="planned">🟢 Gitmek İstediklerim</button>
                         <button type="button" class="filter-pill" data-filter="visited">⚪ Gezilenler</button>
-                        <button type="button" class="filter-pill" data-filter="hotel">🏨 Otel</button>
+                        <button type="button" class="filter-pill" data-filter="cafe">☕ Kafe & Kahve</button>
+                        <button type="button" class="filter-pill" data-filter="food">🍽️ Restoran</button>
+                        <button type="button" class="filter-pill" data-filter="bar">🍸 Bar & Gece</button>
+                        <button type="button" class="filter-pill" data-filter="bakery">🥐 Fırın & Kahvaltı</button>
+                        <button type="button" class="filter-pill" data-filter="viewpoint">🌳 Park & Doğa</button>
                         <button type="button" class="filter-pill" data-filter="museum">🏛️ Müzeler</button>
-                        <button type="button" class="filter-pill" data-filter="food">🍽️ Yeme / İçme</button>
-                        <button type="button" class="filter-pill" data-filter="viewpoint">🌳 Park / Manzara</button>
                         <button type="button" class="filter-pill" data-filter="historical">🗿 Tarihi Alanlar</button>
                         <button type="button" class="filter-pill" data-filter="shopping">🛍️ Alışveriş</button>
+                        <button type="button" class="filter-pill" data-filter="hotel">🏨 Otel</button>
                     </div>
 
                     <!-- Interactive Leaflet Map -->
                     <div class="card glass map-card-container">
                         <div class="map-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <span class="map-tip"><i data-lucide="info"></i> <strong>İpucu:</strong> Haritaya tıklayarak yer ekleyebilir, yakınlaştığınızda isimleri görebilirsiniz.</span>
+                                <span class="map-tip"><i data-lucide="info"></i> <strong>İpucu:</strong> Haritadaki pinlere dokunarak detayları ve yol tarifini görebilirsiniz.</span>
                                 <div id="places-route-total-summary" class="places-route-summary-pill hidden"></div>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-route-line" title="Gezi noktaları arası rota güzergah çizgisini göster/gizle">
-                                <i data-lucide="route"></i> <span id="route-line-status-text">Rota Çizgisi: Açık</span>
-                            </button>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-fullscreen-map" title="Haritayı tam ekran moduna al/kapat">
+                                    <i data-lucide="maximize"></i> <span id="fullscreen-map-text">Tam Ekran</span>
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-route-line" title="Gezi noktaları arası rota güzergah çizgisini göster/gizle">
+                                    <i data-lucide="route"></i> <span id="route-line-status-text">Rota: Açık</span>
+                                </button>
+                            </div>
                         </div>
                         <div id="places-map" class="places-leaflet-map"></div>
+
+                        <!-- Mobile Place Bottom Sheet (Drawer) -->
+                        <div id="place-bottom-sheet" class="place-bottom-sheet hidden">
+                            <div class="bottom-sheet-backdrop" id="bottom-sheet-backdrop"></div>
+                            <div class="bottom-sheet-content glass">
+                                <div class="bottom-sheet-handle-bar">
+                                    <div class="bottom-sheet-drag-handle"></div>
+                                    <button type="button" class="btn-close-sheet" id="btn-close-bottom-sheet" aria-label="Kapat">&times;</button>
+                                </div>
+                                <div class="bottom-sheet-body" id="bottom-sheet-body">
+                                    <!-- Loaded dynamically when pin is clicked on mobile -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Places Cards Grid Section -->
                     <div class="places-section-header margin-top-30">
-                        <h2>📍 Eklenen Gezi Noktaları</h2>
-                        <span class="text-muted text-sm">Otele olan uzaklıklar, bilet/ücret notları ve Google Maps yol tarifi</span>
+                        <h2>📍 Eklenen Mekanlar & Gezi Rehberi</h2>
+                        <span class="text-muted text-sm">Uzaklıklar, puanlar, bilet/ücret notları ve Google Haritalar yol tarifi</span>
                     </div>
                     <div id="places-cards-container" class="places-grid margin-top-16">
                         <!-- Loaded dynamically -->
@@ -468,24 +580,24 @@
                     <div id="modal-place" class="modal hidden">
                         <div class="modal-content glass" style="max-width: 580px;">
                             <div class="modal-header">
-                                <h2 id="place-modal-title">Yeni Gezi Noktası / Otel Ekle</h2>
+                                <h2 id="place-modal-title">Yeni Mekan / Gezi Noktası Ekle</h2>
                                 <button type="button" class="btn-close-modal" id="btn-close-place-modal">&times;</button>
                             </div>
                             <form id="place-form">
                                 <input type="hidden" id="place-id">
                                 
                                 <div class="form-group">
-                                    <label for="place-modal-trip-select">Seyahat Rotası</label>
-                                    <select id="place-modal-trip-select" class="select-input" required>
-                                        <!-- Loaded dynamically -->
+                                    <label for="place-modal-trip-select">Seyahat / Kayıt Alanı</label>
+                                    <select id="place-modal-trip-select" class="select-input">
+                                        <!-- Loaded dynamically: City Guide or Trip -->
                                     </select>
                                 </div>
 
                                 <!-- Fast Geocoding Search -->
                                 <div class="form-group">
-                                    <label for="place-search-query">🔍 Haritada Yer Ara (Akropolis, Otel Adı vb.)</label>
+                                    <label for="place-search-query">🔍 Haritada Yer Ara (Semt, Kafe veya Otel Adı)</label>
                                     <div style="display: flex; gap: 8px;">
-                                        <input type="text" id="place-search-query" class="text-input" placeholder="Örn: Acropolis Athens veya Syntagma Hotel">
+                                        <input type="text" id="place-search-query" class="text-input" placeholder="Örn: Moda Kadıköy veya Petra Gayrettepe">
                                         <button type="button" id="btn-search-place-location" class="btn btn-secondary" style="white-space: nowrap;">
                                             Konumu Bul
                                         </button>
@@ -497,19 +609,22 @@
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="place-name">Mekan / Otel Adı</label>
-                                        <input type="text" id="place-name" required placeholder="Örn: Akropolis Müzesi" class="text-input">
+                                        <label for="place-name">Mekan / Konum Adı</label>
+                                        <input type="text" id="place-name" required placeholder="Örn: Petra Roasting Co." class="text-input">
                                     </div>
                                     <div class="form-group">
                                         <label for="place-category">Kategori</label>
                                         <select id="place-category" class="select-input" required>
-                                            <option value="hotel">🏨 Otel / Konaklama</option>
-                                            <option value="museum" selected>🏛️ Müze / Sergi</option>
-                                            <option value="historical">🗿 Tarihi / Antik Alan</option>
-                                            <option value="food">🍽️ Restoran / Kafe</option>
-                                            <option value="viewpoint">🌳 Manzara / Park</option>
-                                            <option value="shopping">🛍️ Alışveriş / Çarşı</option>
-                                            <option value="other">📍 Diğer Nokta</option>
+                                            <option value="cafe" selected>☕ Kafe & 3. Dalga Kahve</option>
+                                            <option value="food">🍽️ Restoran & Lezzet</option>
+                                            <option value="bar">🍸 Bar & Gece Hayatı</option>
+                                            <option value="bakery">🥐 Fırın, Tatlı & Kahvaltı</option>
+                                            <option value="viewpoint">🌳 Park, Doğa & Yürüyüş</option>
+                                            <option value="museum">🏛️ Kültür, Sanat & Müze</option>
+                                            <option value="historical">🗿 Tarihi Alan & Anıt</option>
+                                            <option value="shopping">🛍️ Alışveriş & Butik</option>
+                                            <option value="hotel">🏨 Otel & Konaklama</option>
+                                            <option value="other">📍 Favori Noktam / Diğer</option>
                                         </select>
                                     </div>
                                 </div>
@@ -518,14 +633,26 @@
                                     <div class="form-group">
                                         <label for="place-status">Durum</label>
                                         <select id="place-status" class="select-input">
-                                            <option value="planned" selected>🟢 Gidilecek (Planlanan)</option>
-                                            <option value="visited">⚪ Gezildi (Gidildi)</option>
+                                            <option value="planned" selected>🟢 Gitmek İstiyorum (Wishlist)</option>
+                                            <option value="visited">⚪ Gidildi / Ziyaret Edildi</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="place-address">Açık Adres / Bölge</label>
-                                        <input type="text" id="place-address" placeholder="Örn: Plaka Mahallesi, Atina" class="text-input">
+                                        <label for="place-rating">Kişisel Puanım</label>
+                                        <select id="place-rating" class="select-input">
+                                            <option value="0">Puan Belirtilmedi</option>
+                                            <option value="5">⭐⭐⭐⭐⭐ Kesinlikle Gidilmeli / Mükemmel</option>
+                                            <option value="4">⭐⭐⭐⭐ Çok İyi / Tavsiye Ederim</option>
+                                            <option value="3">⭐⭐⭐ Ortalama / Güzel</option>
+                                            <option value="2">⭐⭐ Vasat</option>
+                                            <option value="1">⭐ Beğenmedim</option>
+                                        </select>
                                     </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="place-address">Açık Adres / Semt</label>
+                                    <input type="text" id="place-address" placeholder="Örn: Caferağa Mah., Kadıköy, İstanbul" class="text-input">
                                 </div>
 
                                 <div class="form-row">
@@ -1137,11 +1264,11 @@ create table if not exists memories (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. Gezi Noktaları & Harita Tablosu (Places)
+-- 8. Gezi Noktaları, Mekanlar & Şehir Rehberi Tablosu (Places)
 create table if not exists public.places (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users not null,
-  trip_id uuid references trips on delete cascade not null,
+  trip_id uuid references trips on delete cascade, -- Null olabilir: Şehir rehberi & günlük mekanlar
   name text not null,
   category text not null default 'other',
   status text not null default 'planned',
@@ -1153,9 +1280,14 @@ create table if not exists public.places (
   estimated_cost numeric default 0,
   currency text default 'EUR',
   visit_order integer default 0,
+  rating integer default 0, -- 1-5 yıldız kişisel puan
   visited_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Eski veritabanı kısıtlamalarını güncelleme (Gerekirse NOT NULL kısıtlamasını kaldırır ve sütun ekler)
+alter table public.places alter column trip_id drop not null;
+alter table public.places add column if not exists rating integer default 0;
 
 -- 9. Row Level Security (RLS) Aktifleştirme
 alter table public.profiles enable row level security;

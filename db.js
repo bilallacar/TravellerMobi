@@ -120,6 +120,23 @@ export async function signOut() {
     currentCachedUserId = null;
 }
 
+export async function resetPassword(email) {
+    const client = await getSupabase();
+    if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
+    const redirectTo = `${window.location.origin}${window.location.pathname}#reset-password`;
+    const { data, error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+    return true;
+}
+
+export async function updateUserPassword(newPassword) {
+    const client = await getSupabase();
+    if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
+    const { data, error } = await client.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    return data.user;
+}
+
 
 /* ==========================================================================
    OFFLINE STORAGE CACHING & SYNC QUEUE SYSTEM
@@ -1001,16 +1018,23 @@ export async function deleteCategory(id) {
    ========================================================================== */
 
 export async function getPlaces(tripId = null) {
+    const filterCache = (items) => {
+        if (!items) return [];
+        if (!tripId || tripId === 'all-places' || tripId === 'all') return items;
+        if (tripId === 'city-guide') return items.filter(p => !p.trip_id);
+        return items.filter(p => p.trip_id === tripId);
+    };
+
     if (!isOnline()) {
         const local = getLocalCache(CACHE_KEYS.PLACES);
-        return tripId ? local.filter(p => p.trip_id === tripId) : local;
+        return filterCache(local);
     }
 
     try {
         const client = await getSupabase();
         if (!client) {
             const local = getLocalCache(CACHE_KEYS.PLACES);
-            return tripId ? local.filter(p => p.trip_id === tripId) : local;
+            return filterCache(local);
         }
 
         let query = client
@@ -1018,7 +1042,9 @@ export async function getPlaces(tripId = null) {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (tripId) {
+        if (tripId === 'city-guide') {
+            query = query.is('trip_id', null);
+        } else if (tripId && tripId !== 'all-places' && tripId !== 'all') {
             query = query.eq('trip_id', tripId);
         }
 
@@ -1028,7 +1054,9 @@ export async function getPlaces(tripId = null) {
         // Merge with local cache
         const allLocal = getLocalCache(CACHE_KEYS.PLACES);
         let updated;
-        if (tripId) {
+        if (tripId === 'city-guide') {
+            updated = allLocal.filter(p => !!p.trip_id).concat(data || []);
+        } else if (tripId && tripId !== 'all-places' && tripId !== 'all') {
             updated = allLocal.filter(p => p.trip_id !== tripId).concat(data || []);
         } else {
             updated = data || [];
@@ -1038,14 +1066,15 @@ export async function getPlaces(tripId = null) {
     } catch (err) {
         console.warn("Error fetching places, falling back to local cache", err);
         const local = getLocalCache(CACHE_KEYS.PLACES);
-        return tripId ? local.filter(p => p.trip_id === tripId) : local;
+        return filterCache(local);
     }
 }
 
 export async function createPlace(placeData) {
+    const validTripId = (placeData.trip_id && placeData.trip_id !== 'city-guide' && placeData.trip_id !== 'all-places') ? placeData.trip_id : null;
     const payload = {
         id: generateUUID(),
-        trip_id: placeData.trip_id,
+        trip_id: validTripId,
         name: placeData.name,
         category: placeData.category || 'other',
         status: placeData.status || 'planned',
@@ -1057,6 +1086,7 @@ export async function createPlace(placeData) {
         estimated_cost: parseFloat(placeData.estimated_cost) || 0,
         currency: placeData.currency || 'EUR',
         visit_order: parseInt(placeData.visit_order) || 0,
+        rating: parseInt(placeData.rating) || 0,
         visited_at: placeData.status === 'visited' ? new Date().toISOString() : null,
         created_at: new Date().toISOString()
     };
@@ -1095,9 +1125,10 @@ export async function createPlace(placeData) {
 }
 
 export async function updatePlace(placeId, placeData) {
+    const validTripId = (placeData.trip_id && placeData.trip_id !== 'city-guide' && placeData.trip_id !== 'all-places') ? placeData.trip_id : null;
     const payload = {
         id: placeId,
-        trip_id: placeData.trip_id,
+        trip_id: validTripId,
         name: placeData.name,
         category: placeData.category,
         status: placeData.status,
@@ -1108,7 +1139,8 @@ export async function updatePlace(placeId, placeData) {
         opening_hours: placeData.opening_hours || '',
         estimated_cost: parseFloat(placeData.estimated_cost) || 0,
         currency: placeData.currency || 'EUR',
-        visit_order: parseInt(placeData.visit_order) || 0
+        visit_order: parseInt(placeData.visit_order) || 0,
+        rating: parseInt(placeData.rating) || 0
     };
 
     if (placeData.status === 'visited') {

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="pinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Globe Rings -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+  <ellipse cx="256" cy="256" rx="170" ry="60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  <line x1="256" y1="86" x2="256" y2="426" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+
+  <!-- Compass Needle / Pin Shadow -->
+  <g filter="url(#shadow)">
+    <!-- Main Location Pin Body -->
+    <path d="M256 96 C180 96 120 156 120 232 C120 324 236 408 250 418 C253 420 259 420 262 418 C276 408 392 324 392 232 C392 156 332 96 256 96 Z" fill="url(#pinGrad)"/>
+    
+    <!-- Pin Inner Cutout / Compass Center -->
+    <circle cx="256" cy="226" r="54" fill="#0f172a"/>
+    
+    <!-- Dynamic Compass North/South Points -->
+    <!-- North Point (Cyan Glow) -->
+    <polygon points="256,186 244,226 256,220" fill="#38bdf8"/>
+    <polygon points="256,186 268,226 256,220" fill="#0ea5e9"/>
+    
+    <!-- South Point (Rose Glow) -->
+    <polygon points="256,266 244,226 256,232" fill="#f43f5e"/>
+    <polygon points="256,266 268,226 256,232" fill="#e11d48"/>
+
+    <!-- Center Pivot Dot -->
+    <circle cx="256" cy="226" r="8" fill="#ffffff"/>
+  </g>
+
+  <!-- Small Sparkle / Star Top Right -->
+  <circle cx="370" cy="140" r="6" fill="#38bdf8"/>
+</svg>

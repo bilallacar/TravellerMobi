@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { showToast } from './utils.js';
 
 // Import View Modules
-import { initAuthEvents, renderApprovalPending } from './modules/auth.js';
+import { initAuthEvents, renderApprovalPending, checkResetPasswordMode } from './modules/auth.js';
 import { initSettingsEvents, loadSettingsForm } from './modules/settings.js';
 import { initTripsEvents, loadTripsData, renderParticipantTags } from './modules/trips.js';
 import { initExpensesEvents, loadExpensesData, updateExpenseFormParticipants } from './modules/expenses.js';
@@ -43,17 +43,17 @@ function updateDiagnosticsUI() {
     logs.push(`- Kullanıcı ID: ${state.activeUser ? state.activeUser.id : 'null'}`);
     logs.push(`- Yönetici mi? (isAdmin): ${state.isAdmin}`);
     logs.push(`- Profil Verisi (userProfile): ${JSON.stringify(state.userProfile)}`);
-    logs.push(`- Aktif Seyahat ID: ${state.activeTripId}`);
+    logs.push(`- Aktif Seyahat ID: ${state.activeTripId || 'Genel'}`);
     logs.push(`- Seyahat Sayısı: ${state.tripsList.length}`);
     logs.push(`- Toplam Harcama Sayısı: ${state.expensesList.length}`);
     logs.push(`- Toplam Anı Sayısı: ${state.memoriesList.length}`);
     
     if (state.tripsList.length > 0) {
-        logs.push(`- Seyahatler: ${state.tripsList.map(t => `${t.name} (ID: ${t.id.substring(0,6)}...)`).join(', ')}`);
+        logs.push(`- Seyahatler: ${state.tripsList.map(t => `${t.name} (ID: ${t.id ? t.id.substring(0,6) : 'null'}...)`).join(', ')}`);
     }
     
     if (state.expensesList.length > 0) {
-        logs.push(`- Son 3 Harcama: ${state.expensesList.slice(0, 3).map(e => `${e.title} (${e.amount} ${e.currency}, Seyahat ID: ${e.trip_id.substring(0,6)}...)`).join(', ')}`);
+        logs.push(`- Son 3 Harcama: ${state.expensesList.slice(0, 3).map(e => `${e.title} (${e.amount} ${e.currency}, Seyahat ID: ${e.trip_id ? e.trip_id.substring(0,6) : 'Genel'}...)`).join(', ')}`);
     }
 
     if (globalErrors.length > 0) {
@@ -136,9 +136,11 @@ async function handleRouting() {
 
     db.initSupabase();
 
+    checkResetPasswordMode();
+
     state.activeUser = await db.getCurrentUser();
     
-    if (!state.activeUser && hash !== '#auth') {
+    if (!state.activeUser && hash !== '#auth' && !hash.startsWith('#reset-password') && !hash.includes('type=recovery')) {
         window.location.hash = '#auth';
         return;
     }
@@ -399,4 +401,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     fetchExchangeRates();
+
+    // PWA Install Prompt & Service Worker Registration
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.classList.remove('hidden');
+    });
+
+    const btnPwaInstall = document.getElementById('btn-pwa-install');
+    const btnPwaDismiss = document.getElementById('btn-pwa-dismiss');
+    if (btnPwaInstall) {
+        btnPwaInstall.addEventListener('click', async () => {
+            const banner = document.getElementById('pwa-install-banner');
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    showToast('TravellerMobi ana ekranınıza ekleniyor!', 'success');
+                }
+                deferredInstallPrompt = null;
+            } else {
+                showToast('Tarayıcınızın Paylaş/Menü kısmından "Ana Ekrana Ekle"ye dokunarak uygulamayı yükleyebilirsiniz.', 'info');
+            }
+            if (banner) banner.classList.add('hidden');
+        });
+    }
+    if (btnPwaDismiss) {
+        btnPwaDismiss.addEventListener('click', () => {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) banner.classList.add('hidden');
+        });
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then((reg) => {
+            console.log('[PWA] Service Worker registered with scope:', reg.scope);
+        }).catch((err) => {
+            console.warn('[PWA] Service Worker registration failed:', err);
+        });
+    }
 });

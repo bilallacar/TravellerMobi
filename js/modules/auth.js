@@ -71,6 +71,94 @@ export function initAuthEvents() {
         });
     }
 
+    // Forgot Password and Reset Password Form Wireup
+    const btnShowForgot = document.getElementById('btn-show-forgot');
+    const btnBackToLogin = document.getElementById('btn-back-to-login');
+    const authMainBox = document.getElementById('auth-main-box');
+    const authForgotBox = document.getElementById('auth-forgot-box');
+    const forgotForm = document.getElementById('forgot-password-form');
+    const btnSendReset = document.getElementById('btn-send-reset-link');
+
+    if (btnShowForgot && authMainBox && authForgotBox) {
+        btnShowForgot.addEventListener('click', () => {
+            authMainBox.classList.add('hidden');
+            authForgotBox.classList.remove('hidden');
+        });
+    }
+
+    if (btnBackToLogin && authMainBox && authForgotBox) {
+        btnBackToLogin.addEventListener('click', () => {
+            authForgotBox.classList.add('hidden');
+            authMainBox.classList.remove('hidden');
+        });
+    }
+
+    if (forgotForm && btnSendReset) {
+        forgotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value;
+            if (!email) return;
+
+            btnSendReset.disabled = true;
+            btnSendReset.textContent = 'Gönderiliyor...';
+
+            try {
+                await db.resetPassword(email);
+                showToast('Şifre sıfırlama bağlantısı e-postanıza gönderildi! Lütfen gelen kutunuzu kontrol edin.', 'success');
+                forgotForm.reset();
+                if (authForgotBox && authMainBox) {
+                    authForgotBox.classList.add('hidden');
+                    authMainBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Forgot password error:", err);
+                showToast(err.message || 'Şifre sıfırlama bağlantısı gönderilemedi', 'danger');
+            } finally {
+                btnSendReset.disabled = false;
+                btnSendReset.textContent = 'Sıfırlama Bağlantısı Gönder';
+            }
+        });
+    }
+
+    // New Password Modal Submit
+    const resetForm = document.getElementById('reset-password-form');
+    const btnSaveNewPassword = document.getElementById('btn-save-new-password');
+    const modalResetPassword = document.getElementById('modal-reset-password');
+
+    if (resetForm && btnSaveNewPassword) {
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const p1 = document.getElementById('reset-new-password').value;
+            const p2 = document.getElementById('reset-new-password-confirm').value;
+
+            if (p1 !== p2) {
+                showToast('Girdiğiniz şifreler birbiriyle eşleşmiyor!', 'danger');
+                return;
+            }
+            if (p1.length < 6) {
+                showToast('Şifreniz en az 6 karakter olmalıdır.', 'warning');
+                return;
+            }
+
+            btnSaveNewPassword.disabled = true;
+            btnSaveNewPassword.textContent = 'Güncelleniyor...';
+
+            try {
+                await db.updateUserPassword(p1);
+                showToast('Şifreniz başarıyla güncellendi! Giriş yapılıyor...', 'success');
+                if (modalResetPassword) modalResetPassword.classList.add('hidden');
+                resetForm.reset();
+                window.location.hash = '#dashboard';
+            } catch (err) {
+                console.error("Password update error:", err);
+                showToast(err.message || 'Şifre güncellenemedi', 'danger');
+            } finally {
+                btnSaveNewPassword.disabled = false;
+                btnSaveNewPassword.textContent = 'Şifremi Güncelle & Devam Et';
+            }
+        });
+    }
+
     const logoutBtn = document.getElementById('btn-logout');
     const mobileLogoutBtn = document.getElementById('btn-mobile-logout');
     const pendingLogoutBtn = document.getElementById('btn-pending-logout');
@@ -90,6 +178,22 @@ export function initAuthEvents() {
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     if (mobileLogoutBtn) mobileLogoutBtn.addEventListener('click', handleLogout);
     if (pendingLogoutBtn) pendingLogoutBtn.addEventListener('click', handleLogout);
+
+    // Check if user arrived via recovery link
+    checkResetPasswordMode();
+}
+
+/**
+ * Check if current URL contains recovery token or hash
+ */
+export function checkResetPasswordMode() {
+    const hash = window.location.hash;
+    const modalResetPassword = document.getElementById('modal-reset-password');
+    if (!modalResetPassword) return;
+
+    if (hash.startsWith('#reset-password') || hash.includes('type=recovery')) {
+        modalResetPassword.classList.remove('hidden');
+    }
 }
 
 export function renderApprovalPending() {
