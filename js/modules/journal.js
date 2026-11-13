@@ -6,16 +6,16 @@ import { showToast, compressImage, escapeHtml } from '../utils.js';
 
 export async function loadJournalData() {
     state.tripsList = await db.getTrips();
-    
+
     if (!state.activeTripId && state.tripsList.length > 0) {
         state.activeTripId = state.tripsList[0].id;
     }
-    
+
     const filterSelect = document.getElementById('journal-trip-filter');
     const modalSelect = document.getElementById('memory-trip-id');
-    
+
     const tripOptions = state.tripsList.map(t => `<option value="${t.id}" ${t.id === state.activeTripId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
-    
+
     if (filterSelect) filterSelect.innerHTML = '<option value="">Seyahat Seçin...</option>' + tripOptions;
     if (modalSelect) modalSelect.innerHTML = tripOptions;
 
@@ -33,25 +33,25 @@ export function getDisplayPhotoUrl(url) {
     if (url.startsWith('data:') || url.startsWith('blob:')) {
         return url;
     }
-    
+
     if (state.photoBlobUrls[url]) {
         return state.photoBlobUrls[url];
     }
-    
+
     let filePath = url;
     if (url.startsWith('http')) {
         filePath = url.split('/traveller-photos/').pop();
     }
-    
+
     if (!state.pendingPhotoLoads.has(url)) {
         state.pendingPhotoLoads.add(url);
-        
+
         db.downloadPhoto(filePath)
             .then(blob => {
                 if (blob) {
                     const objectUrl = URL.createObjectURL(blob);
                     state.photoBlobUrls[url] = objectUrl;
-                    
+
                     const hash = window.location.hash || '#dashboard';
                     if (hash === '#journal') {
                         renderJournal();
@@ -64,7 +64,7 @@ export function getDisplayPhotoUrl(url) {
                 state.pendingPhotoLoads.delete(url);
             });
     }
-    
+
     return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23222"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-family="sans-serif" font-size="8">Yukleniyor...</text></svg>';
 }
 
@@ -79,10 +79,9 @@ export function renderJournal() {
 
     if (state.memoriesList.length === 0) {
         container.innerHTML = `
-            <div class="card glass text-center" style="padding: 50px;">
-                <i data-lucide="camera" style="width: 48px; height: 48px; margin-bottom: 16px; color: var(--text-muted);"></i>
-                <h3>Seyahat Anısı Bulunmuyor</h3>
-                <p class="text-muted" style="margin-top: 8px;">Uçak biletlerinizi, çektiğiniz fotoğrafları ve o güne dair küçük notlarınızı ekleyin!</p>
+            <div class="card glass text-center" style="padding: 40px;">
+                <i data-lucide="camera" style="width: 40px; height: 40px; margin-bottom: 12px; color: var(--text-muted);"></i>
+                <h3>Henüz Anı Yok</h3>
             </div>
         `;
         if (window.lucide) window.lucide.createIcons();
@@ -273,10 +272,10 @@ export function initJournalEvents() {
                         await db.createMemory({ trip_id: tripId, title, description, location, date }, state.selectedPhotoFile);
                     }
                     clearInterval(progressInterval);
-                    
+
                     progressBar.style.width = '100%';
                     progressText.textContent = 'Fotoğraf başarıyla yüklendi! %100';
-                    
+
                     setTimeout(() => {
                         showToast(memoryId ? 'Seyahat anısı güncellendi!' : 'Seyahat anısı ve fotoğraf başarıyla kaydedildi!', 'success');
                         closeModal();
@@ -310,20 +309,20 @@ export function initJournalEvents() {
                     progressBarContainer.classList.add('hidden');
                     progressBar.style.width = '0%';
                 }
-                
+
                 document.getElementById('memory-modal').classList.add('hidden');
                 memoryForm.reset();
                 document.getElementById('memory-id').value = '';
-                
+
                 state.selectedPhotoFile = null;
                 previewImg.src = '';
                 delete previewImg.dataset.originalPhotoUrl;
                 previewContainer.classList.add('hidden');
                 photoPlaceholder.classList.remove('hidden');
-                
+
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Kaydet';
-                
+
                 state.activeTripId = tripId;
                 await loadJournalData();
             }
@@ -379,11 +378,11 @@ export function populateMemoryFormForEdit(mem) {
     document.getElementById('memory-desc').value = mem.description || '';
     document.getElementById('memory-location').value = mem.location || '';
     document.getElementById('memory-date').value = mem.date;
-    
+
     const previewImg = document.getElementById('photo-preview');
     const previewContainer = document.getElementById('photo-preview-container');
     const photoPlaceholder = document.getElementById('photo-upload-placeholder');
-    
+
     if (mem.photo_url) {
         previewImg.dataset.originalPhotoUrl = mem.photo_url;
         previewImg.src = getDisplayPhotoUrl(mem.photo_url);
@@ -395,10 +394,10 @@ export function populateMemoryFormForEdit(mem) {
         previewContainer.classList.add('hidden');
         photoPlaceholder.classList.remove('hidden');
     }
-    
+
     document.getElementById('memory-modal-title').textContent = 'Anıyı Düzenle';
     document.getElementById('memory-modal').classList.remove('hidden');
-    
+
     state.selectedPhotoFile = null;
     document.getElementById('memory-photo').value = '';
 }

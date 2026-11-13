@@ -14,6 +14,7 @@ export const state = {
     activeTripId: null,
     currentGalleryTab: 'all',
     exchangeRates: {},
+    exchangeRatesMeta: { source: 'fallback', updatedAt: null },
     selectedPhotoFile: null,
     tempTripParticipants: [],
     photoBlobUrls: {},
@@ -21,9 +22,9 @@ export const state = {
 };
 
 export const fallbackRates = {
-    TRY: 32.50,
-    EUR: 0.92,
+    TRY: 50.31,
+    EUR: 0.9035,
     USD: 1.00,
-    GBP: 0.79,
-    JPY: 157.00
+    GBP: 0.755,
+    JPY: 159.80
 };

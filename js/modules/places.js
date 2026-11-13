@@ -71,132 +71,6 @@ export function guessCategoryFromName(name = '') {
     return 'other';
 }
 
-/**
- * 1-Click Link Import: Google Maps (maps.app.goo.gl, web URLs), Instagram, or Coordinates
- */
-export async function handleLinkImport(rawInput) {
-    const input = (rawInput || '').trim();
-    if (!input) {
-        showToast("Lütfen bir Google Maps linki, koordinat veya mekan adı girin.", "warning");
-        return;
-    }
-
-    showToast("Bağlantı ve koordinatlar çözümleniyor...", "info");
-
-    let lat = null;
-    let lng = null;
-    let placeName = '';
-    let address = '';
-
-    // 1. Direct coordinates: e.g. 41.0082, 28.9784 or 41.0082 28.9784
-    const coordMatch = input.match(/^(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)$/);
-    if (coordMatch) {
-        lat = parseFloat(coordMatch[1]);
-        lng = parseFloat(coordMatch[2]);
-    }
-
-    // 2. Google Maps URL patterns
-    if (!isValidCoord(lat, lng)) {
-        // Pattern A: @41.0082,28.9784
-        const atMatch = input.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-        if (atMatch) {
-            lat = parseFloat(atMatch[1]);
-            lng = parseFloat(atMatch[2]);
-        }
-        // Pattern B: q=41.0082,28.9784 or ll=41.0082,28.9784
-        const qMatch = input.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
-        if (qMatch) {
-            lat = parseFloat(qMatch[1]);
-            lng = parseFloat(qMatch[2]);
-        }
-        // Extract place name from /place/Name
-        const placeMatch = input.match(/\/place\/([^/@?]+)/);
-        if (placeMatch) {
-            try {
-                placeName = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
-            } catch (_) {}
-        }
-    }
-
-    // 3. Instagram location slug pattern (e.g. /explore/locations/123/place-name/)
-    if (!placeName && input.includes('instagram.com')) {
-        const instaMatch = input.match(/\/locations\/\d+\/([^/?#]+)/);
-        if (instaMatch) {
-            placeName = instaMatch[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
-    }
-
-    // If coordinates found: reverse geocode with Nominatim to get official address & name
-    if (isValidCoord(lat, lng)) {
-        try {
-            const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-                headers: { 'Accept-Language': 'tr' }
-            });
-            if (revRes.ok) {
-                const data = await revRes.json();
-                if (!placeName) {
-                    placeName = data.name || data.address?.amenity || data.address?.shop || data.address?.road || 'Yeni Mekan';
-                }
-                address = data.display_name ? data.display_name.split(',').slice(0, 3).join(', ') : '';
-            }
-        } catch (e) {
-            console.warn("Reverse geocode failed:", e);
-        }
-    } else {
-        // No inline coordinates in URL: Use cleaned query to search via Nominatim
-        let searchQuery = input;
-        if (input.startsWith('http://') || input.startsWith('https://')) {
-            if (placeName) {
-                searchQuery = placeName;
-            } else {
-                searchQuery = input.replace(/https?:\/\/[^\s]+/g, '').trim();
-                if (!searchQuery) {
-                    showToast("Bu kısa bağlantı için lütfen mekan adını yazarak aratın.", "warning");
-                    openPlaceModal();
-                    return;
-                }
-            }
-        }
-
-        try {
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1&addressdetails=1`, {
-                headers: { 'Accept-Language': 'tr' }
-            });
-            if (geoRes.ok) {
-                const results = await geoRes.json();
-                if (results && results.length > 0) {
-                    lat = parseFloat(results[0].lat);
-                    lng = parseFloat(results[0].lon);
-                    placeName = placeName || results[0].name || searchQuery;
-                    address = results[0].display_name ? results[0].display_name.split(',').slice(0, 3).join(', ') : '';
-                }
-            }
-        } catch (geoErr) {
-            console.warn("Geocoding failed:", geoErr);
-        }
-    }
-
-    if (isValidCoord(lat, lng)) {
-        openPlaceModal({
-            name: placeName || 'Yeni Mekan',
-            latitude: lat,
-            longitude: lng,
-            address: address,
-            category: guessCategoryFromName(placeName)
-        });
-        showToast("Mekan ve koordinatlar başarıyla çözümlendi! Bilgileri kontrol edip kaydedin.", "success");
-        const linkBox = document.getElementById('places-link-import-box');
-        if (linkBox) linkBox.classList.add('hidden');
-    } else {
-        showToast("Bağlantıdan konum çözümlenemedi. Lütfen mekan adını yazarak deneyin.", "warning");
-        openPlaceModal({ name: placeName || input });
-    }
-}
-window.handleLinkImport = handleLinkImport;
-
-/**
- * Initialize event listeners for Places & Map module
- */
 export function initPlacesEvents() {
     // Add Place Button
     const btnAdd = document.getElementById('btn-add-place');
@@ -360,38 +234,6 @@ export function initPlacesEvents() {
 
     if (btnRetryLocation) {
         btnRetryLocation.addEventListener('click', () => requestLocationFromPermissionModal());
-    }
-
-    // 1-Click Link Import Controls
-    const btnToggleLinkImport = document.getElementById('btn-toggle-link-import');
-    const linkImportBox = document.getElementById('places-link-import-box');
-    const btnCloseLinkImport = document.getElementById('btn-close-link-import');
-    const btnExecuteLinkImport = document.getElementById('btn-execute-link-import');
-    const quickLinkInput = document.getElementById('quick-link-input');
-
-    if (btnToggleLinkImport && linkImportBox) {
-        btnToggleLinkImport.addEventListener('click', () => {
-            linkImportBox.classList.toggle('hidden');
-            if (!linkImportBox.classList.contains('hidden') && quickLinkInput) {
-                quickLinkInput.focus();
-            }
-        });
-    }
-    if (btnCloseLinkImport && linkImportBox) {
-        btnCloseLinkImport.addEventListener('click', () => {
-            linkImportBox.classList.add('hidden');
-        });
-    }
-    if (btnExecuteLinkImport && quickLinkInput) {
-        btnExecuteLinkImport.addEventListener('click', () => {
-            handleLinkImport(quickLinkInput.value);
-        });
-        quickLinkInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleLinkImport(quickLinkInput.value);
-            }
-        });
     }
 
     // Radar Banner Close Button
@@ -1478,18 +1320,12 @@ function renderPlacesList() {
     const filtered = getFilteredPlaces();
 
     if (filtered.length === 0) {
-        const isCityGuide = state.activeTripId === 'city-guide';
         listContainer.innerHTML = `
             <div class="empty-places-card card glass">
-                <i data-lucide="map-pin-off" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 12px;"></i>
-                <h3>${isCityGuide ? 'Kayıtlı Mekan Bulunamadı' : 'Henüz Mekan Eklenmemiş'}</h3>
-                <p class="text-muted">
-                    ${isCityGuide 
-                        ? 'Şehir rehberinize favori kahvecilerinizi, restoranları veya parkları 1 tıkla ekleyin.' 
-                        : 'Bu rota için ziyaret edilecek yerleri veya otelinizi haritaya ekleyin.'}
-                </p>
+                <i data-lucide="map-pin-off" style="width: 40px; height: 40px; color: var(--text-muted); margin-bottom: 10px;"></i>
+                <h3>${isCityGuide ? 'Mekan Bulunamadı' : 'Henüz Mekan Yok'}</h3>
                 <button type="button" class="btn btn-primary margin-top-12" id="btn-empty-add-place">
-                    + İlk Mekanı Ekle
+                    + Mekan Ekle
                 </button>
             </div>
         `;
@@ -1772,13 +1608,34 @@ export function closePlaceModal() {
 }
 
 /**
- * Smart Multilingual Location Search using OpenStreetMap Nominatim + Wikipedia
+ * Apply resolved location fields to the Place Modal form
+ */
+function applyResolvedLocation(lat, lng, suggestedName = '', suggestedAddress = '') {
+    document.getElementById('place-lat').value = Number(lat).toFixed(6);
+    document.getElementById('place-lng').value = Number(lng).toFixed(6);
+    if (suggestedAddress) {
+        document.getElementById('place-address').value = suggestedAddress;
+    }
+    const nameInput = document.getElementById('place-name');
+    if (nameInput && !nameInput.value.trim() && suggestedName) {
+        nameInput.value = suggestedName;
+    }
+    const catSelect = document.getElementById('place-category');
+    if (catSelect && suggestedName) {
+        const guessed = guessCategoryFromName(suggestedName);
+        if (guessed !== 'other') catSelect.value = guessed;
+    }
+    if (mapInstance) mapInstance.setView([lat, lng], 16);
+}
+
+/**
+ * Location Search (Place name, coordinates, or full Google Maps link)
  */
 async function handleLocationSearch() {
     const queryInput = document.getElementById('place-search-query');
-    const query = queryInput ? queryInput.value.trim() : '';
-    if (!query) {
-        showToast("Lütfen aranacak yeri veya semti yazın (örn: Kadıköy Moda, Petra Gayrettepe veya Akropolis)", "warning");
+    const rawQuery = queryInput ? queryInput.value.trim() : '';
+    if (!rawQuery) {
+        showToast("Mekan adı, semt veya koordinat yazın (ör: Kadıköy Moda).", "warning");
         return;
     }
 
@@ -1789,11 +1646,61 @@ async function handleLocationSearch() {
     }
 
     try {
-        let found = false;
+        // 1. Direct coordinates (e.g. 41.0082, 28.9784) or Google Maps URL with coordinates
+        let directLat = null;
+        let directLng = null;
+        let extractedName = '';
 
-        // Step 1: OpenStreetMap Nominatim API
+        const coordMatch = rawQuery.match(/^(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)$/);
+        if (coordMatch) {
+            directLat = parseFloat(coordMatch[1]);
+            directLng = parseFloat(coordMatch[2]);
+        } else {
+            const atMatch = rawQuery.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            const qMatch = rawQuery.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+            const coordSrc = atMatch || qMatch;
+            if (coordSrc) {
+                directLat = parseFloat(coordSrc[1]);
+                directLng = parseFloat(coordSrc[2]);
+            }
+            const placeMatch = rawQuery.match(/\/place\/([^/@?]+)/);
+            if (placeMatch) {
+                try {
+                    extractedName = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+                } catch (_) {}
+            }
+        }
+
+        if (isValidCoord(directLat, directLng)) {
+            let addr = '';
+            try {
+                const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${directLat}&lon=${directLng}&zoom=18`, {
+                    headers: { 'Accept-Language': 'tr' }
+                });
+                if (revRes.ok) {
+                    const revData = await revRes.json();
+                    addr = revData.display_name ? revData.display_name.split(',').slice(0, 3).join(', ') : '';
+                    if (!extractedName) {
+                        extractedName = revData.name || revData.address?.amenity || revData.address?.road || '';
+                    }
+                }
+            } catch (_) {}
+            applyResolvedLocation(directLat, directLng, extractedName, addr);
+            showToast("Koordinat konuma uygulandı.", "success");
+            return;
+        }
+
+        // Reject unsupported URLs (short links, Instagram/TikTok links) early with clear guidance
+        let searchQuery = extractedName || rawQuery;
+        if (/^https?:\/\//i.test(rawQuery) && !extractedName) {
+            showToast("Sosyal medya veya kısa linklerden konum okunamıyor. Mekan adını yazarak arayın.", "warning");
+            return;
+        }
+
+        // 2. OpenStreetMap Nominatim API
+        let found = false;
         try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`;
             const res = await fetch(url, {
                 headers: { 'Accept-Language': 'tr,en' }
             });
@@ -1803,18 +1710,10 @@ async function handleLocationSearch() {
                 const result = data[0];
                 const lat = parseFloat(result.lat);
                 const lon = parseFloat(result.lon);
+                const shortAddr = result.display_name ? result.display_name.split(',').slice(0, 3).join(', ') : '';
 
-                document.getElementById('place-lat').value = lat.toFixed(6);
-                document.getElementById('place-lng').value = lon.toFixed(6);
-                document.getElementById('place-address').value = result.display_name.split(',').slice(0, 3).join(', ');
-
-                const nameInput = document.getElementById('place-name');
-                if (!nameInput.value.trim()) {
-                    nameInput.value = query;
-                }
-
-                showToast(`"${query}" başarıyla bulundu!`, "success");
-                if (mapInstance) mapInstance.setView([lat, lon], 16);
+                applyResolvedLocation(lat, lon, searchQuery, shortAddr);
+                showToast(`"${searchQuery}" bulundu.`, "success");
                 found = true;
                 return;
             }
@@ -1822,10 +1721,10 @@ async function handleLocationSearch() {
             console.warn("Nominatim search failed, trying fallback:", nomErr);
         }
 
-        // Step 2: Wikipedia / Wikidata Multilingual Geosearch Fallback
+        // 3. Wikipedia Geosearch Fallback
         if (!found) {
             try {
-                const wikiUrl = `https://tr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+                const wikiUrl = `https://tr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*`;
                 const wikiRes = await fetch(wikiUrl);
                 const wikiData = await wikiRes.json();
                 const searchList = wikiData?.query?.search || [];
@@ -1846,13 +1745,8 @@ async function handleLocationSearch() {
                             const enName = page.langlinks?.[0]?.['*'] || '';
                             const cleanName = topTitle.replace(/\s*\([^)]*\)/g, '').trim();
 
-                            document.getElementById('place-lat').value = lat.toFixed(6);
-                            document.getElementById('place-lng').value = lon.toFixed(6);
-                            document.getElementById('place-name').value = cleanName;
-                            document.getElementById('place-address').value = enName ? `${cleanName} (${enName})` : cleanName;
-
-                            showToast(`"${cleanName}" başarıyla bulundu!`, "success");
-                            if (mapInstance) mapInstance.setView([lat, lon], 16);
+                            applyResolvedLocation(lat, lon, cleanName, enName ? `${cleanName} (${enName})` : cleanName);
+                            showToast(`"${cleanName}" bulundu.`, "success");
                             found = true;
                             return;
                         }
@@ -1864,7 +1758,7 @@ async function handleLocationSearch() {
         }
 
         if (!found) {
-            showToast("Konum bulunamadı. Lütfen şehir veya semt adını ekleyin (örn: Petra Kafe Gayrettepe).", "warning");
+            showToast("Konum bulunamadı. Şehir veya semt ekleyerek tekrar deneyin.", "warning");
         }
     } catch (err) {
         console.error("Geocoding failed:", err);
@@ -1872,7 +1766,8 @@ async function handleLocationSearch() {
     } finally {
         if (btnSearch) {
             btnSearch.disabled = false;
-            btnSearch.textContent = 'Konumu Bul';
+            btnSearch.innerHTML = '<i data-lucide="search"></i> Bul';
+            if (window.lucide) window.lucide.createIcons();
         }
     }
 }
@@ -2003,10 +1898,9 @@ function renderEmptyState() {
     if (list) {
         list.innerHTML = `
             <div class="empty-places-card card glass">
-                <i data-lucide="compass" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 12px;"></i>
-                <h3>Şehir Rehberinize Hoş Geldiniz!</h3>
-                <p class="text-muted">Günlük hayatınızda veya seyahatlerinizde sevdiğiniz mekanları haritaya kaydedin.</p>
-                <button type="button" class="btn btn-primary margin-top-12" id="btn-empty-add-place">+ İlk Mekanı Ekle</button>
+                <i data-lucide="compass" style="width: 40px; height: 40px; color: var(--text-muted); margin-bottom: 10px;"></i>
+                <h3>Henüz Mekan Yok</h3>
+                <button type="button" class="btn btn-primary margin-top-12" id="btn-empty-add-place">+ Mekan Ekle</button>
             </div>
         `;
         const btnEmpty = document.getElementById('btn-empty-add-place');

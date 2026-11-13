@@ -241,6 +241,8 @@ export function renderDashboard() {
         }
     }
 
+    updateConverterResult();
+
     if (window.lucide) window.lucide.createIcons();
     
     // Dispatch event to app.js for updates
@@ -261,17 +263,20 @@ export function initDashboardEvents() {
     const convToSelect = document.getElementById('conv-to');
     const convSwapBtn = document.getElementById('btn-conv-swap');
 
-    if (convAmountInput && convFromSelect && convToSelect && convSwapBtn) {
+    if (convAmountInput && convFromSelect && convToSelect) {
         convAmountInput.addEventListener('input', updateConverterResult);
         convFromSelect.addEventListener('change', updateConverterResult);
         convToSelect.addEventListener('change', updateConverterResult);
-        
-        convSwapBtn.addEventListener('click', () => {
-            const temp = convFromSelect.value;
-            convFromSelect.value = convToSelect.value;
-            convToSelect.value = temp;
-            updateConverterResult();
-        });
+
+        if (convSwapBtn) {
+            convSwapBtn.addEventListener('click', () => {
+                const temp = convFromSelect.value;
+                convFromSelect.value = convToSelect.value;
+                convToSelect.value = temp;
+                updateConverterResult();
+            });
+        }
+        updateConverterResult();
     }
 
     const syncBtn = document.getElementById('btn-sync-now');
@@ -308,6 +313,7 @@ export function initDashboardEvents() {
 function updateConverterResult() {
     const amountInput = document.getElementById('conv-amount');
     const resultDiv = document.getElementById('exchange-result');
+    const metaDiv = document.getElementById('exchange-rate-meta');
     const fromSelect = document.getElementById('conv-from');
     const toSelect = document.getElementById('conv-to');
 
@@ -319,6 +325,16 @@ function updateConverterResult() {
 
     const converted = convertCurrency(amount, from, to);
     resultDiv.textContent = `${amount.toFixed(2)} ${from} = ${converted.toFixed(2)} ${to}`;
+
+    if (metaDiv) {
+        const unitRate = convertCurrency(1, from, to);
+        const reverseRate = convertCurrency(1, to, from);
+        const hasLiveRates = state.exchangeRates && Object.keys(state.exchangeRates).length > 0;
+        const sourceLabel = state.exchangeRatesMeta?.source === 'live'
+            ? 'Canlı kur'
+            : (hasLiveRates ? 'Kayıtlı kur' : 'Tahmini kur');
+        metaDiv.textContent = `1 ${from} = ${unitRate.toFixed(4)} ${to} · 1 ${to} = ${reverseRate.toFixed(2)} ${from} (${sourceLabel})`;
+    }
 }
 
 // Helpers

@@ -49,11 +49,11 @@
                 </a>
                 <a href="#trips" class="nav-item" id="nav-trips">
                     <i data-lucide="compass"></i>
-                    <span>Seyahatlerim</span>
+                    <span>Seyahatler</span>
                 </a>
                 <a href="#places" class="nav-item" id="nav-places">
                     <i data-lucide="map-pin"></i>
-                    <span>Gezi Haritası</span>
+                    <span>Harita</span>
                 </a>
                 <a href="#expenses" class="nav-item" id="nav-expenses">
                     <i data-lucide="wallet"></i>
@@ -61,7 +61,7 @@
                 </a>
                 <a href="#journal" class="nav-item" id="nav-journal">
                     <i data-lucide="book-open"></i>
-                    <span>Anılar & Fotoğraflar</span>
+                    <span>Anılar</span>
                 </a>
                 <a href="#settings" class="nav-item" id="nav-settings">
                     <i data-lucide="settings"></i>
@@ -249,8 +249,7 @@
                 <section id="view-dashboard" class="app-view hidden">
                     <div class="dashboard-header-row">
                         <div>
-                            <h1 class="welcome-title">Merhaba Seyahatsever!</h1>
-                            <p class="subtitle">Maceralarını belgele, rotanı çiz ve bütçeni kontrol altında tut.</p>
+                            <h1 class="welcome-title">Genel Bakış</h1>
                         </div>
                         <div class="header-sync-status-wrapper" style="display:flex; align-items:center; gap:10px;">
                             <div class="sync-status-badge" id="dash-sync-badge" title="Bulut Senkronizasyon Durumu">
@@ -258,7 +257,7 @@
                                 <span class="sync-text">Buluta Bağlı</span>
                             </div>
                             <button id="btn-sync-now" class="btn btn-secondary btn-sm hidden">
-                                <i data-lucide="refresh-cw"></i> Şimdi Eşitle
+                                <i data-lucide="refresh-cw"></i> Eşitle
                             </button>
                         </div>
                     </div>
@@ -270,7 +269,7 @@
                             <div class="metric-info">
                                 <h3>Toplam Harcama</h3>
                                 <p class="metric-value" id="dash-total-expense">0.00 TRY</p>
-                                <span class="metric-sub" id="dash-expense-converted">Tüm rotaların genel toplamı</span>
+                                <span class="metric-sub" id="dash-expense-converted">Genel toplam</span>
                             </div>
                         </div>
                         <div class="metric-card glass">
@@ -278,15 +277,15 @@
                             <div class="metric-info">
                                 <h3>Aktif Seyahat</h3>
                                 <p class="metric-value" id="dash-active-trip">-</p>
-                                <span class="metric-sub" id="dash-trip-dates">Seyahat tarihleri</span>
+                                <span class="metric-sub" id="dash-trip-dates">Tarih aralığı</span>
                             </div>
                         </div>
                         <div class="metric-card glass">
                             <div class="metric-icon memory"><i data-lucide="image"></i></div>
                             <div class="metric-info">
-                                <h3>Anılar & Resimler</h3>
+                                <h3>Anılar</h3>
                                 <p class="metric-value" id="dash-memories-count">0 Anı</p>
-                                <span class="metric-sub" id="dash-photos-count">0 Fotoğraf yüklendi</span>
+                                <span class="metric-sub" id="dash-photos-count">0 fotoğraf</span>
                             </div>
                         </div>
                     </div>
@@ -299,15 +298,15 @@
                             <div class="card glass">
                                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                                     <div>
-                                        <h2 style="font-size:18px; margin:0;"><i data-lucide="compass" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Günün Rotası & Aktif Seyahat Durumu</h2>
-                                        <span class="text-sm text-muted" id="dash-route-subtitle">Gezilecek yerler ve bütçe kullanımı</span>
+                                        <h2 style="font-size:18px; margin:0;"><i data-lucide="compass" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Aktif Seyahat</h2>
+                                        <span class="text-sm text-muted" id="dash-route-subtitle"></span>
                                     </div>
                                     <div style="display:flex; gap:8px; align-items:center;">
                                         <select id="dash-trip-selector" class="select-input compact-select">
-                                            <option value="">Seyahat Seçin...</option>
+                                            <option value="">Seyahat Seçin</option>
                                         </select>
                                         <a href="#places" class="btn btn-primary btn-sm">
-                                            <i data-lucide="map"></i> Haritada Aç
+                                            <i data-lucide="map"></i> Harita
                                         </a>
                                     </div>
                                 </div>
@@ -315,7 +314,7 @@
                                 <!-- Budget Progress Row -->
                                 <div class="budget-progress-container" style="margin-top:16px;">
                                     <div class="budget-text-row">
-                                        <span style="font-weight:600;">Bütçe Harcama Durumu</span>
+                                        <span style="font-weight:600;">Bütçe</span>
                                         <span id="dash-budget-progress-text" style="font-weight:700;">0 / 0 TRY</span>
                                     </div>
                                     <div class="progress-bar-bg">
@@ -326,8 +325,8 @@
                                 <!-- Mini Places Summary Container -->
                                 <div class="margin-top-20">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                        <h4 style="margin:0; font-size:14px; color:var(--text-secondary);"><i data-lucide="map-pin" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i> Sıradaki Gezi Noktaları</h4>
-                                        <a href="#places" class="text-sm" style="color:var(--color-primary); text-decoration:none;">+ Yeni Yer Ekle</a>
+                                        <h4 style="margin:0; font-size:14px; color:var(--text-secondary);"><i data-lucide="map-pin" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i> Sıradaki Yerler</h4>
+                                        <a href="#places" class="text-sm" style="color:var(--color-primary); text-decoration:none;">+ Ekle</a>
                                     </div>
                                     <div id="dash-places-summary" class="dash-places-preview-grid">
                                         <!-- Rendered dynamically -->
@@ -370,17 +369,17 @@
 
                             <!-- Compact Currency Converter Widget -->
                             <div class="card glass margin-top-20">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                    <h4 style="margin:0; font-size:15px;"><i data-lucide="arrow-left-right" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px;"></i> Seyahat Döviz Çevirici</h4>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <h4 style="margin:0; font-size:15px;"><i data-lucide="arrow-left-right" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px;"></i> Döviz Çevirici</h4>
                                 </div>
                                 <div class="exchange-grid compact-exchange">
                                     <div class="rate-box">
-                                        <label>Tutar</label>
-                                        <input type="number" id="conv-amount" value="100" class="text-input" style="padding:8px 10px;">
+                                        <label for="conv-amount">Tutar</label>
+                                        <input type="number" id="conv-amount" value="100" min="0" step="any" class="text-input" style="padding:8px 10px;">
                                     </div>
-                                    <div class="form-row" style="gap:8px; margin-top:8px;">
+                                    <div class="form-row" style="gap:8px; margin-top:8px; align-items:flex-end;">
                                         <div class="rate-box" style="flex:1;">
-                                            <label>Kaynak</label>
+                                            <label for="conv-from">Kaynak</label>
                                             <select id="conv-from" class="select-input" style="padding:8px 10px;">
                                                 <option value="EUR">EUR (€)</option>
                                                 <option value="USD">USD ($)</option>
@@ -389,8 +388,11 @@
                                                 <option value="JPY">JPY (¥)</option>
                                             </select>
                                         </div>
+                                        <button type="button" id="btn-conv-swap" class="btn btn-secondary btn-icon" title="Para birimlerini değiştir" style="height:38px; width:38px; padding:0; flex-shrink:0;">
+                                            <i data-lucide="arrow-left-right" style="width:15px;height:15px;"></i>
+                                        </button>
                                         <div class="rate-box" style="flex:1;">
-                                            <label>Hedef</label>
+                                            <label for="conv-to">Hedef</label>
                                             <select id="conv-to" class="select-input" style="padding:8px 10px;">
                                                 <option value="EUR" selected>EUR (€)</option>
                                                 <option value="USD">USD ($)</option>
@@ -402,8 +404,9 @@
                                     </div>
                                 </div>
                                 <div class="exchange-result" id="exchange-result" style="margin-top:12px; padding:10px; font-weight:700; text-align:center;">
-                                    100 TRY = 2.65 EUR
+                                    Hesaplanıyor...
                                 </div>
+                                <div id="exchange-rate-meta" class="text-xs text-muted" style="text-align:center; margin-top:6px;"></div>
                             </div>
                         </div>
                     </div>
@@ -421,10 +424,9 @@
                 <section id="view-trips" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>Seyahatler & Rotalar</h1>
-                            <p class="subtitle">Aktif rotalarınız, bütçe ve gezi planlarınız.</p>
+                            <h1>Seyahatler</h1>
                         </div>
-                        <button id="btn-add-trip" class="btn btn-primary"><i data-lucide="plus"></i> Yeni Seyahat Ekle</button>
+                        <button id="btn-add-trip" class="btn btn-primary"><i data-lucide="plus"></i> Yeni Seyahat</button>
                     </div>
 
                     <!-- Trips List Grid -->
@@ -490,46 +492,25 @@
                 <section id="view-places" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>Gezi Haritası & Şehir Rehberi</h1>
-                            <p class="subtitle">Kaydedilen mekanlar, kişisel gurme notları, radar ve navigasyon.</p>
+                            <h1>Harita & Mekanlar</h1>
                         </div>
                         <div class="action-buttons-group">
                             <select id="places-trip-selector" class="select-input compact-select">
                                 <!-- Loaded dynamically -->
                             </select>
-                            <button id="btn-toggle-link-import" class="btn btn-secondary" title="Google Maps veya Instagram linkiyle anında mekan ekle">
-                                <i data-lucide="link"></i> Link İçe Aktar
-                            </button>
-                            <button id="btn-share-places-route" class="btn btn-secondary" title="Bu rotayı benzersiz link ve PIN ile arkadaşlarınla paylaş">
-                                <i data-lucide="share-2"></i> Rotayı Paylaş
+                            <button id="btn-share-places-route" class="btn btn-secondary" title="Rotayı paylaş">
+                                <i data-lucide="share-2"></i> Paylaş
                             </button>
                             <button id="btn-add-place" class="btn btn-primary">
-                                <i data-lucide="plus"></i> Yeni Mekan Ekle
+                                <i data-lucide="plus"></i> Mekan Ekle
                             </button>
                         </div>
-                    </div>
-
-                    <!-- 1-Click Link Import Card -->
-                    <div id="places-link-import-box" class="link-import-card hidden">
-                        <div class="link-import-header">
-                            <div class="link-import-title"><i data-lucide="link-2"></i> Google Maps veya Instagram Bağlantısıyla Hızlı Ekle</div>
-                            <button type="button" class="btn-close-modal" id="btn-close-link-import" style="position:static; padding:2px 8px; font-size:18px;">&times;</button>
-                        </div>
-                        <div class="link-import-input-row">
-                            <input type="text" id="quick-link-input" class="text-input" placeholder="Google Maps linki (maps.app.goo.gl), koordinat (41.0082, 28.9784) veya mekan adı yapıştırın...">
-                            <button type="button" id="btn-execute-link-import" class="btn btn-primary" style="white-space:nowrap;">
-                                <i data-lucide="download"></i> Çözümle & Ekle
-                            </button>
-                        </div>
-                        <span class="text-xs text-muted" style="margin-top:6px; display:block;">
-                            Google Maps veya Instagram'dan kopyaladığınız bağlantıyı yapıştırdığınızda koordinat ve adres otomatik doldurulur.
-                        </span>
                     </div>
 
                     <!-- Radar Status Banner -->
                     <div id="radar-status-banner" class="radar-banner hidden">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <i data-lucide="crosshair"></i> <span><strong>Radar Aktif:</strong> Anlık konumunuza en yakın mekanlar listeleniyor.</span>
+                            <i data-lucide="crosshair"></i> <span><strong>Radar Aktif:</strong> Yakındaki mekanlar</span>
                         </div>
                         <button type="button" id="btn-close-radar" class="btn btn-sm btn-secondary" style="padding:2px 8px; font-size:11px;">Kapat</button>
                     </div>
@@ -543,16 +524,16 @@
                     <div class="places-search-bar margin-bottom-12">
                         <div class="input-icon-wrapper" style="width: 100%;">
                             <i data-lucide="search"></i>
-                            <input type="text" id="places-search-input" placeholder="Mekan adı, semt, tavsiye veya kategori ara... (Örn: Kadıköy, filtre kahve, müze)" class="text-input" style="padding-left: 38px;">
+                            <input type="text" id="places-search-input" placeholder="Mekan, semt veya etiket ara..." class="text-input" style="padding-left: 38px;">
                         </div>
                     </div>
 
-                    <!-- Category & Status Filter Bar (Official, Clean Design) -->
+                    <!-- Category & Status Filter Bar -->
                     <div class="places-filter-bar" id="places-filter-bar">
                         <button type="button" class="filter-pill active" data-filter="all">Tümü</button>
-                        <button type="button" class="filter-pill" data-filter="radar"><i data-lucide="crosshair" style="width:13px; height:13px; vertical-align:middle; margin-right:4px;"></i> Yakınım (Radar)</button>
-                        <button type="button" class="filter-pill" data-filter="planned">İstek Listesi</button>
-                        <button type="button" class="filter-pill" data-filter="visited">Ziyaret Edilenler</button>
+                        <button type="button" class="filter-pill" data-filter="radar"><i data-lucide="crosshair" style="width:13px; height:13px; vertical-align:middle; margin-right:4px;"></i> Yakınımda</button>
+                        <button type="button" class="filter-pill" data-filter="planned">İstek</button>
+                        <button type="button" class="filter-pill" data-filter="visited">Gidildi</button>
                         <button type="button" class="filter-pill" data-filter="cafe">Kafe</button>
                         <button type="button" class="filter-pill" data-filter="food">Restoran</button>
                         <button type="button" class="filter-pill" data-filter="bar">Bar & Gece</button>
@@ -568,20 +549,20 @@
                     <div class="card glass map-card-container">
                         <div class="map-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <span class="map-tip"><i data-lucide="info"></i> <strong>İpucu:</strong> Haritadaki pinlere dokunarak detayları ve yol tarifini görebilirsiniz.</span>
+                                <span class="map-tip"><i data-lucide="info"></i> Pinlere dokunarak detayları görün.</span>
                                 <div id="places-route-total-summary" class="places-route-summary-pill hidden"></div>
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-secondary btn-sm" id="btn-optimize-route" title="Mekanlar arasındaki toplam yürüyüş mesafesini en aza indirecek şekilde sırayı otomatik düzenle">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-optimize-route" title="En kısa yürüyüş rotasına göre sırala">
                                     <i data-lucide="sparkles"></i> <span>Akıllı Sırala</span>
                                 </button>
-                                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-story-export" title="Instagram Story ve sosyal medya için 9:16 infografik kartı oluştur">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-story-export" title="Story kartı oluştur">
                                     <i data-lucide="image"></i> <span>Story Kartı</span>
                                 </button>
-                                <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-fullscreen-map" title="Haritayı tam ekran moduna al/kapat">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-fullscreen-map" title="Tam ekran">
                                     <i data-lucide="maximize"></i> <span id="fullscreen-map-text">Tam Ekran</span>
                                 </button>
-                                <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-route-line" title="Gezi noktaları arası rota güzergah çizgisini göster/gizle">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-route-line" title="Rota çizgisini aç/kapat">
                                     <i data-lucide="route"></i> <span id="route-line-status-text">Rota: Açık</span>
                                 </button>
                             </div>
@@ -605,8 +586,7 @@
 
                     <!-- Places Cards Grid Section -->
                     <div class="places-section-header margin-top-30">
-                        <h2><i data-lucide="map-pin" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Eklenen Mekanlar & Gezi Rehberi</h2>
-                        <span class="text-muted text-sm">Uzaklıklar, puanlar, bilet/ücret notları ve Google Haritalar yol tarifi</span>
+                        <h2><i data-lucide="map-pin" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Kayıtlı Mekanlar</h2>
                     </div>
                     <div id="places-cards-container" class="places-grid margin-top-16">
                         <!-- Loaded dynamically -->
@@ -616,85 +596,82 @@
                     <div id="modal-place" class="modal hidden">
                         <div class="modal-content glass" style="max-width: 580px;">
                             <div class="modal-header">
-                                <h2 id="place-modal-title">Yeni Mekan / Gezi Noktası Ekle</h2>
+                                <h2 id="place-modal-title">Mekan Ekle</h2>
                                 <button type="button" class="btn-close-modal" id="btn-close-place-modal">&times;</button>
                             </div>
                             <form id="place-form">
                                 <input type="hidden" id="place-id">
                                 
                                 <div class="form-group">
-                                    <label for="place-modal-trip-select">Seyahat / Kayıt Alanı</label>
+                                    <label for="place-modal-trip-select">Kayıt Alanı</label>
                                     <select id="place-modal-trip-select" class="select-input">
                                         <!-- Loaded dynamically: City Guide or Trip -->
                                     </select>
                                 </div>
 
-                                <!-- Fast Geocoding & Link Search -->
+                                <!-- Fast Geocoding Search -->
                                 <div class="form-group">
-                                    <label for="place-search-query">Konum veya Bağlantı Ara (Google Maps, Instagram veya Mekan Adı)</label>
+                                    <label for="place-search-query">Konum Ara</label>
                                     <div style="display: flex; gap: 8px;">
-                                        <input type="text" id="place-search-query" class="text-input" placeholder="Google Maps linki, koordinat veya mekan adı yapıştırın...">
+                                        <input type="text" id="place-search-query" class="text-input" placeholder="Mekan adı, koordinat (41.0082, 28.9784) veya Maps linki">
                                         <button type="button" id="btn-search-place-location" class="btn btn-secondary" style="white-space: nowrap;">
                                             <i data-lucide="search"></i> Bul
                                         </button>
                                     </div>
-                                    <span class="text-xs text-muted" style="margin-top: 4px; display: block;">
-                                        Google Maps linki (maps.app.goo.gl), enlem/boylam (41.0082, 28.9784) veya mekan adı yazabilirsiniz.
-                                    </span>
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="place-name">Mekan / Konum Adı</label>
+                                        <label for="place-name">Mekan Adı</label>
                                         <input type="text" id="place-name" required placeholder="Örn: Petra Roasting Co." class="text-input">
                                     </div>
                                     <div class="form-group">
                                         <label for="place-category">Kategori</label>
                                         <select id="place-category" class="select-input" required>
-                                            <option value="cafe" selected>Kafe & 3. Dalga Kahve</option>
-                                            <option value="food">Restoran & Gastronomi</option>
-                                            <option value="bar">Bar & Gece Hayatı</option>
-                                            <option value="bakery">Fırın, Tatlı & Kahvaltı</option>
-                                            <option value="viewpoint">Park, Doğa & Yürüyüş</option>
-                                            <option value="museum">Kültür, Sanat & Müze</option>
-                                            <option value="historical">Tarihi Alan & Anıt</option>
-                                            <option value="shopping">Alışveriş & Butik</option>
-                                            <option value="hotel">Otel & Konaklama</option>
-                                            <option value="other">Diğer / Özel Nokta</option>
+                                            <option value="cafe" selected>Kafe & Kahve</option>
+                                            <option value="food">Restoran</option>
+                                            <option value="bar">Bar & Gece</option>
+                                            <option value="bakery">Fırın & Tatlı</option>
+                                            <option value="viewpoint">Park & Doğa</option>
+                                            <option value="museum">Müze & Sanat</option>
+                                            <option value="historical">Tarihi Alan</option>
+                                            <option value="shopping">Alışveriş</option>
+                                            <option value="hotel">Otel</option>
+                                            <option value="other">Diğer</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="place-status">Ziyaret Durumu</label>
+                                        <label for="place-status">Durum</label>
                                         <select id="place-status" class="select-input">
-                                            <option value="planned" selected>İstek Listesi (Gitmek İstiyorum)</option>
-                                            <option value="visited">Ziyaret Edildi / Gidildi</option>
+                                            <option value="planned" selected>İstek Listesi</option>
+                                            <option value="visited">Gidildi</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="place-rating">Kişisel Puanım</label>
+                                        <label for="place-rating">Puan</label>
                                         <select id="place-rating" class="select-input">
-                                            <option value="0">Puan Belirtilmedi</option>
-                                            <option value="5">5 / 5 — Mükemmel (Kesinlikle Önerilir)</option>
-                                            <option value="4">4 / 5 — Çok İyi</option>
-                                            <option value="3">3 / 5 — İyi / Ortalama</option>
-                                            <option value="2">2 / 5 — Vasat</option>
-                                            <option value="1">1 / 5 — Yetersiz</option>
+                                            <option value="0">Belirtilmedi</option>
+                                            <option value="5">5 / 5</option>
+                                            <option value="4">4 / 5</option>
+                                            <option value="3">3 / 5</option>
+                                            <option value="2">2 / 5</option>
+                                            <option value="1">1 / 5</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <!-- Foodie / Gourmet Recommendation -->
                                 <div class="form-group">
-                                    <label for="place-must-try">Tavsiye Edilen Lezzet / Ne Denenmeli? (Gurme Notu)</label>
-                                    <input type="text" id="place-must-try" class="text-input" placeholder="Örn: San Sebastian Cheesecake, Flat White, Trüflü Makarna">
+                                    <label for="place-must-try">Ne Denenmeli?</label>
+                                    <input type="text" id="place-must-try" class="text-input" placeholder="Örn: Flat White, San Sebastian">
                                 </div>
 
                                 <!-- Vibe & Feature Tags -->
                                 <div class="form-group">
-                                    <label>Mekan Özellikleri & Etiketler</label>
+                                    <label>Etiketler</label>
                                     <div class="quick-tags-container" id="place-quick-tags">
                                         <span class="tag-chip" data-tag="Sessiz & Sakin">Sessiz & Sakin</span>
                                         <span class="tag-chip" data-tag="Laptopla Çalışma">Laptopla Çalışma</span>
@@ -709,24 +686,24 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="place-address">Açık Adres / Semt</label>
-                                    <input type="text" id="place-address" placeholder="Örn: Caferağa Mah., Kadıköy, İstanbul" class="text-input">
+                                    <label for="place-address">Adres</label>
+                                    <input type="text" id="place-address" placeholder="Örn: Caferağa Mah., Kadıköy" class="text-input">
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="place-lat">Enlem (Latitude)</label>
+                                        <label for="place-lat">Enlem</label>
                                         <input type="number" step="any" id="place-lat" required class="text-input" placeholder="37.9715">
                                     </div>
                                     <div class="form-group">
-                                        <label for="place-lng">Boylam (Longitude)</label>
+                                        <label for="place-lng">Boylam</label>
                                         <input type="number" step="any" id="place-lng" required class="text-input" placeholder="23.7257">
                                     </div>
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="place-cost">Tahmini Giriş / Masraf</label>
+                                        <label for="place-cost">Tahmini Tutar</label>
                                         <input type="number" step="0.01" id="place-cost" class="text-input" placeholder="15.00">
                                     </div>
                                     <div class="form-group">
@@ -741,13 +718,13 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="place-notes">Notlar & Hatırlatıcılar</label>
-                                    <textarea id="place-notes" rows="2" class="textarea-input" placeholder="Örn: Sabah 09:00'da açılıyor, bilet online alındı, manzarası çok güzel."></textarea>
+                                    <label for="place-notes">Notlar</label>
+                                    <textarea id="place-notes" rows="2" class="textarea-input" placeholder="Kısa not ekleyin..."></textarea>
                                 </div>
 
                                 <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px;">
                                     <button type="button" class="btn btn-danger hidden" id="btn-delete-place-modal">
-                                        <i data-lucide="trash-2"></i> Bu Mekanı Sil
+                                        <i data-lucide="trash-2"></i> Sil
                                     </button>
                                     <div style="display: flex; gap: 12px; margin-left: auto;">
                                         <button type="button" class="btn btn-secondary" id="btn-cancel-place-modal">Vazgeç</button>
@@ -957,12 +934,11 @@
                 <section id="view-expenses" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>Masraflar & Hesaplaşma</h1>
-                            <p class="subtitle">Bireysel ve ortak harcamalar, Splitwise borç denkleştirme tablosu.</p>
+                            <h1>Masraflar</h1>
                         </div>
                         <div class="action-buttons-group">
                             <select id="expense-trip-filter" class="select-input compact-select">
-                                <option value="">Aktif Seyahat Seçin...</option>
+                                <option value="">Seyahat Seçin</option>
                             </select>
                             <button id="btn-add-expense" class="btn btn-primary"><i data-lucide="plus"></i> Masraf Ekle</button>
                         </div>
@@ -970,16 +946,16 @@
 
                     <!-- Expense View Tabs -->
                     <div class="gallery-tabs margin-bottom-20">
-                        <button class="gallery-tab active" id="tab-expense-list">Harcama Listesi</button>
-                        <button class="gallery-tab" id="tab-expense-balance">Grup Hesaplaşması (Splitwise)</button>
-                        <button class="gallery-tab" id="tab-expense-analysis">Harcama Analizi</button>
+                        <button class="gallery-tab active" id="tab-expense-list">Harcamalar</button>
+                        <button class="gallery-tab" id="tab-expense-balance">Hesaplaşma</button>
+                        <button class="gallery-tab" id="tab-expense-analysis">Analiz</button>
                     </div>
 
                     <div class="expenses-layout" id="expenses-list-container">
                         <!-- Expenses Table/List Card -->
                         <div class="card glass list-card">
                             <div class="card-header">
-                                <h3>Harcama Detayları</h3>
+                                <h3>Harcamalar</h3>
                                 <div class="filter-controls">
                                     <select id="expense-category-filter" class="select-input compact-select">
                                         <!-- Dinamik doldurulacak -->
@@ -993,14 +969,14 @@
                                             <th>Tarih</th>
                                             <th>Açıklama</th>
                                             <th>Kategori</th>
-                                            <th>Harcama Tutarı</th>
-                                            <th>Ana Para Birimi Karşılığı</th>
+                                            <th>Tutar</th>
+                                            <th>Karşılık</th>
                                             <th>İşlem</th>
                                         </tr>
                                     </thead>
                                     <tbody id="expenses-list">
                                         <tr>
-                                            <td colspan="6" class="text-center text-muted">Lütfen listelemek için bir seyahat seçin.</td>
+                                            <td colspan="6" class="text-center text-muted">Seyahat seçin.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1011,8 +987,7 @@
                         <div class="card glass charts-card">
                             <h3>Kategori Dağılımı</h3>
                             <div class="category-chart-container" id="category-chart">
-                                <!-- Rendered dynamically using pure CSS and HTML -->
-                                <p class="text-muted">Masraf verisi bulunmamaktadır.</p>
+                                <p class="text-muted">Masraf verisi yok.</p>
                             </div>
                         </div>
                     </div>
@@ -1022,7 +997,6 @@
                         <!-- Balance Status Card -->
                         <div class="card glass double-span" style="grid-column: 1 / -1;">
                             <h3>Katılımcı Durumları</h3>
-                            <p class="text-muted" style="margin-top: 5px;">Kişi bazlı toplam ödenen tutarlar ve net alacak/borç dengesi.</p>
                             <div id="balance-members-list" class="balance-members-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px; margin-top:15px;">
                                 <!-- Rendered dynamically -->
                             </div>
@@ -1032,11 +1006,10 @@
                         <div class="card glass double-span" style="grid-column: 1 / -1; margin-top: 20px;">
                             <div class="settlement-card-header">
                                 <div>
-                                    <h3 style="margin: 0;">Borç Denkleştirme & Hesap Kapatma</h3>
-                                    <p class="text-muted" style="margin-top: 4px; font-size: 13px;">Grup seyahati sonrasında borçların sıfırlanması için gereken minimum para transferleri.</p>
+                                    <h3 style="margin: 0;">Borç Denkleştirme</h3>
                                 </div>
                                 <button type="button" id="btn-copy-settlements-whatsapp" class="btn-whatsapp-copy" title="WhatsApp borç özetini kopyala">
-                                    <i data-lucide="copy"></i> WhatsApp Borç Özetini Kopyala
+                                    <i data-lucide="copy"></i> Özeti Kopyala
                                 </button>
                             </div>
                             <div id="balance-settlements-list" class="settlements-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
@@ -1055,8 +1028,7 @@
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px;">
                             <!-- Participant Shares & Habits -->
                             <div class="card glass">
-                                <h3><i data-lucide="pie-chart" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Katılımcı Harcama Payları & Alışkanlıkları</h3>
-                                <p class="text-muted" style="margin-top:5px; margin-bottom:15px;">Kim hangi oranda ödeme yaptı ve en çok hangi kategoride harcadı.</p>
+                                <h3 style="margin-bottom:15px;"><i data-lucide="pie-chart" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Kişi Bazlı Dağılım</h3>
                                 <div id="analysis-participants-list" style="display:flex; flex-direction:column; gap:20px;">
                                     <!-- Rendered dynamically -->
                                 </div>
@@ -1064,8 +1036,7 @@
 
                             <!-- Category Detailed Habits -->
                             <div class="card glass">
-                                <h3><i data-lucide="tag" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Kategori Bazlı Alışkanlık Analizi</h3>
-                                <p class="text-muted" style="margin-top:5px; margin-bottom:15px;">Kategorilere göre harcama sıklığı, tutarı ve bütçe içindeki payı.</p>
+                                <h3 style="margin-bottom:15px;"><i data-lucide="tag" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Kategori Dağılımı</h3>
                                 <div id="analysis-categories-list" style="display:flex; flex-direction:column; gap:16px;">
                                     <!-- Rendered dynamically -->
                                 </div>
@@ -1074,7 +1045,7 @@
 
                         <!-- Smart Insights Card -->
                         <div class="card glass" style="margin-top: 24px;">
-                            <h3><i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Seyahat Tavsiyeleri & İçgörüler</h3>
+                            <h3><i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Öneriler</h3>
                             <div id="analysis-insights-content" style="margin-top: 15px; display:flex; flex-direction:column; gap:12px;">
                                 <!-- Rendered dynamically -->
                             </div>
@@ -1159,55 +1130,54 @@
                 <section id="view-journal" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1>Anılar & Fotoğraf Galerisi</h1>
-                            <p class="subtitle">Seyahat günlükleri, fotoğraflar ve özel notlar.</p>
+                            <h1>Anılar</h1>
                         </div>
                         <div class="action-buttons-group">
                             <select id="journal-trip-filter" class="select-input compact-select">
-                                <option value="">Seyahat Seçin...</option>
+                                <option value="">Seyahat Seçin</option>
                             </select>
-                            <button id="btn-add-memory" class="btn btn-primary"><i data-lucide="camera"></i> Yeni Anı Ekle</button>
+                            <button id="btn-add-memory" class="btn btn-primary"><i data-lucide="camera"></i> Anı Ekle</button>
                         </div>
                     </div>
 
                     <!-- Photo Gallery Filter Header -->
                     <div class="gallery-tabs">
-                        <button class="gallery-tab active" id="tab-all-memories">Günlük Görünümü</button>
-                        <button class="gallery-tab" id="tab-only-photos">Fotoğraf Akışı</button>
+                        <button class="gallery-tab active" id="tab-all-memories">Günlük</button>
+                        <button class="gallery-tab" id="tab-only-photos">Fotoğraflar</button>
                     </div>
 
                     <!-- Journal Timeline / Photos Grid -->
                     <div id="journal-container" class="journal-container">
                         <!-- Loaded dynamically -->
-                        <div class="text-center text-muted pad-50">Lütfen listelemek için bir seyahat seçin.</div>
+                        <div class="text-center text-muted pad-50">Seyahat seçin.</div>
                     </div>
 
                     <!-- Add/Edit Memory Modal -->
                     <div id="memory-modal" class="modal hidden">
                         <div class="modal-content glass">
                             <div class="modal-header">
-                                <h2 id="memory-modal-title">Yeni Anı Kaydet</h2>
+                                <h2 id="memory-modal-title">Anı Ekle</h2>
                                 <button class="btn-close-modal" id="btn-close-memory-modal">&times;</button>
                             </div>
                             <form id="memory-form">
                                 <input type="hidden" id="memory-id">
                                 <div class="form-group">
-                                    <label for="memory-trip-id">İlgili Seyahat</label>
+                                    <label for="memory-trip-id">Seyahat</label>
                                     <select id="memory-trip-id" class="select-input" required>
                                         <!-- Loaded dynamically -->
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="memory-title">Anı Başlığı / Konum</label>
-                                    <input type="text" id="memory-title" required placeholder="Örn: Trevi Çeşmesi Ziyareti" class="text-input">
+                                    <label for="memory-title">Başlık</label>
+                                    <input type="text" id="memory-title" required placeholder="Örn: Trevi Çeşmesi" class="text-input">
                                 </div>
                                 <div class="form-group">
-                                    <label for="memory-desc">Neler Yaşandı? (Günlük)</label>
-                                    <textarea id="memory-desc" rows="4" placeholder="Buraya o güne dair hislerinizi, yaşadıklarınızı yazın..." class="text-input"></textarea>
+                                    <label for="memory-desc">Notlar</label>
+                                    <textarea id="memory-desc" rows="3" placeholder="Kısa notunuzu yazın..." class="text-input"></textarea>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="memory-location">Konum (Şehir/Ülke)</label>
+                                        <label for="memory-location">Konum</label>
                                         <input type="text" id="memory-location" placeholder="Örn: Roma, İtalya" class="text-input">
                                     </div>
                                     <div class="form-group">
@@ -1216,12 +1186,12 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="memory-photo">Fotoğraf Yükle (Cloud Storage)</label>
+                                    <label for="memory-photo">Fotoğraf</label>
                                     <div class="file-upload-wrapper">
                                         <input type="file" id="memory-photo" accept="image/*" class="file-input">
                                         <div class="upload-placeholder" id="photo-upload-placeholder">
                                             <i data-lucide="image"></i>
-                                            <span>Fotoğraf seçmek için tıklayın</span>
+                                            <span>Fotoğraf seç</span>
                                         </div>
                                     </div>
                                     <div class="upload-progress-container hidden" id="upload-progress-container">
@@ -1278,7 +1248,7 @@
 
                 <!-- 7. SETTINGS VIEW -->
                 <section id="view-settings" class="app-view hidden">
-                    <h1>Ayarlar & Tercihler</h1>
+                    <h1>Ayarlar</h1>
 
                     <div class="settings-grid">
                         <!-- API Configurations -->
@@ -1309,7 +1279,7 @@
                                         <option value="EUR">EUR (€) - Euro</option>
                                         <option value="GBP">GBP (£) - Sterlin</option>
                                     </select>
-                                    <span class="text-sm text-muted">Tüm harcamalar grafiklerinizde bu para birimine otomatik dönüştürülür.</span>
+                                    <span class="text-sm text-muted">Grafikler bu para birimine dönüştürülür.</span>
                                 </div>
                                 <div class="form-group">
                                     <label>Tema Seçimi</label>
@@ -1324,8 +1294,7 @@
 
                          <!-- Category Management Panel Card -->
                          <div class="card glass double-span hidden" id="settings-categories-card" style="grid-column: 1 / -1;">
-                             <h3><i data-lucide="tag" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Harcama Kategorileri Yönetimi</h3>
-                             <p class="text-muted" style="margin-top: 5px; margin-bottom: 15px;">Uygulama genelinde kullanılacak harcama kategorilerini ekleyin veya silin.</p>
+                             <h3 style="margin-bottom: 15px;"><i data-lucide="tag" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Harcama Kategorileri</h3>
                              
                              <form id="admin-category-form" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom: 20px;">
                                  <input type="hidden" id="edit-cat-id">
@@ -1362,8 +1331,7 @@
 
                         <!-- Admin Panel Card -->
                         <div class="card glass double-span nav-admin-only hidden" id="settings-admin-card">
-                            <h3><i data-lucide="users" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Üye Yönetim Paneli</h3>
-                            <p class="text-muted" style="margin-top: 8px; margin-bottom: 16px;">Yeni kayıt olan arkadaşlarınızın üyeliklerini onaylayın ve sistem erişimlerini yönetin.</p>
+                            <h3 style="margin-bottom: 14px;"><i data-lucide="users" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Üye Yönetimi</h3>
                             <a href="#admin" class="btn btn-primary"><i data-lucide="users"></i> Üyeleri Yönet</a>
                         </div>
 
@@ -1793,8 +1761,8 @@ create policy "Users can delete own shared routes" on public.shared_routes
                         <!-- Upper Half: Interactive Leaflet Map with Numbered Pins & Polyline -->
                         <div class="card glass map-card-container margin-top-20">
                             <div class="map-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="map-tip"><i data-lucide="info"></i> Haritaya yakınlaştığınızda mekan adları pinlerin altında otomatik olarak belirir.</span>
-                                <span class="badge-pill">Numaralı Güzergah Haritası</span>
+                                <span class="map-tip"><i data-lucide="info"></i> Yakınlaştırdığınızda mekan adları görünür.</span>
+                                <span class="badge-pill">Rota Haritası</span>
                             </div>
                             <div id="share-map" class="places-leaflet-map" style="min-height: 480px;"></div>
                         </div>
@@ -1803,8 +1771,7 @@ create policy "Users can delete own shared routes" on public.shared_routes
                         <div class="share-places-section margin-top-30">
                             <div class="section-title-row">
                                 <div>
-                                    <h2>Rota Sırası ve Gezi Rehberi</h2>
-                                    <p class="subtitle">Haritadaki numaralandırma sırasına göre gezilecek yerler, notlar ve yol tarifleri.</p>
+                                    <h2>Rota Sırası</h2>
                                 </div>
                             </div>
                             <div id="share-places-list" class="share-places-grid margin-top-16">

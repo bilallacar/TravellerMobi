@@ -326,17 +326,61 @@ function setupModal(triggerId, modalId, closeId) {
     }
 }
 
-// Fetch exchange rates from exchange rate API on load
-async function fetchExchangeRates() {
+// Fetch exchange rates from exchange rate API on load (with localStorage cache & fallback provider)
+const RATES_CACHE_KEY = 'travellermobi_rates_cache_v1';
+
+function loadCachedExchangeRates() {
     try {
-        const response = await fetch('https://open.er-api.com/v6/latest/USD');
+        const raw = localStorage.getItem(RATES_CACHE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.rates && parsed.rates.TRY && parsed.rates.EUR) {
+            state.exchangeRates = parsed.rates;
+            state.exchangeRatesMeta = {
+                source: 'cache',
+                updatedAt: parsed.updatedAt || null
+            };
+            return true;
+        }
+    } catch (_) {}
+    return false;
+}
+
+async function fetchExchangeRates() {
+    loadCachedExchangeRates();
+
+    const applyLiveRates = (rates, updatedAt = new Date().toISOString()) => {
+        state.exchangeRates = { USD: 1, ...rates };
+        state.exchangeRatesMeta = { source: 'live', updatedAt };
+        try {
+            localStorage.setItem(RATES_CACHE_KEY, JSON.stringify({
+                rates: state.exchangeRates,
+                updatedAt
+            }));
+        } catch (_) {}
+        renderDashboard();
+    };
+
+    try {
+        const response = await fetch('https://open.er-api.com/v6/latest/USD', { cache: 'no-store' });
         const data = await response.json();
-        if (data && data.rates) {
-            state.exchangeRates = data.rates;
-            renderDashboard();
+        if (data && data.result === 'success' && data.rates) {
+            applyLiveRates(data.rates, data.time_last_update_utc || new Date().toISOString());
+            return;
         }
     } catch (error) {
-        console.warn("Could not fetch live exchange rates, using offline defaults:", error);
+        console.warn("Primary exchange rate API failed, trying fallback:", error);
+    }
+
+    try {
+        const res2 = await fetch('https://api.frankfurter.app/latest?from=USD', { cache: 'no-store' });
+        const data2 = await res2.json();
+        if (data2 && data2.rates) {
+            applyLiveRates(data2.rates, data2.date || new Date().toISOString());
+            return;
+        }
+    } catch (err2) {
+        console.warn("Could not fetch live exchange rates, using cached/offline defaults:", err2);
     }
 }
 
