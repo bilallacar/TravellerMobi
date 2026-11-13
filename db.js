@@ -182,6 +182,69 @@ function addToSyncQueue(action, data) {
     window.dispatchEvent(new CustomEvent('offline-queue-changed'));
 }
 
+function deduplicateById(list) {
+    const seen = new Set();
+    return (list || []).filter(item => {
+        if (!item || !item.id) return false;
+        const key = String(item.id);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function mergePendingRecords(recordsList, { createAction, updateAction, deleteAction, filterFn = null }) {
+    const queue = getLocalCache(CACHE_KEYS.QUEUE) || [];
+    let result = [...(recordsList || [])];
+
+    if (Array.isArray(queue) && queue.length > 0) {
+        for (const item of queue) {
+            if (!item || !item.data) continue;
+            const itemId = String(item.data.id || '');
+            if (item.action === createAction) {
+                const matches = typeof filterFn === 'function' ? filterFn(item.data) : true;
+                if (matches && !result.some(r => String(r.id) === itemId)) {
+                    result.unshift(item.data);
+                }
+            } else if (item.action === updateAction) {
+                const idx = result.findIndex(r => String(r.id) === itemId);
+                if (idx > -1) result[idx] = { ...result[idx], ...item.data };
+            } else if (item.action === deleteAction) {
+                result = result.filter(r => String(r.id) !== itemId);
+            }
+        }
+    }
+
+    return deduplicateById(result);
+}
+
+function pruneSyncQueueByRecord(recordId, actionsToRemove, cascadeTripId = null) {
+    const queue = getLocalCache(CACHE_KEYS.QUEUE) || [];
+    if (!Array.isArray(queue) || queue.length === 0) return false;
+    const targetId = String(recordId);
+    const cascadeId = cascadeTripId ? String(cascadeTripId) : null;
+    let hadPendingCreate = false;
+
+    const nextQueue = queue.filter(item => {
+        if (!item || !item.data) return true;
+        const itemId = item.data.id !== undefined ? String(item.data.id) : '';
+        if (itemId === targetId && actionsToRemove.includes(item.action)) {
+            if (item.action.startsWith('create_')) hadPendingCreate = true;
+            return false;
+        }
+        if (cascadeId && item.data.trip_id !== undefined && String(item.data.trip_id) === cascadeId) {
+            return false;
+        }
+        return true;
+    });
+
+    if (nextQueue.length !== queue.length) {
+        setLocalCache(CACHE_KEYS.QUEUE, nextQueue);
+        window.dispatchEvent(new CustomEvent('offline-queue-changed'));
+    }
+    return hadPendingCreate;
+}
+
 let syncInFlightPromise = null;
 
 async function processOfflineMemoryPhoto(itemData, payload) {
@@ -344,25 +407,32 @@ function base64ToBlob(base64Str) {
    TRIPS RESOURCE API
    ========================================================================== */
 
+const TRIP_QUEUE_CONFIG = {
+    createAction: 'create_trip',
+    updateAction: 'update_trip',
+    deleteAction: 'delete_trip'
+};
+
 export async function getTrips() {
     if (!isOnline()) {
-        return getLocalCache(CACHE_KEYS.TRIPS);
+        return mergePendingRecords(getLocalCache(CACHE_KEYS.TRIPS), TRIP_QUEUE_CONFIG);
     }
 
     try {
         const sb = await getSupabase();
-        if (!sb) return getLocalCache(CACHE_KEYS.TRIPS);
+        if (!sb) return mergePendingRecords(getLocalCache(CACHE_KEYS.TRIPS), TRIP_QUEUE_CONFIG);
         const { data, error } = await sb
             .from('trips')
             .select('*')
             .order('start_date', { ascending: false });
 
         if (error) throw error;
-        setLocalCache(CACHE_KEYS.TRIPS, data);
-        return data;
+        const merged = mergePendingRecords(data || [], TRIP_QUEUE_CONFIG);
+        setLocalCache(CACHE_KEYS.TRIPS, merged);
+        return merged;
     } catch (err) {
         console.warn("Error fetching trips, falling back to local cache", err);
-        return getLocalCache(CACHE_KEYS.TRIPS);
+        return mergePendingRecords(getLocalCache(CACHE_KEYS.TRIPS), TRIP_QUEUE_CONFIG);
     }
 }
 
@@ -392,6 +462,7 @@ export async function createTrip(tripData) {
     try {
         const sb = await getSupabase();
         if (!sb) throw new Error("Supabase connection is unconfigured.");
+        if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
         const { data, error } = await sb
             .from('trips')
             .insert([payload])
@@ -450,17 +521,29 @@ export async function updateTrip(tripId, tripData) {
 
 
 export async function deleteTrip(tripId) {
+    const targetId = String(tripId);
+
     // Optimistic Update Cache
-    const trips = getLocalCache(CACHE_KEYS.TRIPS).filter(t => t.id !== tripId);
+    const trips = getLocalCache(CACHE_KEYS.TRIPS).filter(t => String(t.id) !== targetId);
     setLocalCache(CACHE_KEYS.TRIPS, trips);
 
     // Cascading local delete for related items
-    const expenses = getLocalCache(CACHE_KEYS.EXPENSES).filter(e => e.trip_id !== tripId);
+    const expenses = getLocalCache(CACHE_KEYS.EXPENSES).filter(e => String(e.trip_id) !== targetId);
     setLocalCache(CACHE_KEYS.EXPENSES, expenses);
-    const memories = getLocalCache(CACHE_KEYS.MEMORIES).filter(m => m.trip_id !== tripId);
+    const memories = getLocalCache(CACHE_KEYS.MEMORIES).filter(m => String(m.trip_id) !== targetId);
     setLocalCache(CACHE_KEYS.MEMORIES, memories);
-    const places = getLocalCache(CACHE_KEYS.PLACES).filter(p => p.trip_id !== tripId);
+    const places = getLocalCache(CACHE_KEYS.PLACES).filter(p => String(p.trip_id) !== targetId);
     setLocalCache(CACHE_KEYS.PLACES, places);
+
+    // Cancel pending create/update and orphan child actions in sync queue
+    const hadPendingCreate = pruneSyncQueueByRecord(
+        targetId,
+        ['create_trip', 'update_trip', 'delete_trip'],
+        targetId
+    );
+    if (hadPendingCreate) {
+        return { success: true, removedLocalOnly: true };
+    }
 
     if (!isOnline()) {
         addToSyncQueue('delete_trip', { id: tripId });
@@ -490,41 +573,48 @@ export async function deleteTrip(tripId) {
    EXPENSES RESOURCE API
    ========================================================================== */
 
+function getTripScopedQueueConfig(createAction, updateAction, deleteAction, tripId) {
+    return {
+        createAction,
+        updateAction,
+        deleteAction,
+        filterFn: (item) => !tripId || String(item.trip_id) === String(tripId)
+    };
+}
+
 export async function getExpenses(tripId = null) {
-    if (!isOnline()) {
+    const queueCfg = getTripScopedQueueConfig('create_expense', 'update_expense', 'delete_expense', tripId);
+    const filterLocal = () => {
         const local = getLocalCache(CACHE_KEYS.EXPENSES);
-        return tripId ? local.filter(e => e.trip_id === tripId) : local;
+        const scoped = tripId ? local.filter(e => String(e.trip_id) === String(tripId)) : local;
+        return mergePendingRecords(scoped, queueCfg);
+    };
+
+    if (!isOnline()) {
+        return filterLocal();
     }
 
     try {
         const sb = await getSupabase();
-        if (!sb) {
-            const local = getLocalCache(CACHE_KEYS.EXPENSES);
-            return tripId ? local.filter(e => e.trip_id === tripId) : local;
-        }
+        if (!sb) return filterLocal();
         let query = sb.from('expenses').select('*').order('date', { ascending: false });
         if (tripId) query = query.eq('trip_id', tripId);
         
         const { data, error } = await query;
         if (error) throw error;
 
-        // If caching for a specific trip, merge it back to global list
+        const mergedRemote = mergePendingRecords(data || [], queueCfg);
+
+        // If caching for a specific trip, merge it back to global list without duplicates
         const cachedList = getLocalCache(CACHE_KEYS.EXPENSES);
-        let updatedList;
-        if (tripId) {
-            updatedList = [
-                ...cachedList.filter(e => e.trip_id !== tripId),
-                ...data
-            ];
-        } else {
-            updatedList = data;
-        }
+        const updatedList = tripId
+            ? deduplicateById([...cachedList.filter(e => String(e.trip_id) !== String(tripId)), ...mergedRemote])
+            : mergedRemote;
         setLocalCache(CACHE_KEYS.EXPENSES, updatedList);
-        return data;
+        return mergedRemote;
     } catch (err) {
         console.warn("Error fetching expenses, falling back to local cache", err);
-        const local = getLocalCache(CACHE_KEYS.EXPENSES);
-        return tripId ? local.filter(e => e.trip_id === tripId) : local;
+        return filterLocal();
     }
 }
 
@@ -537,6 +627,7 @@ export async function createExpense(expenseData) {
         amount: parseFloat(expenseData.amount),
         currency: expenseData.currency,
         category: expenseData.category,
+        category_id: expenseData.category_id || null,
         date: expenseData.date,
         user_id: user ? user.id : 'offline-user',
         paid_by: expenseData.paid_by || null,
@@ -556,6 +647,7 @@ export async function createExpense(expenseData) {
     try {
         const sb = await getSupabase();
         if (!sb) throw new Error("Supabase connection is unconfigured.");
+        if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
         const { data, error } = await sb
             .from('expenses')
             .insert([payload])
@@ -578,6 +670,7 @@ export async function updateExpense(expenseId, expenseData) {
         amount: parseFloat(expenseData.amount),
         currency: expenseData.currency,
         category: expenseData.category,
+        category_id: expenseData.category_id || null,
         date: expenseData.date,
         paid_by: expenseData.paid_by || null,
         split_with: expenseData.split_with || []
@@ -616,9 +709,16 @@ export async function updateExpense(expenseId, expenseData) {
 
 
 export async function deleteExpense(expenseId) {
+    const targetId = String(expenseId);
+
     // Optimistic Update Cache
-    const expenses = getLocalCache(CACHE_KEYS.EXPENSES).filter(e => e.id !== expenseId);
+    const expenses = getLocalCache(CACHE_KEYS.EXPENSES).filter(e => String(e.id) !== targetId);
     setLocalCache(CACHE_KEYS.EXPENSES, expenses);
+
+    const hadPendingCreate = pruneSyncQueueByRecord(targetId, ['create_expense', 'update_expense', 'delete_expense']);
+    if (hadPendingCreate) {
+        return { success: true, removedLocalOnly: true };
+    }
 
     if (!isOnline()) {
         addToSyncQueue('delete_expense', { id: expenseId });
@@ -649,39 +749,37 @@ export async function deleteExpense(expenseId) {
    ========================================================================== */
 
 export async function getMemories(tripId = null) {
-    if (!isOnline()) {
+    const queueCfg = getTripScopedQueueConfig('create_memory', 'update_memory', 'delete_memory', tripId);
+    const filterLocal = () => {
         const local = getLocalCache(CACHE_KEYS.MEMORIES);
-        return tripId ? local.filter(m => m.trip_id === tripId) : local;
+        const scoped = tripId ? local.filter(m => String(m.trip_id) === String(tripId)) : local;
+        return mergePendingRecords(scoped, queueCfg);
+    };
+
+    if (!isOnline()) {
+        return filterLocal();
     }
 
     try {
         const sb = await getSupabase();
-        if (!sb) {
-            const local = getLocalCache(CACHE_KEYS.MEMORIES);
-            return tripId ? local.filter(m => m.trip_id === tripId) : local;
-        }
+        if (!sb) return filterLocal();
         let query = sb.from('memories').select('*').order('date', { ascending: false });
         if (tripId) query = query.eq('trip_id', tripId);
         
         const { data, error } = await query;
         if (error) throw error;
 
+        const mergedRemote = mergePendingRecords(data || [], queueCfg);
+
         const cachedList = getLocalCache(CACHE_KEYS.MEMORIES);
-        let updatedList;
-        if (tripId) {
-            updatedList = [
-                ...cachedList.filter(m => m.trip_id !== tripId),
-                ...data
-            ];
-        } else {
-            updatedList = data;
-        }
+        const updatedList = tripId
+            ? deduplicateById([...cachedList.filter(m => String(m.trip_id) !== String(tripId)), ...mergedRemote])
+            : mergedRemote;
         setLocalCache(CACHE_KEYS.MEMORIES, updatedList);
-        return data;
+        return mergedRemote;
     } catch (err) {
         console.warn("Error fetching memories, falling back to local cache", err);
-        const local = getLocalCache(CACHE_KEYS.MEMORIES);
-        return tripId ? local.filter(m => m.trip_id === tripId) : local;
+        return filterLocal();
     }
 }
 
@@ -738,6 +836,7 @@ export async function createMemory(memoryData, photoFile = null) {
 
         const sb = await getSupabase();
         if (!sb) throw new Error("Supabase connection is unconfigured.");
+        if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
         const { data, error } = await sb
             .from('memories')
             .insert([dbPayload])
@@ -803,6 +902,7 @@ export async function updateMemory(memoryId, memoryData, photoFile = null) {
 
         const sb = await getSupabase();
         if (!sb) throw new Error("Supabase connection is unconfigured.");
+        if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
         const { data, error } = await sb
             .from('memories')
             .update(dbPayload)
@@ -820,9 +920,16 @@ export async function updateMemory(memoryId, memoryData, photoFile = null) {
 
 
 export async function deleteMemory(memoryId) {
+    const targetId = String(memoryId);
+
     // Optimistic Update Cache
-    const memories = getLocalCache(CACHE_KEYS.MEMORIES).filter(m => m.id !== memoryId);
+    const memories = getLocalCache(CACHE_KEYS.MEMORIES).filter(m => String(m.id) !== targetId);
     setLocalCache(CACHE_KEYS.MEMORIES, memories);
+
+    const hadPendingCreate = pruneSyncQueueByRecord(targetId, ['create_memory', 'update_memory', 'delete_memory']);
+    if (hadPendingCreate) {
+        return { success: true, removedLocalOnly: true };
+    }
 
     if (!isOnline()) {
         addToSyncQueue('delete_memory', { id: memoryId });
@@ -1057,31 +1164,17 @@ export async function deleteCategory(id) {
    ========================================================================== */
 
 function mergePendingPlaces(placesList, tripId) {
-    const queue = getLocalCache(CACHE_KEYS.QUEUE) || [];
-    if (!Array.isArray(queue) || queue.length === 0) return placesList;
-
-    let result = [...(placesList || [])];
-    const matchesTripFilter = (p) => {
-        if (!p) return false;
-        if (!tripId || tripId === 'all-places' || tripId === 'all') return true;
-        if (tripId === 'city-guide') return !p.trip_id;
-        return p.trip_id === tripId;
-    };
-
-    for (const item of queue) {
-        if (!item || !item.data) continue;
-        if (item.action === 'create_place') {
-            if (matchesTripFilter(item.data) && !result.some(p => p.id === item.data.id)) {
-                result.unshift(item.data);
-            }
-        } else if (item.action === 'update_place') {
-            const idx = result.findIndex(p => p.id === item.data.id);
-            if (idx > -1) result[idx] = { ...result[idx], ...item.data };
-        } else if (item.action === 'delete_place') {
-            result = result.filter(p => p.id !== item.data.id);
+    return mergePendingRecords(placesList, {
+        createAction: 'create_place',
+        updateAction: 'update_place',
+        deleteAction: 'delete_place',
+        filterFn: (p) => {
+            if (!p) return false;
+            if (!tripId || tripId === 'all-places' || tripId === 'all') return true;
+            if (tripId === 'city-guide') return !p.trip_id;
+            return String(p.trip_id) === String(tripId);
         }
-    }
-    return result;
+    });
 }
 
 export async function getPlaces(tripId = null) {
@@ -1124,9 +1217,9 @@ export async function getPlaces(tripId = null) {
         const allLocal = getLocalCache(CACHE_KEYS.PLACES);
         let updated;
         if (tripId === 'city-guide') {
-            updated = allLocal.filter(p => !!p.trip_id).concat(mergedRemote);
+            updated = deduplicateById(allLocal.filter(p => !!p.trip_id).concat(mergedRemote));
         } else if (tripId && tripId !== 'all-places' && tripId !== 'all') {
-            updated = allLocal.filter(p => p.trip_id !== tripId).concat(mergedRemote);
+            updated = deduplicateById(allLocal.filter(p => String(p.trip_id) !== String(tripId)).concat(mergedRemote));
         } else {
             updated = mergedRemote;
         }
@@ -1297,9 +1390,17 @@ export async function updatePlaceStatus(placeId, newStatus) {
 }
 
 export async function deletePlace(placeId) {
+    const targetId = String(placeId);
+
     // Optimistic cache update
-    const places = getLocalCache(CACHE_KEYS.PLACES).filter(p => p.id !== placeId);
+    const places = getLocalCache(CACHE_KEYS.PLACES).filter(p => String(p.id) !== targetId);
     setLocalCache(CACHE_KEYS.PLACES, places);
+
+    // Cancel any unsynced create/update for this place so mergePendingPlaces cannot resurrect it
+    const hadPendingCreate = pruneSyncQueueByRecord(targetId, ['create_place', 'update_place', 'delete_place']);
+    if (hadPendingCreate) {
+        return { success: true, removedLocalOnly: true };
+    }
 
     if (!isOnline()) {
         addToSyncQueue('delete_place', { id: placeId });

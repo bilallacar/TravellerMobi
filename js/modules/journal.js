@@ -173,13 +173,16 @@ export function renderJournal() {
     document.querySelectorAll('.btn-delete-memory, .btn-delete-photo-grid').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            if (btn.disabled) return;
             const id = btn.getAttribute('data-id');
             if (confirm('Bu anıyı silmek istediğinizden emin misiniz?')) {
+                btn.disabled = true;
                 try {
                     await db.deleteMemory(id);
                     showToast('Anı silindi', 'success');
                     await loadJournalData();
                 } catch (err) {
+                    btn.disabled = false;
                     showToast('Silme hatası: ' + err.message, 'danger');
                 }
             }

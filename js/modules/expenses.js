@@ -241,13 +241,16 @@ export function renderExpenses() {
 
     document.querySelectorAll('.btn-delete-expense').forEach(btn => {
         btn.addEventListener('click', async () => {
+            if (btn.disabled) return;
             const id = btn.getAttribute('data-id');
             if (confirm('Bu harcamayı silmek istediğinize emin misiniz?')) {
+                btn.disabled = true;
                 try {
                     await db.deleteExpense(id);
                     showToast('Harcama silindi', 'success');
                     await loadExpensesData();
                 } catch (err) {
+                    btn.disabled = false;
                     showToast('Silme hatası: ' + err.message, 'danger');
                 }
             }
@@ -327,6 +330,10 @@ export function initExpensesEvents() {
     if (expenseForm) {
         expenseForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = expenseForm.querySelector('button[type="submit"]');
+            if (submitBtn && submitBtn.disabled) return;
+            if (submitBtn) submitBtn.disabled = true;
+
             const expenseId = document.getElementById('expense-id').value;
             const tripId = document.getElementById('expense-trip-id').value;
             const title = document.getElementById('expense-title').value;
@@ -378,6 +385,8 @@ export function initExpensesEvents() {
                 await loadExpensesData();
             } catch (err) {
                 showToast('Hata oluştu: ' + err.message, 'danger');
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
             }
         });
     }

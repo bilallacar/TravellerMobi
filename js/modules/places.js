@@ -277,6 +277,17 @@ export function initPlacesEvents() {
             tagsValInput.value = activeTags.join(', ');
         });
     }
+
+    // Delegated Delete handler on place cards list (reliable across icon SVG clicks)
+    const cardsContainer = document.getElementById('places-cards-container');
+    if (cardsContainer) {
+        cardsContainer.addEventListener('click', (e) => {
+            const delBtn = e.target.closest('.btn-delete-place');
+            if (!delBtn) return;
+            const pid = delBtn.dataset.id;
+            if (pid) window.deletePlaceAction(pid);
+        });
+    }
 }
 
 /**
@@ -1431,7 +1442,7 @@ function renderPlacesList() {
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.editPlaceAction('${place.id}')" title="Düzenle">
                             <i data-lucide="edit-2"></i>
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm btn-delete-place" onclick="window.deletePlaceAction('${place.id}')" title="Sil">
+                        <button type="button" class="btn btn-secondary btn-sm btn-delete-place" data-id="${escapeHtml(String(place.id))}" title="Sil">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>
@@ -2033,17 +2044,23 @@ window.editPlaceAction = function(placeId) {
 /**
  * Delete place action (with instant optimistic update)
  */
+const deletingPlaceIds = new Set();
+
 window.deletePlaceAction = async function(placeId) {
-    const place = state.placesList.find(p => p.id === placeId);
+    const targetId = String(placeId);
+    if (deletingPlaceIds.has(targetId)) return;
+
+    const place = state.placesList.find(p => String(p.id) === targetId);
     const placeName = place ? `"${place.name}"` : "Bu mekanı";
     if (!confirm(`${placeName} haritadan ve gezi listesinden silinsin mi?`)) return;
 
+    deletingPlaceIds.add(targetId);
     try {
         if (mapInstance) mapInstance.closePopup();
         closePlaceBottomSheet();
 
         // Optimistic UI update
-        state.placesList = state.placesList.filter(p => p.id !== placeId);
+        state.placesList = state.placesList.filter(p => String(p.id) !== targetId);
         renderPlacesList();
         renderMapMarkers();
         renderRoutePolyline();
@@ -2055,6 +2072,8 @@ window.deletePlaceAction = async function(placeId) {
         console.error("Delete place failed:", err);
         showToast("Silinemedi: " + err.message, "danger");
         await loadPlacesData();
+    } finally {
+        deletingPlaceIds.delete(targetId);
     }
 };
 

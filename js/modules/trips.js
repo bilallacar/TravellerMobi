@@ -125,14 +125,17 @@ export function renderTrips() {
     document.querySelectorAll('.btn-delete-trip').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            if (btn.disabled) return;
             const id = btn.getAttribute('data-id');
             if (confirm('Bu seyahati sildiğinizde, bu seyahate ait tüm harcamalar ve anılar da silinecektir. Emin misiniz?')) {
+                btn.disabled = true;
                 try {
                     await db.deleteTrip(id);
                     showToast('Seyahat silindi', 'success');
                     if (state.activeTripId === id) state.activeTripId = null;
                     await loadTripsData();
                 } catch (err) {
+                    btn.disabled = false;
                     showToast('Silme hatası: ' + err.message, 'danger');
                 }
             }
@@ -212,6 +215,10 @@ export function initTripsEvents() {
     if (tripForm) {
         tripForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = tripForm.querySelector('button[type="submit"]');
+            if (submitBtn && submitBtn.disabled) return;
+            if (submitBtn) submitBtn.disabled = true;
+
             const tripId = document.getElementById('trip-id').value;
             const name = document.getElementById('trip-name').value;
             const start = document.getElementById('trip-start').value;
@@ -233,10 +240,14 @@ export function initTripsEvents() {
                 document.getElementById('trip-modal').classList.add('hidden');
                 tripForm.reset();
                 document.getElementById('trip-id').value = '';
+                state.tempTripParticipants = [];
+                renderParticipantTags();
                 
                 await loadTripsData();
             } catch (err) {
                 showToast('Hata oluştu: ' + err.message, 'danger');
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
             }
         });
     }
