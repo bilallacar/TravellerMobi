@@ -1498,7 +1498,7 @@ export async function togglePlaceStatus(placeId) {
 /**
  * Open Place Modal
  */
-export function openPlaceModal(place = null) {
+export function openPlaceModal(place = null, prefill = null) {
     const modal = document.getElementById('modal-place');
     const form = document.getElementById('place-form');
     const titleEl = document.getElementById('place-modal-title');
