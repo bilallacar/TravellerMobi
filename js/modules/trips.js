@@ -2,10 +2,15 @@
 
 import { state } from '../state.js';
 import * as db from '../../db.js';
-import { showToast } from '../utils.js';
+import { showToast, convertCurrency, escapeHtml } from '../utils.js';
 
 export async function loadTripsData() {
-    state.tripsList = await db.getTrips();
+    const [trips, expenses] = await Promise.all([
+        db.getTrips(),
+        (!state.expensesList || state.expensesList.length === 0) ? db.getExpenses() : Promise.resolve(state.expensesList)
+    ]);
+    state.tripsList = trips;
+    state.expensesList = expenses;
     renderTrips();
 }
 
@@ -29,14 +34,16 @@ export function renderTrips() {
         const isActive = state.activeTripId === trip.id;
         const coverImg = getTripCoverImage(trip.name);
         
-        // Calculate spent amount for this trip
+        // Calculate spent amount for this trip in the trip's budget currency
+        const tripCurrency = trip.currency || 'TRY';
+        const budget = Number(trip.budget) || 0;
         const tripExpenses = (state.expensesList || []).filter(e => e.trip_id === trip.id);
         let totalSpent = 0;
         tripExpenses.forEach(e => {
-            totalSpent += Number(e.amount) || 0;
+            totalSpent += convertCurrency(Number(e.amount) || 0, e.currency || tripCurrency, tripCurrency);
         });
-        const percent = trip.budget > 0 ? Math.min((totalSpent / trip.budget) * 100, 100) : 0;
-        const isOverBudget = trip.budget > 0 && totalSpent > trip.budget;
+        const percent = budget > 0 ? Math.min((totalSpent / budget) * 100, 100) : 0;
+        const isOverBudget = budget > 0 && totalSpent > budget;
         const progressColor = isOverBudget ? 'var(--color-danger)' : (percent > 80 ? 'var(--color-warning)' : 'var(--color-success)');
 
         return `
@@ -56,7 +63,7 @@ export function renderTrips() {
                         </div>
                     </div>
                     <div class="trip-cover-title-row">
-                        <span class="trip-title">${escapeHTML(trip.name)}</span>
+                        <span class="trip-title">${escapeHtml(trip.name)}</span>
                         <div class="trip-dates text-xs" style="color:rgba(255,255,255,0.85);">
                             <i data-lucide="calendar" style="width: 12px; height: 12px; display:inline; margin-right:4px;"></i>
                             ${formatDate(trip.start_date)} - ${formatDate(trip.end_date)}
@@ -68,8 +75,8 @@ export function renderTrips() {
                     <!-- Budget Progress Bar -->
                     <div class="trip-progress-container" style="margin-bottom: 14px;">
                         <div class="trip-progress-labels" style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
-                            <span>Harcanan: <strong>${totalSpent.toFixed(2)} ${trip.currency}</strong></span>
-                            <span>Bütçe: <strong>${trip.budget.toFixed(2)} ${trip.currency}</strong></span>
+                            <span>Harcanan: <strong>${totalSpent.toFixed(2)} ${escapeHtml(tripCurrency)}</strong></span>
+                            <span>Bütçe: <strong>${budget.toFixed(2)} ${escapeHtml(tripCurrency)}</strong></span>
                         </div>
                         <div class="progress-bar-bg" style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
                             <div class="progress-bar-fill" style="width: ${percent}%; height:100%; background: ${progressColor}; border-radius: 4px; transition: width 0.3s ease;"></div>
@@ -156,7 +163,7 @@ export function renderParticipantTags() {
     
     container.innerHTML = state.tempTripParticipants.map((p, index) => `
         <span class="badge" style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; font-size:13px; font-weight:600; border-radius:20px; background-color: var(--color-primary-light); color: var(--color-primary); border: 1px solid rgba(99, 102, 241, 0.25);">
-            ${escapeHTML(p)}
+            ${escapeHtml(p)}
             <button type="button" class="btn-remove-tag" data-index="${index}" style="background:none; border:none; color:var(--color-danger); font-size:16px; font-weight:bold; cursor:pointer; padding:0; line-height:1; vertical-align:middle;">&times;</button>
         </span>
     `).join('');
@@ -245,16 +252,6 @@ function formatDate(dateString) {
     } catch {
         return dateString;
     }
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }
 
 function getTripCoverImage(tripName) {

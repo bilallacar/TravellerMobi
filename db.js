@@ -182,10 +182,34 @@ function addToSyncQueue(action, data) {
     window.dispatchEvent(new CustomEvent('offline-queue-changed'));
 }
 
+let syncInFlightPromise = null;
+
+async function processOfflineMemoryPhoto(itemData, payload) {
+    if (!itemData.photo_base64 || !itemData.photo_name) return;
+    const fileBlob = base64ToBlob(itemData.photo_base64);
+    const mimeHeader = itemData.photo_base64.split(';')[0] || '';
+    const fileType = mimeHeader.includes(':') ? mimeHeader.split(':')[1] : 'image/jpeg';
+    const file = new File([fileBlob], itemData.photo_name, { type: fileType });
+    payload.photo_url = await uploadPhotoToStorage(file);
+}
+
 /**
- * Processes items pending in the offline queue to Supabase
+ * Processes items pending in the offline queue to Supabase (with single-flight lock)
  */
 export async function syncOfflineQueue(onProgress) {
+    if (syncInFlightPromise) {
+        return syncInFlightPromise;
+    }
+
+    syncInFlightPromise = runOfflineQueueSync(onProgress);
+    try {
+        return await syncInFlightPromise;
+    } finally {
+        syncInFlightPromise = null;
+    }
+}
+
+async function runOfflineQueueSync(onProgress) {
     if (!isOnline()) {
         console.log("App is offline. Sync postponed.");
         return { success: false, reason: 'offline' };
@@ -194,10 +218,13 @@ export async function syncOfflineQueue(onProgress) {
     const queue = getLocalCache(CACHE_KEYS.QUEUE);
     if (queue.length === 0) return { success: true, count: 0 };
 
+    const sb = await getSupabase();
+    if (!sb) {
+        return { success: false, reason: 'no_client' };
+    }
+
     console.log(`Syncing ${queue.length} offline actions to Supabase...`);
     let completedCount = 0;
-    
-    // Copy queue to process elements
     const remainingQueue = [...queue];
 
     for (const item of queue) {
@@ -214,75 +241,54 @@ export async function syncOfflineQueue(onProgress) {
             const payload = { ...item.data, user_id: user.id };
 
             if (item.action === 'create_trip') {
-                const { error } = await supabase.from('trips').insert([payload]);
+                const { error } = await sb.from('trips').insert([payload]);
                 if (error) throw error;
             } 
             else if (item.action === 'update_trip') {
-                const { error } = await supabase.from('trips').update(payload).eq('id', item.data.id);
+                const { error } = await sb.from('trips').update(payload).eq('id', item.data.id);
                 if (error) throw error;
             }
             else if (item.action === 'delete_trip') {
-                const { error } = await supabase.from('trips').delete().eq('id', item.data.id);
+                const { error } = await sb.from('trips').delete().eq('id', item.data.id);
                 if (error) throw error;
             }
             else if (item.action === 'create_expense') {
-                const { error } = await supabase.from('expenses').insert([payload]);
+                const { error } = await sb.from('expenses').insert([payload]);
                 if (error) throw error;
             }
             else if (item.action === 'update_expense') {
-                const { error } = await supabase.from('expenses').update(payload).eq('id', item.data.id);
+                const { error } = await sb.from('expenses').update(payload).eq('id', item.data.id);
                 if (error) throw error;
             }
             else if (item.action === 'delete_expense') {
-                const { error } = await supabase.from('expenses').delete().eq('id', item.data.id);
+                const { error } = await sb.from('expenses').delete().eq('id', item.data.id);
                 if (error) throw error;
             }
-            else if (item.action === 'create_memory') {
-                // Check if memory has base64 data to upload first
-                if (item.data.photo_base64 && item.data.photo_name) {
-                    const fileBlob = base64ToBlob(item.data.photo_base64);
-                    const fileType = item.data.photo_base64.split(';')[0].split(':')[1];
-                    const file = new File([fileBlob], item.data.photo_name, { type: fileType });
-                    
-                    // Upload file now
-                    const publicUrl = await uploadPhotoToStorage(file);
-                    payload.photo_url = publicUrl;
-                }
-                
-                // Remove temporary client helpers
+            else if (item.action === 'create_memory' || item.action === 'update_memory') {
+                await processOfflineMemoryPhoto(item.data, payload);
                 delete payload.photo_base64;
                 delete payload.photo_name;
 
-                const { error } = await supabase.from('memories').insert([payload]);
-                if (error) throw error;
-            }
-            else if (item.action === 'update_memory') {
-                if (item.data.photo_base64 && item.data.photo_name) {
-                    const fileBlob = base64ToBlob(item.data.photo_base64);
-                    const fileType = item.data.photo_base64.split(';')[0].split(':')[1];
-                    const file = new File([fileBlob], item.data.photo_name, { type: fileType });
-                    const publicUrl = await uploadPhotoToStorage(file);
-                    payload.photo_url = publicUrl;
-                }
-                delete payload.photo_base64;
-                delete payload.photo_name;
-                const { error } = await supabase.from('memories').update(payload).eq('id', item.data.id);
+                const query = item.action === 'create_memory'
+                    ? sb.from('memories').insert([payload])
+                    : sb.from('memories').update(payload).eq('id', item.data.id);
+                const { error } = await query;
                 if (error) throw error;
             }
             else if (item.action === 'delete_memory') {
-                const { error } = await supabase.from('memories').delete().eq('id', item.data.id);
+                const { error } = await sb.from('memories').delete().eq('id', item.data.id);
                 if (error) throw error;
             }
             else if (item.action === 'create_place') {
-                const { error } = await supabase.from('places').insert([payload]);
+                const { error } = await sb.from('places').insert([payload]);
                 if (error) throw error;
             }
             else if (item.action === 'update_place') {
-                const { error } = await supabase.from('places').update(payload).eq('id', item.data.id);
+                const { error } = await sb.from('places').update(payload).eq('id', item.data.id);
                 if (error) throw error;
             }
             else if (item.action === 'delete_place') {
-                const { error } = await supabase.from('places').delete().eq('id', item.data.id);
+                const { error } = await sb.from('places').delete().eq('id', item.data.id);
                 if (error) throw error;
             }
 
@@ -344,7 +350,9 @@ export async function getTrips() {
     }
 
     try {
-        const { data, error } = await supabase
+        const sb = await getSupabase();
+        if (!sb) return getLocalCache(CACHE_KEYS.TRIPS);
+        const { data, error } = await sb
             .from('trips')
             .select('*')
             .order('start_date', { ascending: false });
@@ -382,7 +390,9 @@ export async function createTrip(tripData) {
     }
 
     try {
-        const { data, error } = await supabase
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { data, error } = await sb
             .from('trips')
             .insert([payload])
             .select();
@@ -421,7 +431,9 @@ export async function updateTrip(tripId, tripData) {
     }
 
     try {
-        const { data, error } = await supabase
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { data, error } = await sb
             .from('trips')
             .update(payload)
             .eq('id', tripId)
@@ -447,6 +459,8 @@ export async function deleteTrip(tripId) {
     setLocalCache(CACHE_KEYS.EXPENSES, expenses);
     const memories = getLocalCache(CACHE_KEYS.MEMORIES).filter(m => m.trip_id !== tripId);
     setLocalCache(CACHE_KEYS.MEMORIES, memories);
+    const places = getLocalCache(CACHE_KEYS.PLACES).filter(p => p.trip_id !== tripId);
+    setLocalCache(CACHE_KEYS.PLACES, places);
 
     if (!isOnline()) {
         addToSyncQueue('delete_trip', { id: tripId });
@@ -454,7 +468,9 @@ export async function deleteTrip(tripId) {
     }
 
     try {
-        const { error } = await supabase.from('trips').delete().eq('id', tripId);
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { error } = await sb.from('trips').delete().eq('id', tripId);
         if (error) throw error;
         return { success: true };
     } catch (err) {
@@ -481,7 +497,12 @@ export async function getExpenses(tripId = null) {
     }
 
     try {
-        let query = supabase.from('expenses').select('*').order('date', { ascending: false });
+        const sb = await getSupabase();
+        if (!sb) {
+            const local = getLocalCache(CACHE_KEYS.EXPENSES);
+            return tripId ? local.filter(e => e.trip_id === tripId) : local;
+        }
+        let query = sb.from('expenses').select('*').order('date', { ascending: false });
         if (tripId) query = query.eq('trip_id', tripId);
         
         const { data, error } = await query;
@@ -533,7 +554,9 @@ export async function createExpense(expenseData) {
     }
 
     try {
-        const { data, error } = await supabase
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { data, error } = await sb
             .from('expenses')
             .insert([payload])
             .select();
@@ -574,7 +597,9 @@ export async function updateExpense(expenseId, expenseData) {
     }
 
     try {
-        const { data, error } = await supabase
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { data, error } = await sb
             .from('expenses')
             .update(payload)
             .eq('id', expenseId)
@@ -601,7 +626,9 @@ export async function deleteExpense(expenseId) {
     }
 
     try {
-        const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { error } = await sb.from('expenses').delete().eq('id', expenseId);
         if (error) throw error;
         return { success: true };
     } catch (err) {
@@ -628,7 +655,12 @@ export async function getMemories(tripId = null) {
     }
 
     try {
-        let query = supabase.from('memories').select('*').order('date', { ascending: false });
+        const sb = await getSupabase();
+        if (!sb) {
+            const local = getLocalCache(CACHE_KEYS.MEMORIES);
+            return tripId ? local.filter(m => m.trip_id === tripId) : local;
+        }
+        let query = sb.from('memories').select('*').order('date', { ascending: false });
         if (tripId) query = query.eq('trip_id', tripId);
         
         const { data, error } = await query;
@@ -704,7 +736,9 @@ export async function createMemory(memoryData, photoFile = null) {
         delete dbPayload.photo_base64;
         delete dbPayload.photo_name;
 
-        const { data, error } = await supabase
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { data, error } = await sb
             .from('memories')
             .insert([dbPayload])
             .select();
@@ -767,7 +801,9 @@ export async function updateMemory(memoryId, memoryData, photoFile = null) {
         delete dbPayload.photo_base64;
         delete dbPayload.photo_name;
 
-        const { data, error } = await supabase
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { data, error } = await sb
             .from('memories')
             .update(dbPayload)
             .eq('id', memoryId)
@@ -794,7 +830,9 @@ export async function deleteMemory(memoryId) {
     }
 
     try {
-        const { error } = await supabase.from('memories').delete().eq('id', memoryId);
+        const sb = await getSupabase();
+        if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const { error } = await sb.from('memories').delete().eq('id', memoryId);
         if (error) throw error;
         return { success: true };
     } catch (err) {
@@ -815,7 +853,8 @@ export async function deleteMemory(memoryId) {
    ========================================================================== */
 
 async function uploadPhotoToStorage(file) {
-    if (!supabase) throw new Error("Supabase connection is unconfigured.");
+    const sb = await getSupabase();
+    if (!sb) throw new Error("Supabase connection is unconfigured.");
     const user = await getCurrentUser();
     if (!user) throw new Error("Kullanıcı oturumu bulunamadı.");
     
@@ -827,7 +866,7 @@ async function uploadPhotoToStorage(file) {
     const filePath = `${user.id}/${fileName}`;
 
     // Upload payload
-    const { data, error } = await supabase.storage
+    const { data, error } = await sb.storage
         .from(BUCKET_NAME)
         .upload(filePath, file, {
             cacheControl: '3600',

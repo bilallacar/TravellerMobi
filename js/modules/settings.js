@@ -4,7 +4,7 @@ import { state } from '../state.js';
 import { config, saveConfig, savePreferences } from '../../config.js';
 import { initSupabase } from '../../db.js';
 import * as db from '../../db.js';
-import { showToast } from '../utils.js';
+import { showToast, escapeHtml } from '../utils.js';
 
 export async function loadSettingsForm() {
     const urlInput = document.getElementById('settings-supabase-url');
@@ -77,9 +77,9 @@ function renderSettingsCategories() {
                     ${iconMapping[c.icon] || '🔖'}
                 </span>
             </td>
-            <td><strong>${escapeHTML(c.name)}</strong></td>
+            <td><strong>${escapeHtml(c.name)}</strong></td>
             <td>
-                <button class="btn btn-primary btn-sm btn-edit-category" data-id="${c.id}" data-name="${escapeHTML(c.name)}" data-icon="${c.icon}" data-color="${c.color}">Düzenle</button>
+                <button class="btn btn-primary btn-sm btn-edit-category" data-id="${c.id}" data-name="${escapeHtml(c.name)}" data-icon="${c.icon}" data-color="${c.color}">Düzenle</button>
                 <button class="btn btn-secondary btn-sm btn-delete-category" data-id="${c.id}">Sil</button>
             </td>
         </tr>
@@ -223,14 +223,4 @@ export function initSettingsEvents() {
             }
         });
     }
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }

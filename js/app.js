@@ -84,38 +84,38 @@ const views = {
     'approval-pending': document.getElementById('view-approval-pending')
 };
 
+function updateActiveNav(hash) {
+    const cleanHash = (hash || '#dashboard').split('?')[0];
+    document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
+        el.classList.remove('active');
+    });
+
+    const mapping = {
+        '#dashboard': ['nav-dash', 'm-nav-dash'],
+        '#trips': ['nav-trips', 'm-nav-trips'],
+        '#places': ['nav-places', 'm-nav-places'],
+        '#expenses': ['nav-expenses', 'm-nav-expenses'],
+        '#journal': ['nav-journal', 'm-nav-journal'],
+        '#settings': ['nav-settings', 'm-nav-settings']
+    };
+
+    const ids = mapping[cleanHash];
+    if (ids) {
+        ids.forEach(id => {
+            const navEl = document.getElementById(id);
+            if (navEl) navEl.classList.add('active');
+        });
+    }
+}
+
 function initNavigation() {
     window.addEventListener('hashchange', handleRouting);
     handleRouting();
-
-    window.addEventListener('hashchange', () => {
-        const hash = window.location.hash || '#dashboard';
-        
-        document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
-            el.classList.remove('active');
-        });
-
-        const mapping = {
-            '#dashboard': ['nav-dash', 'm-nav-dash'],
-            '#trips': ['nav-trips', 'm-nav-trips'],
-            '#places': ['nav-places', 'm-nav-places'],
-            '#expenses': ['nav-expenses', 'm-nav-expenses'],
-            '#journal': ['nav-journal', 'm-nav-journal'],
-            '#settings': ['nav-settings', 'm-nav-settings']
-        };
-
-        const ids = mapping[hash];
-        if (ids) {
-            ids.forEach(id => {
-                const navEl = document.getElementById(id);
-                if (navEl) navEl.classList.add('active');
-            });
-        }
-    });
 }
 
 async function handleRouting() {
     const hash = window.location.hash || '#dashboard';
+    updateActiveNav(hash);
 
     // Handle Read-Only Guest Share View (#share?id=... or #s=...)
     if (hash.startsWith('#share') || hash.startsWith('#s=') || hash.startsWith('#s?')) {
@@ -376,13 +376,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const queueText = document.getElementById('queue-status-text');
         const syncBtn = document.getElementById('btn-sync-now');
 
-        if (queueText && syncBtn) {
+        if (syncBtn) {
+            syncBtn.classList.toggle('hidden', pendingCount === 0);
+        }
+
+        if (queueText) {
             if (pendingCount > 0) {
                 queueText.innerHTML = `Eşitlenmeyi bekleyen <strong>${pendingCount}</strong> değişiklik var.`;
-                syncBtn.classList.remove('hidden');
             } else {
                 queueText.textContent = "Verileriniz güncel ve bulutla eşitlenmiş.";
-                syncBtn.classList.add('hidden');
                 queueText.style.color = '';
             }
         }

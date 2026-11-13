@@ -3,8 +3,13 @@
 import { state } from '../state.js';
 import { config } from '../../config.js';
 import * as db from '../../db.js';
-import { showToast, convertCurrency } from '../utils.js';
+import { showToast, convertCurrency, escapeHtml } from '../utils.js';
 import { renderBalanceSheet } from './balance.js';
+
+function findSplitAmountInput(root, memberName) {
+    return Array.from(root.querySelectorAll('.expense-split-amount'))
+        .find(el => el.dataset.member === memberName) || null;
+}
 
 export async function loadExpensesData() {
     state.tripsList = await db.getTrips();
@@ -19,7 +24,7 @@ export async function loadExpensesData() {
     const categoryFilterSelect = document.getElementById('expense-category-filter');
     const expenseCategorySelect = document.getElementById('expense-category-id');
 
-    const tripOptions = state.tripsList.map(t => `<option value="${t.id}" ${t.id === state.activeTripId ? 'selected' : ''}>${escapeHTML(t.name)}</option>`).join('');
+    const tripOptions = state.tripsList.map(t => `<option value="${t.id}" ${t.id === state.activeTripId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
     
     if (filterSelect) filterSelect.innerHTML = '<option value="">Seyahat Seçin...</option>' + tripOptions;
     if (modalSelect) modalSelect.innerHTML = tripOptions;
@@ -27,13 +32,13 @@ export async function loadExpensesData() {
     // Fill dynamic categories filter
     if (categoryFilterSelect) {
         categoryFilterSelect.innerHTML = '<option value="">Tüm Kategoriler</option>' + 
-            state.categoriesList.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
+            state.categoriesList.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
     }
 
     // Fill dynamic categories input in form
     if (expenseCategorySelect) {
         expenseCategorySelect.innerHTML = state.categoriesList.map(c => 
-            `<option value="${c.id}">${escapeHTML(c.name)}</option>`
+            `<option value="${c.id}">${escapeHtml(c.name)}</option>`
         ).join('');
     }
 
@@ -59,7 +64,7 @@ export function updateExpenseFormParticipants(tripId, selectedPaidBy = null, sel
 
     if (paidBySelect) {
         paidBySelect.innerHTML = participants.map(p => `
-            <option value="${escapeHTML(p)}" ${selectedPaidBy === p ? 'selected' : ''}>${escapeHTML(p)}</option>
+            <option value="${escapeHtml(p)}" ${selectedPaidBy === p ? 'selected' : ''}>${escapeHtml(p)}</option>
         `).join('');
     }
 
@@ -98,17 +103,17 @@ export function updateExpenseFormParticipants(tripId, selectedPaidBy = null, sel
                     return `
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding: 4px 0;">
                             <label style="display:flex; align-items:center; gap:8px; color:var(--text-color); cursor:pointer;">
-                                <input type="checkbox" class="expense-split-member" value="${escapeHTML(p)}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px;">
-                                <span>${escapeHTML(p)}</span>
+                                <input type="checkbox" class="expense-split-member" value="${escapeHtml(p)}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px;">
+                                <span>${escapeHtml(p)}</span>
                             </label>
-                            <input type="number" step="0.01" class="text-input expense-split-amount" data-member="${escapeHTML(p)}" placeholder="Tutar" value="${val}" style="width:100px; padding: 4px 8px; margin:0;" ${isChecked ? '' : 'disabled'}>
+                            <input type="number" step="0.01" class="text-input expense-split-amount" data-member="${escapeHtml(p)}" placeholder="Tutar" value="${val}" style="width:100px; padding: 4px 8px; margin:0;" ${isChecked ? '' : 'disabled'}>
                         </div>
                     `;
                 } else {
                     return `
                         <label style="display:flex; align-items:center; gap:8px; color:var(--text-color); cursor:pointer; padding: 4px 0;">
-                            <input type="checkbox" class="expense-split-member" value="${escapeHTML(p)}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px;">
-                            <span>${escapeHTML(p)}</span>
+                            <input type="checkbox" class="expense-split-member" value="${escapeHtml(p)}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px;">
+                            <span>${escapeHtml(p)}</span>
                         </label>
                     `;
                 }
@@ -118,7 +123,7 @@ export function updateExpenseFormParticipants(tripId, selectedPaidBy = null, sel
             if (type === 'custom') {
                 splitContainer.querySelectorAll('.expense-split-member').forEach(cb => {
                     cb.addEventListener('change', () => {
-                        const amtInput = splitContainer.querySelector(`.expense-split-amount[data-member="${cb.value}"]`);
+                        const amtInput = findSplitAmountInput(splitContainer, cb.value);
                         if (amtInput) {
                             amtInput.disabled = !cb.checked;
                             if (!cb.checked) amtInput.value = '';
@@ -176,14 +181,14 @@ export function renderExpenses() {
         if (parts.length > 1) {
             const subDetail = parts.slice(1).join(' / ');
             catBadgeHtml = `
-                <span class="badge badge-category-pill" style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40;" title="${escapeHTML(catName)}">
-                    ${escapeHTML(mainCat)} <span class="badge-sub-info" title="${escapeHTML(subDetail)}">ℹ️</span>
+                <span class="badge badge-category-pill" style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40;" title="${escapeHtml(catName)}">
+                    ${escapeHtml(mainCat)} <span class="badge-sub-info" title="${escapeHtml(subDetail)}">ℹ️</span>
                 </span>
             `;
         } else {
             catBadgeHtml = `
-                <span class="badge badge-category-pill" style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40;" title="${escapeHTML(catName)}">
-                    ${escapeHTML(mainCat)}
+                <span class="badge badge-category-pill" style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40;" title="${escapeHtml(catName)}">
+                    ${escapeHtml(mainCat)}
                 </span>
             `;
         }
@@ -191,9 +196,9 @@ export function renderExpenses() {
         return `
             <tr>
                 <td>${formatDate(exp.date)}</td>
-                <td><strong>${escapeHTML(exp.title)}</strong></td>
+                <td><strong>${escapeHtml(exp.title)}</strong></td>
                 <td>${catBadgeHtml}</td>
-                <td>${exp.amount.toFixed(2)} ${exp.currency}</td>
+                <td>${(Number(exp.amount) || 0).toFixed(2)} ${escapeHtml(exp.currency || baseCur)}</td>
                 <td>${amtInBase.toFixed(2)} ${baseCur}</td>
                 <td>
                     <div class="table-actions" style="display: flex; gap: 6px; align-items: center;">
@@ -290,7 +295,7 @@ export function renderExpenseChart(expenses) {
                 <div class="chart-bar-label">
                     <span style="display:flex; align-items:center; gap:6px;">
                         <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${barColor};"></span>
-                        ${escapeHTML(catName)}
+                        ${escapeHtml(catName)}
                     </span>
                     <span>${catVal.toFixed(2)} ${baseCur} (${percent.toFixed(0)}%)</span>
                 </div>
@@ -339,7 +344,7 @@ export function initExpensesEvents() {
                 let totalCustom = 0;
                 
                 membersChecked.forEach(cb => {
-                    const amtInput = document.querySelector(`.expense-split-amount[data-member="${cb.value}"]`);
+                    const amtInput = findSplitAmountInput(document, cb.value);
                     const val = parseFloat(amtInput ? amtInput.value : 0) || 0;
                     totalCustom += val;
                     split_with.push(`${cb.value}:${val.toFixed(2)}`);
@@ -507,7 +512,7 @@ export function renderExpenseAnalysis() {
             <div class="metric-icon memory" style="background: linear-gradient(135deg, #f59e0b, #e11d48);"><i data-lucide="award"></i></div>
             <div class="metric-info">
                 <h3>En Çok Harcanan</h3>
-                <p class="metric-value">${escapeHTML(topCatName)}</p>
+                <p class="metric-value">${escapeHtml(topCatName)}</p>
                 <span class="metric-sub">${topCatVal.toFixed(2)} ${baseCur} (%${totalSpent > 0 ? ((topCatVal/totalSpent)*100).toFixed(0) : 0})</span>
             </div>
         </div>
@@ -537,14 +542,14 @@ export function renderExpenseAnalysis() {
         return `
             <div class="chart-bar-row" style="margin-bottom: 5px;">
                 <div class="chart-bar-label" style="font-weight:600;">
-                    <span>👤 ${escapeHTML(p)}</span>
+                    <span>👤 ${escapeHtml(p)}</span>
                     <span>${paidVal.toFixed(2)} ${baseCur} (%${sharePercent.toFixed(0)})</span>
                 </div>
                 <div class="progress-bar-bg" style="height: 12px; border-radius:6px; margin: 4px 0 6px 0;">
                     <div class="progress-bar" style="width: ${sharePercent}%; height:100%; border-radius:6px;"></div>
                 </div>
                 <span style="font-size:11px; color:var(--text-secondary);">
-                    💡 En çok harcadığı kategori: <strong>${escapeHTML(pTopCat)}</strong> (${pTopCatVal.toFixed(2)} ${baseCur})
+                    💡 En çok harcadığı kategori: <strong>${escapeHtml(pTopCat)}</strong> (${pTopCatVal.toFixed(2)} ${baseCur})
                 </span>
             </div>
         `;
@@ -561,7 +566,7 @@ export function renderExpenseAnalysis() {
         return `
             <div class="chart-bar-row">
                 <div class="chart-bar-label">
-                    <span><strong>${escapeHTML(catName)}</strong> (${count} İşlem)</span>
+                    <span><strong>${escapeHtml(catName)}</strong> (${count} İşlem)</span>
                     <span>${catVal.toFixed(2)} ${baseCur} (${percent.toFixed(0)}%)</span>
                 </div>
                 <div class="progress-bar-bg" style="height: 10px; border-radius:5px; margin-top:4px;">
@@ -604,14 +609,14 @@ export function renderExpenseAnalysis() {
         } else if (topCatName === 'Ulaşım') {
             suggestion = "Ulaşım harcamalarınız yoğunlukta. Şehir içi ulaşımlarda taksi yerine toplu taşıma kartlarını veya bisiklet/yürüyüş alternatiflerini tercih etmek bütçenizi rahatlatacaktır.";
         } else {
-            suggestion = `${escapeHTML(topCatName)} kategorisi en büyük gider kaleminiz durumunda. Bu harcamaların seyahat planınızdaki önceliğini tekrar değerlendirebilirsiniz.`;
+            suggestion = `${escapeHtml(topCatName)} kategorisi en büyük gider kaleminiz durumunda. Bu harcamaların seyahat planınızdaki önceliğini tekrar değerlendirebilirsiniz.`;
         }
         
         insights.push(`
             <div style="display:flex; align-items:flex-start; gap:12px; padding: 12px; border-radius:8px; background: rgba(255,255,255,0.02); border:1px solid var(--border-color); width: 100%; box-sizing: border-box;">
                 <span style="font-size:20px; flex-shrink: 0;">💡</span>
                 <div>
-                    <strong style="display:block; margin-bottom:4px; color:var(--text-primary); font-size: 14px;">En Büyük Gider Kalemi: ${escapeHTML(topCatName)} (%${topCatPercent.toFixed(0)})</strong>
+                    <strong style="display:block; margin-bottom:4px; color:var(--text-primary); font-size: 14px;">En Büyük Gider Kalemi: ${escapeHtml(topCatName)} (%${topCatPercent.toFixed(0)})</strong>
                     <p style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin: 0;">${suggestion}</p>
                 </div>
             </div>
@@ -644,7 +649,7 @@ export function renderExpenseAnalysis() {
                     <div>
                         <strong style="display:block; margin-bottom:4px; color:var(--text-primary); font-size: 14px;">Harcama Paylaşım Dengesizliği</strong>
                         <p style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin: 0;">
-                            Seyahatteki harcamaların çoğunu <strong>${escapeHTML(maxPayer)}</strong> yaptı (${maxPayVal.toFixed(2)} ${baseCur}), en az ödemeyi ise <strong>${escapeHTML(minPayer)}</strong> yaptı (${minPayVal.toFixed(2)} ${baseCur}). 
+                            Seyahatteki harcamaların çoğunu <strong>${escapeHtml(maxPayer)}</strong> yaptı (${maxPayVal.toFixed(2)} ${baseCur}), en az ödemeyi ise <strong>${escapeHtml(minPayer)}</strong> yaptı (${minPayVal.toFixed(2)} ${baseCur}). 
                             Grup içi dengenin sağlanması adına seyahat sonrasında Rota Bilançosu sekmesindeki ödeme planını uygulayabilirsiniz.
                         </p>
                     </div>
@@ -666,16 +671,6 @@ function formatDate(dateString) {
     } catch {
         return dateString;
     }
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }
 
 function getCategoryBadgeClass(category) {

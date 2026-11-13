@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import * as db from '../../db.js';
-import { showToast, escapeHtml } from '../utils.js';
+import { showToast, escapeHtml, calculateDistance, isValidCoord } from '../utils.js';
 import { openStoryModal, initStoryExportEvents } from './story_export.js';
 
 let mapInstance = null;
@@ -96,7 +96,7 @@ export async function handleLinkImport(rawInput) {
     }
 
     // 2. Google Maps URL patterns
-    if (!lat || !lng) {
+    if (!isValidCoord(lat, lng)) {
         // Pattern A: @41.0082,28.9784
         const atMatch = input.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
         if (atMatch) {
@@ -127,7 +127,7 @@ export async function handleLinkImport(rawInput) {
     }
 
     // If coordinates found: reverse geocode with Nominatim to get official address & name
-    if (lat && lng) {
+    if (isValidCoord(lat, lng)) {
         try {
             const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
                 headers: { 'Accept-Language': 'tr' }
@@ -176,7 +176,7 @@ export async function handleLinkImport(rawInput) {
         }
     }
 
-    if (lat && lng) {
+    if (isValidCoord(lat, lng)) {
         openPlaceModal({
             name: placeName || 'Yeni Mekan',
             latitude: lat,
@@ -237,6 +237,9 @@ export function initPlacesEvents() {
             filterContainer.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
             pill.classList.add('active');
             state.activePlaceFilter = pill.dataset.filter || 'all';
+            if (state.activePlaceFilter === 'radar' && !currentUserCoords) {
+                handleUserLocationRequest();
+            }
             renderPlacesList();
             renderMapMarkers();
         });
@@ -432,6 +435,10 @@ function isMobileScreen() {
  * Load Places Data for currently selected trip or City Guide
  */
 export async function loadPlacesData() {
+    if (!state.tripsList || state.tripsList.length === 0) {
+        state.tripsList = await db.getTrips();
+    }
+
     const tripSelector = document.getElementById('places-trip-selector');
     
     // Ensure trips and everyday city guide options are available in dropdown
@@ -1045,9 +1052,7 @@ function getFilteredPlaces() {
 
     if (filter === 'radar') {
         if (radarBanner) radarBanner.classList.remove('hidden');
-        if (!currentUserCoords) {
-            handleUserLocationRequest();
-        } else {
+        if (currentUserCoords) {
             // Calculate distances to user
             filtered.forEach(p => {
                 p._radarDist = calculateDistance(currentUserCoords.lat, currentUserCoords.lng, p.latitude, p.longitude);
@@ -1993,24 +1998,6 @@ window.deletePlaceAction = async function(placeId) {
     }
 };
 
-/**
- * Haversine formula to calculate distance in meters between two lat/lng points
- */
-export function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-}
-
 function renderEmptyState() {
     const list = document.getElementById('places-cards-container');
     if (list) {
@@ -2019,9 +2006,11 @@ function renderEmptyState() {
                 <i data-lucide="compass" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 12px;"></i>
                 <h3>Şehir Rehberinize Hoş Geldiniz!</h3>
                 <p class="text-muted">Günlük hayatınızda veya seyahatlerinizde sevdiğiniz mekanları haritaya kaydedin.</p>
-                <button type="button" class="btn btn-primary margin-top-12" onclick="openPlaceModal()">+ İlk Mekanı Ekle</button>
+                <button type="button" class="btn btn-primary margin-top-12" id="btn-empty-add-place">+ İlk Mekanı Ekle</button>
             </div>
         `;
+        const btnEmpty = document.getElementById('btn-empty-add-place');
+        if (btnEmpty) btnEmpty.addEventListener('click', () => openPlaceModal());
         if (window.lucide) window.lucide.createIcons();
     }
 }

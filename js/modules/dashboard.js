@@ -3,7 +3,7 @@
 import { state } from '../state.js';
 import { config } from '../../config.js';
 import * as db from '../../db.js';
-import { convertCurrency } from '../utils.js';
+import { convertCurrency, escapeHtml } from '../utils.js';
 
 export async function loadDashboardData() {
     state.tripsList = await db.getTrips();
@@ -23,7 +23,7 @@ export async function loadDashboardData() {
     const selector = document.getElementById('dash-trip-selector');
     if (selector) {
         selector.innerHTML = '<option value="">Seyahat Seçin...</option>' + 
-            state.tripsList.map(t => `<option value="${t.id}" ${t.id === state.activeTripId ? 'selected' : ''}>${escapeHTML(t.name)}</option>`).join('');
+            state.tripsList.map(t => `<option value="${t.id}" ${t.id === state.activeTripId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
     }
 
     renderDashboard();
@@ -54,21 +54,22 @@ export function renderDashboard() {
         }
     }
 
-    const queueCard = document.getElementById('offline-queue-card');
     const queueText = document.getElementById('queue-status-text');
     const syncBtn = document.getElementById('btn-sync-now');
     const pendingCount = db.getPendingQueueCount();
 
-    if (queueCard && queueText && syncBtn) {
+    if (syncBtn) {
+        syncBtn.classList.toggle('hidden', pendingCount === 0);
+    }
+
+    if (queueText) {
         if (pendingCount > 0) {
             queueText.innerHTML = `Eşitlenmeyi bekleyen <strong>${pendingCount}</strong> değişiklik var.`;
-            syncBtn.classList.remove('hidden');
             if (onlineStatus) {
                 queueText.style.color = 'var(--color-warning)';
             }
         } else {
             queueText.textContent = "Verileriniz güncel ve bulutla eşitlenmiş.";
-            syncBtn.classList.add('hidden');
             queueText.style.color = '';
         }
     }
@@ -162,8 +163,8 @@ export function renderDashboard() {
                         <div style="display:flex; align-items:center; gap:10px;">
                             <span style="font-size:18px;">🏨</span>
                             <div>
-                                <strong style="font-size:14px; color:var(--text-primary);">${escapeHTML(hotel.name)}</strong>
-                                <span class="text-xs text-muted" style="display:block;">${escapeHTML(hotel.address || 'Ana Konaklama')}</span>
+                                <strong style="font-size:14px; color:var(--text-primary);">${escapeHtml(hotel.name)}</strong>
+                                <span class="text-xs text-muted" style="display:block;">${escapeHtml(hotel.address || 'Ana Konaklama')}</span>
                             </div>
                         </div>
                         <a href="https://www.google.com/maps/dir/?api=1&destination=${hotel.latitude},${hotel.longitude}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="padding:6px 10px; font-size:11px;">
@@ -185,8 +186,8 @@ export function renderDashboard() {
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <span style="font-size:16px;">🟢</span>
                                 <div>
-                                    <strong style="font-size:13px; color:var(--text-primary);">${escapeHTML(p.name)}</strong>
-                                    <span class="text-xs text-muted" style="display:block;">${escapeHTML(p.address || p.category)}</span>
+                                    <strong style="font-size:13px; color:var(--text-primary);">${escapeHtml(p.name)}</strong>
+                                    <span class="text-xs text-muted" style="display:block;">${escapeHtml(p.address || p.category)}</span>
                                 </div>
                             </div>
                             <div style="display:flex; gap:6px;">
@@ -228,11 +229,11 @@ export function renderDashboard() {
                 return `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
                         <div>
-                            <strong style="font-size:13px; color:var(--text-primary);">${escapeHTML(exp.title)}</strong>
-                            <span class="text-xs text-muted" style="display:block;">${formatDate(exp.date)} • ${escapeHTML(catName)}</span>
+                            <strong style="font-size:13px; color:var(--text-primary);">${escapeHtml(exp.title)}</strong>
+                            <span class="text-xs text-muted" style="display:block;">${formatDate(exp.date)} • ${escapeHtml(catName)}</span>
                         </div>
                         <span style="font-size:14px; font-weight:700; color:var(--text-primary);">
-                            ${exp.amount.toFixed(2)} ${exp.currency}
+                            ${(Number(exp.amount) || 0).toFixed(2)} ${escapeHtml(exp.currency || baseCur)}
                         </span>
                     </div>
                 `;
@@ -329,14 +330,4 @@ function formatDate(dateString) {
     } catch {
         return dateString;
     }
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }

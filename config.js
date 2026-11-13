@@ -12,20 +12,30 @@ export const config = {
  * Save Supabase connection details to localStorage
  */
 export function saveConfig(url, key) {
-    if (url) localStorage.setItem('supabase_url', url.trim());
-    if (key) localStorage.setItem('supabase_key', key.trim());
-    config.supabaseUrl = url.trim();
-    config.supabaseKey = key.trim();
+    if (typeof url === 'string' && url.trim()) {
+        const cleanUrl = url.trim();
+        localStorage.setItem('supabase_url', cleanUrl);
+        config.supabaseUrl = cleanUrl;
+    }
+    if (typeof key === 'string' && key.trim()) {
+        const cleanKey = key.trim();
+        localStorage.setItem('supabase_key', cleanKey);
+        config.supabaseKey = cleanKey;
+    }
 }
 
 /**
  * Save user app settings and preferences
  */
 export function savePreferences(currency, theme) {
-    if (currency) localStorage.setItem('default_currency', currency);
-    if (theme) localStorage.setItem('theme', theme);
-    config.defaultCurrency = currency;
-    config.theme = theme;
+    if (currency) {
+        localStorage.setItem('default_currency', currency);
+        config.defaultCurrency = currency;
+    }
+    if (theme) {
+        localStorage.setItem('theme', theme);
+        config.theme = theme;
+    }
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import * as db from '../../db.js';
-import { showToast, escapeHtml } from '../utils.js';
+import { showToast, escapeHtml, calculateDistance } from '../utils.js';
 import { PLACE_CATEGORIES } from './places.js';
 import { openStoryModal } from './story_export.js';
 
@@ -1408,22 +1408,4 @@ function slugify(text) {
         .replace(/[^\w\-]+/g, '')
         .replace(/\-\-+/g, '-')
         .substring(0, 20);
-}
-
-/**
- * Haversine distance in meters
- */
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Earth radius in meters
-    const phi1 = lat1 * Math.PI / 180;
-    const phi2 = lat2 * Math.PI / 180;
-    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-              Math.cos(phi1) * Math.cos(phi2) *
-              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
 }

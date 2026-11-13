@@ -1,7 +1,11 @@
 // js/modules/balance.js
 
 import { state } from '../state.js';
-import { convertCurrency } from '../utils.js';
+import { showToast, convertCurrency, escapeHtml } from '../utils.js';
+
+let lastCalculatedTransactions = [];
+let lastTripName = '';
+let lastTripCurrency = 'TRY';
 
 export function renderBalanceSheet() {
     const membersListEl = document.getElementById('balance-members-list');
@@ -95,7 +99,7 @@ export function renderBalanceSheet() {
 
         return `
             <div class="card glass text-center" style="padding: 15px; border-radius: 12px; background: rgba(255, 255, 255, 0.03);">
-                <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: var(--text-color);">${escapeHTML(member)}</div>
+                <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: var(--text-color);">${escapeHtml(member)}</div>
                 <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 5px;">Toplam Ödenen: ${paid.toFixed(2)} ${tripCurrency}</div>
                 <div class="${statusClass}" style="font-weight: bold; font-size: 14px;">${statusText}</div>
             </div>
@@ -148,9 +152,7 @@ export function renderBalanceSheet() {
         if (Math.abs(creditor.balance) < 0.01) {
             cIdx++;
         }
-let lastCalculatedTransactions = [];
-let lastTripName = '';
-let lastTripCurrency = 'TRY';
+    }
 
     lastCalculatedTransactions = transactions;
     lastTripName = trip.name || 'Seyahat';
@@ -167,8 +169,8 @@ let lastTripCurrency = 'TRY';
         settlementsListEl.innerHTML = transactions.map(t => `
             <div class="settlement-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border:1px solid rgba(255,255,255,0.06); border-radius:10px; background:rgba(255,255,255,0.02);">
                 <div style="font-size:14px; color:var(--text-color);">
-                    <strong>${escapeHTML(t.from)}</strong>, 
-                    <strong>${escapeHTML(t.to)}</strong> kişisine ödeme yapmalı.
+                    <strong>${escapeHtml(t.from)}</strong>, 
+                    <strong>${escapeHtml(t.to)}</strong> kişisine ödeme yapmalı.
                 </div>
                 <div style="font-weight:700; font-size:15px; color:#38bdf8;">
                     ${t.amount.toFixed(2)} ${tripCurrency}
@@ -215,13 +217,3 @@ export function copySettlementsForWhatsApp() {
     }
 }
 window.copySettlementsForWhatsApp = copySettlementsForWhatsApp;
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}

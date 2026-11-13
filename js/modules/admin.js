@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import * as db from '../../db.js';
-import { showToast } from '../utils.js';
+import { showToast, escapeHtml } from '../utils.js';
 
 export async function loadAdminData() {
     try {
@@ -33,12 +33,13 @@ export function renderAdminUsers(profiles) {
         }
 
         const isSelf = profile.id === state.activeUser?.id;
+        const isAdminProfile = profile.role?.name === 'admin';
 
         return `
             <tr>
                 <td>
-                    <strong>${escapeHTML(profile.email)}</strong>
-                    ${profile.is_admin ? ' <span class="badge badge-lodge" style="font-size:8px; padding:2px 4px;">Yönetici</span>' : ''}
+                    <strong>${escapeHtml(profile.email)}</strong>
+                    ${isAdminProfile ? ' <span class="badge badge-lodge" style="font-size:8px; padding:2px 4px;">Yönetici</span>' : ''}
                 </td>
                 <td>${formatDate(profile.created_at)}</td>
                 <td>${statusBadge}</td>
@@ -101,14 +102,4 @@ function formatDate(dateString) {
     } catch {
         return dateString;
     }
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }

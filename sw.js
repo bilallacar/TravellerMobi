@@ -1,6 +1,6 @@
 // sw.js - Service Worker for TravellerMobi PWA
 
-const CACHE_NAME = 'travellermobi-v1.0.1';
+const CACHE_NAME = 'travellermobi-v1.0.2';
 
 const STATIC_ASSETS = [
     './',
@@ -21,10 +21,12 @@ const STATIC_ASSETS = [
     './js/modules/trips.js',
     './js/modules/places.js',
     './js/modules/expenses.js',
+    './js/modules/balance.js',
     './js/modules/journal.js',
     './js/modules/dashboard.js',
     './js/modules/admin.js',
-    './js/modules/share.js'
+    './js/modules/share.js',
+    './js/modules/story_export.js'
 ];
 
 // Install: Pre-cache static shell assets

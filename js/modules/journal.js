@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import * as db from '../../db.js';
-import { showToast, compressImage } from '../utils.js';
+import { showToast, compressImage, escapeHtml } from '../utils.js';
 
 export async function loadJournalData() {
     state.tripsList = await db.getTrips();
@@ -14,7 +14,7 @@ export async function loadJournalData() {
     const filterSelect = document.getElementById('journal-trip-filter');
     const modalSelect = document.getElementById('memory-trip-id');
     
-    const tripOptions = state.tripsList.map(t => `<option value="${t.id}" ${t.id === state.activeTripId ? 'selected' : ''}>${escapeHTML(t.name)}</option>`).join('');
+    const tripOptions = state.tripsList.map(t => `<option value="${t.id}" ${t.id === state.activeTripId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
     
     if (filterSelect) filterSelect.innerHTML = '<option value="">Seyahat Seçin...</option>' + tripOptions;
     if (modalSelect) modalSelect.innerHTML = tripOptions;
@@ -103,10 +103,10 @@ export function renderJournal() {
                     <button class="btn-delete-memory btn-delete-photo-grid" data-id="${mem.id}" title="Anıyı Sil" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.85); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">
                         X
                     </button>
-                    <img src="${getDisplayPhotoUrl(mem.photo_url)}" alt="${escapeHTML(mem.title)}">
+                    <img src="${getDisplayPhotoUrl(mem.photo_url)}" alt="${escapeHtml(mem.title)}">
                     <div class="photo-caption-overlay">
-                        <strong>${escapeHTML(mem.title)}</strong><br>
-                        ${formatDate(mem.date)} - ${escapeHTML(mem.location || '')}
+                        <strong>${escapeHtml(mem.title)}</strong><br>
+                        ${formatDate(mem.date)} - ${escapeHtml(mem.location || '')}
                     </div>
                 </div>
             `;
@@ -130,11 +130,11 @@ export function renderJournal() {
                     <div class="journal-info-col">
                         <div class="journal-meta">
                             <span>📅 ${formatDate(mem.date)}</span>
-                            ${mem.location ? `<span>📍 ${escapeHTML(mem.location)}</span>` : ''}
+                            ${mem.location ? `<span>📍 ${escapeHtml(mem.location)}</span>` : ''}
                         </div>
-                        <h2 class="journal-title">${escapeHTML(mem.title)}</h2>
+                        <h2 class="journal-title">${escapeHtml(mem.title)}</h2>
                         <div class="journal-body">
-                            <p>${escapeHTML(mem.description || '').replace(/\n/g, '<br>')}</p>
+                            <p>${escapeHtml(mem.description || '').replace(/\n/g, '<br>')}</p>
                         </div>
                         <div class="journal-actions" style="display: flex; gap: 8px;">
                             <button class="btn btn-secondary btn-sm btn-edit-memory" data-id="${mem.id}">
@@ -147,7 +147,7 @@ export function renderJournal() {
                     </div>
                     ${hasImage ? `
                         <div class="journal-image-col">
-                            <img src="${getDisplayPhotoUrl(mem.photo_url)}" class="journal-img photo-lightbox-trigger" data-id="${mem.id}" alt="${escapeHTML(mem.title)}" title="Büyütmek ve anıyı okumak için tıklayın" style="cursor: pointer;">
+                            <img src="${getDisplayPhotoUrl(mem.photo_url)}" class="journal-img photo-lightbox-trigger" data-id="${mem.id}" alt="${escapeHtml(mem.title)}" title="Büyütmek ve anıyı okumak için tıklayın" style="cursor: pointer;">
                         </div>
                     ` : ''}
                 </div>
@@ -225,6 +225,7 @@ export function initJournalEvents() {
             state.selectedPhotoFile = null;
             fileInput.value = '';
             previewImg.src = '';
+            delete previewImg.dataset.originalPhotoUrl;
             previewContainer.classList.add('hidden');
             photoPlaceholder.classList.remove('hidden');
         });
@@ -249,8 +250,10 @@ export function initJournalEvents() {
             const progressBar = document.getElementById('upload-progress-bar');
             const progressText = document.getElementById('upload-progress-text');
 
-            const hasExistingPhoto = !previewContainer.classList.contains('hidden') && previewImg.src.startsWith('http');
-            const existingPhotoUrl = hasExistingPhoto ? previewImg.src : null;
+            const isPreviewVisible = !previewContainer.classList.contains('hidden');
+            const originalUrl = previewImg.dataset.originalPhotoUrl || null;
+            const fallbackUrl = previewImg.src.startsWith('http') ? previewImg.src : null;
+            const existingPhotoUrl = isPreviewVisible ? (originalUrl || fallbackUrl) : null;
 
             if (state.selectedPhotoFile && progressBarContainer && progressBar && progressText) {
                 progressBarContainer.classList.remove('hidden');
@@ -265,7 +268,7 @@ export function initJournalEvents() {
 
                 try {
                     if (memoryId) {
-                        await db.updateMemory(memoryId, { trip_id: tripId, title, description, location, date, photo_url: null }, state.selectedPhotoFile);
+                        await db.updateMemory(memoryId, { trip_id: tripId, title, description, location, date, photo_url: existingPhotoUrl }, state.selectedPhotoFile);
                     } else {
                         await db.createMemory({ trip_id: tripId, title, description, location, date }, state.selectedPhotoFile);
                     }
@@ -313,6 +316,8 @@ export function initJournalEvents() {
                 document.getElementById('memory-id').value = '';
                 
                 state.selectedPhotoFile = null;
+                previewImg.src = '';
+                delete previewImg.dataset.originalPhotoUrl;
                 previewContainer.classList.add('hidden');
                 photoPlaceholder.classList.remove('hidden');
                 
@@ -380,10 +385,12 @@ export function populateMemoryFormForEdit(mem) {
     const photoPlaceholder = document.getElementById('photo-upload-placeholder');
     
     if (mem.photo_url) {
+        previewImg.dataset.originalPhotoUrl = mem.photo_url;
         previewImg.src = getDisplayPhotoUrl(mem.photo_url);
         previewContainer.classList.remove('hidden');
         photoPlaceholder.classList.add('hidden');
     } else {
+        delete previewImg.dataset.originalPhotoUrl;
         previewImg.src = '';
         previewContainer.classList.add('hidden');
         photoPlaceholder.classList.remove('hidden');
@@ -423,7 +430,7 @@ export function openPhotoLightbox(mem) {
 
     if (locEl) {
         if (mem.location) {
-            locEl.innerHTML = `<i data-lucide="map-pin"></i> <span>${escapeHTML(mem.location)}</span>`;
+            locEl.innerHTML = `<i data-lucide="map-pin"></i> <span>${escapeHtml(mem.location)}</span>`;
             locEl.style.display = 'inline-flex';
         } else {
             locEl.style.display = 'none';
@@ -432,7 +439,7 @@ export function openPhotoLightbox(mem) {
 
     if (descEl) {
         if (mem.description && mem.description.trim()) {
-            const paragraphs = escapeHTML(mem.description)
+            const paragraphs = escapeHtml(mem.description)
                 .split('\n\n')
                 .filter(p => p.trim())
                 .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
@@ -469,14 +476,4 @@ function formatDate(dateString) {
     } catch {
         return dateString;
     }
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }
