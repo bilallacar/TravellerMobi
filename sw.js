@@ -1,6 +1,6 @@
 // sw.js - Service Worker for TravellerMobi PWA
 
-const CACHE_NAME = 'travellermobi-v1.0.3';
+const CACHE_NAME = 'travellermobi-v1.0.4';
 
 const STATIC_ASSETS = [
     './',
@@ -73,7 +73,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     event.respondWith(
-        caches.match(request).then((cachedResponse) => {
+        caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
             // Fetch from network in background to update cache
             const fetchPromise = fetch(request).then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200) {

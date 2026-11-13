@@ -1056,6 +1056,34 @@ export async function deleteCategory(id) {
    PLACES & MAP RESOURCE API
    ========================================================================== */
 
+function mergePendingPlaces(placesList, tripId) {
+    const queue = getLocalCache(CACHE_KEYS.QUEUE) || [];
+    if (!Array.isArray(queue) || queue.length === 0) return placesList;
+
+    let result = [...(placesList || [])];
+    const matchesTripFilter = (p) => {
+        if (!p) return false;
+        if (!tripId || tripId === 'all-places' || tripId === 'all') return true;
+        if (tripId === 'city-guide') return !p.trip_id;
+        return p.trip_id === tripId;
+    };
+
+    for (const item of queue) {
+        if (!item || !item.data) continue;
+        if (item.action === 'create_place') {
+            if (matchesTripFilter(item.data) && !result.some(p => p.id === item.data.id)) {
+                result.unshift(item.data);
+            }
+        } else if (item.action === 'update_place') {
+            const idx = result.findIndex(p => p.id === item.data.id);
+            if (idx > -1) result[idx] = { ...result[idx], ...item.data };
+        } else if (item.action === 'delete_place') {
+            result = result.filter(p => p.id !== item.data.id);
+        }
+    }
+    return result;
+}
+
 export async function getPlaces(tripId = null) {
     const filterCache = (items) => {
         if (!items) return [];
@@ -1066,14 +1094,14 @@ export async function getPlaces(tripId = null) {
 
     if (!isOnline()) {
         const local = getLocalCache(CACHE_KEYS.PLACES);
-        return filterCache(local);
+        return mergePendingPlaces(filterCache(local), tripId);
     }
 
     try {
         const client = await getSupabase();
         if (!client) {
             const local = getLocalCache(CACHE_KEYS.PLACES);
-            return filterCache(local);
+            return mergePendingPlaces(filterCache(local), tripId);
         }
 
         let query = client
@@ -1090,22 +1118,24 @@ export async function getPlaces(tripId = null) {
         const { data, error } = await query;
         if (error) throw error;
 
-        // Merge with local cache
+        const mergedRemote = mergePendingPlaces(data || [], tripId);
+
+        // Merge with local cache without dropping pending queue additions
         const allLocal = getLocalCache(CACHE_KEYS.PLACES);
         let updated;
         if (tripId === 'city-guide') {
-            updated = allLocal.filter(p => !!p.trip_id).concat(data || []);
+            updated = allLocal.filter(p => !!p.trip_id).concat(mergedRemote);
         } else if (tripId && tripId !== 'all-places' && tripId !== 'all') {
-            updated = allLocal.filter(p => p.trip_id !== tripId).concat(data || []);
+            updated = allLocal.filter(p => p.trip_id !== tripId).concat(mergedRemote);
         } else {
-            updated = data || [];
+            updated = mergedRemote;
         }
         setLocalCache(CACHE_KEYS.PLACES, updated);
-        return data || [];
+        return mergedRemote;
     } catch (err) {
         console.warn("Error fetching places, falling back to local cache", err);
         const local = getLocalCache(CACHE_KEYS.PLACES);
-        return filterCache(local);
+        return mergePendingPlaces(filterCache(local), tripId);
     }
 }
 
@@ -1147,7 +1177,8 @@ export async function createPlace(placeData) {
             return payload;
         }
         const user = await getCurrentUser();
-        if (user) payload.user_id = user.id;
+        if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
+        payload.user_id = user.id;
 
         const { data, error } = await client
             .from('places')
@@ -1159,7 +1190,7 @@ export async function createPlace(placeData) {
     } catch (err) {
         console.warn("DB offline or error, queued place creation:", err);
         addToSyncQueue('create_place', payload);
-        return payload;
+        return { ...payload, _syncError: err?.message || 'Veritabanı senkronizasyonu ertelendi' };
     }
 }
 

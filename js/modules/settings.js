@@ -191,6 +191,49 @@ export function initSettingsEvents() {
         });
     }
 
+    const exportBackupBtn = document.getElementById('btn-export-backup');
+    if (exportBackupBtn) {
+        exportBackupBtn.addEventListener('click', async () => {
+            const prevHtml = exportBackupBtn.innerHTML;
+            exportBackupBtn.disabled = true;
+            exportBackupBtn.textContent = 'Hazırlanıyor...';
+            try {
+                const [trips, places, expenses, memories, categories] = await Promise.all([
+                    db.getTrips(),
+                    db.getPlaces(null),
+                    db.getExpenses(null),
+                    db.getMemories(null),
+                    db.getCategories()
+                ]);
+                const payload = {
+                    app: 'TravellerMobi',
+                    exportedAt: new Date().toISOString(),
+                    trips,
+                    places,
+                    expenses,
+                    memories,
+                    categories
+                };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `travellermobi-yedek-${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showToast('JSON yedeği indirildi.', 'success');
+            } catch (err) {
+                showToast('Yedek oluşturulamadı: ' + err.message, 'danger');
+            } finally {
+                exportBackupBtn.disabled = false;
+                exportBackupBtn.innerHTML = prevHtml;
+                if (window.lucide) window.lucide.createIcons();
+            }
+        });
+    }
+
     const cancelCatBtn = document.getElementById('btn-cancel-edit-category');
     if (cancelCatBtn) {
         cancelCatBtn.addEventListener('click', () => {

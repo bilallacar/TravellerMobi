@@ -66,6 +66,7 @@ export function guessCategoryFromName(name = '') {
     if (n.includes('fırın') || n.includes('bakery') || n.includes('pastane') || n.includes('tatlı') || n.includes('patisserie') || n.includes('tatlici')) return 'bakery';
     if (n.includes('park') || n.includes('bahçe') || n.includes('garden') || n.includes('koru') || n.includes('sahil') || n.includes('tepe')) return 'viewpoint';
     if (n.includes('müze') || n.includes('museum') || n.includes('galeri') || n.includes('saray') || n.includes('palace') || n.includes('sergi')) return 'museum';
+    if (n.includes('kilise') || n.includes('bazilika') || n.includes('basilica') || n.includes('katedral') || n.includes('cathedral') || n.includes('cami') || n.includes('mosque') || n.includes('antik') || n.includes('kolezyum') || n.includes('colosseum') || n.includes('tapınak') || n.includes('temple') || n.includes('meydan') || n.includes('piazza') || n.includes('çeşme') || n.includes('fountain') || n.includes('kale') || n.includes('castle') || n.includes('anıt') || n.includes('monument')) return 'historical';
     if (n.includes('hotel') || n.includes('otel') || n.includes('pansiyon') || n.includes('resort') || n.includes('hostel')) return 'hotel';
     if (n.includes('mall') || n.includes('avm') || n.includes('butik') || n.includes('çarşı') || n.includes('pazar')) return 'shopping';
     return 'other';
@@ -76,6 +77,18 @@ export function initPlacesEvents() {
     const btnAdd = document.getElementById('btn-add-place');
     if (btnAdd) {
         btnAdd.addEventListener('click', () => openPlaceModal());
+    }
+
+    // 1-Tap GPS Check-in Button
+    const btnCheckin = document.getElementById('btn-checkin-here');
+    if (btnCheckin) {
+        btnCheckin.addEventListener('click', () => checkinCurrentLocation(btnCheckin));
+    }
+
+    // Fill GPS Coordinates inside Modal
+    const btnFillGps = document.getElementById('btn-fill-gps');
+    if (btnFillGps) {
+        btnFillGps.addEventListener('click', () => fillGpsIntoModal(btnFillGps));
     }
 
     // Modal Close and Cancel
@@ -1320,6 +1333,7 @@ function renderPlacesList() {
     const filtered = getFilteredPlaces();
 
     if (filtered.length === 0) {
+        const isCityGuide = state.activeTripId === 'city-guide';
         listContainer.innerHTML = `
             <div class="empty-places-card card glass">
                 <i data-lucide="map-pin-off" style="width: 40px; height: 40px; color: var(--text-muted); margin-bottom: 10px;"></i>
@@ -1548,14 +1562,30 @@ export function openPlaceModal(place = null) {
         }
     } else {
         state.selectedPlaceForEdit = null;
-        if (titleEl) titleEl.textContent = 'Yeni Mekan / Gezi Noktası Ekle';
+        if (titleEl) titleEl.textContent = 'Mekan Ekle';
         if (btnDeleteModal) {
             btnDeleteModal.classList.add('hidden');
             btnDeleteModal.style.display = 'none';
         }
         document.getElementById('place-id').value = '';
         document.getElementById('place-rating').value = '0';
-        document.getElementById('place-category').value = 'cafe';
+        document.getElementById('place-status').value = 'planned';
+        document.getElementById('place-category').value = prefill?.category || 'cafe';
+
+        const searchInput = document.getElementById('place-search-query');
+        if (searchInput) searchInput.value = prefill?.searchQuery || '';
+
+        const nameInput = document.getElementById('place-name');
+        if (nameInput) nameInput.value = prefill?.name || '';
+
+        const addressInput = document.getElementById('place-address');
+        if (addressInput) addressInput.value = prefill?.address || '';
+
+        const costInput = document.getElementById('place-cost');
+        if (costInput) costInput.value = '';
+
+        const notesInput = document.getElementById('place-notes');
+        if (notesInput) notesInput.value = '';
 
         const mustTryInput = document.getElementById('place-must-try');
         if (mustTryInput) mustTryInput.value = '';
@@ -1568,8 +1598,11 @@ export function openPlaceModal(place = null) {
             quickTagsBox.querySelectorAll('.tag-chip').forEach(chip => chip.classList.remove('active'));
         }
 
-        // Pre-fill coordinates with map center or user GPS
-        if (currentUserCoords) {
+        // Pre-fill coordinates with explicit prefill, user GPS, or map center
+        if (isValidCoord(prefill?.latitude, prefill?.longitude)) {
+            document.getElementById('place-lat').value = Number(prefill.latitude).toFixed(6);
+            document.getElementById('place-lng').value = Number(prefill.longitude).toFixed(6);
+        } else if (currentUserCoords) {
             document.getElementById('place-lat').value = currentUserCoords.lat.toFixed(6);
             document.getElementById('place-lng').value = currentUserCoords.lng.toFixed(6);
         } else if (mapInstance) {
@@ -1581,6 +1614,119 @@ export function openPlaceModal(place = null) {
 
     modal.classList.remove('hidden');
     if (window.lucide) window.lucide.createIcons();
+}
+
+/**
+ * Resolve current device coordinates using Capacitor Geolocation (if present) or Browser GPS API
+ */
+async function requestDeviceGpsCoords() {
+    const capGeo = window.Capacitor?.Plugins?.Geolocation;
+    if (capGeo && typeof capGeo.getCurrentPosition === 'function') {
+        const pos = await capGeo.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+        return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+    }
+
+    if (!navigator.geolocation) {
+        throw new Error('Bu cihazda konum servisi desteklenmiyor.');
+    }
+
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+        );
+    });
+}
+
+async function reverseGeocodePoint(lat, lng) {
+    try {
+        const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+            headers: { 'Accept-Language': 'tr' }
+        });
+        if (revRes.ok) {
+            const data = await revRes.json();
+            const suggestedName = data.name || data.address?.amenity || data.address?.shop || data.address?.tourism || data.address?.road || '';
+            const address = data.display_name ? data.display_name.split(',').slice(0, 3).join(', ') : '';
+            return { suggestedName, address };
+        }
+    } catch (_) {}
+    return { suggestedName: '', address: '' };
+}
+
+export async function checkinCurrentLocation(triggerBtn = null) {
+    const prevHtml = triggerBtn ? triggerBtn.innerHTML : '';
+    if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.textContent = 'Konum alınıyor...';
+    }
+
+    try {
+        const { lat, lng } = await requestDeviceGpsCoords();
+        currentUserCoords = { lat, lng };
+        const { suggestedName, address } = await reverseGeocodePoint(lat, lng);
+
+        if (mapInstance) mapInstance.setView([lat, lng], 16);
+
+        openPlaceModal(null, {
+            latitude: lat,
+            longitude: lng,
+            name: suggestedName,
+            address,
+            category: guessCategoryFromName(suggestedName)
+        });
+        showToast('Konumunuz alındı! Bilgileri kontrol edip kaydedin.', 'success');
+    } catch (err) {
+        if (err && (err.code === 1 || err.PERMISSION_DENIED)) {
+            openLocationPermissionModal(err);
+        } else {
+            showToast('GPS konumu alınamadı: ' + (err?.message || 'Bilinmeyen hata'), 'warning');
+        }
+    } finally {
+        if (triggerBtn) {
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = prevHtml;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+}
+
+async function fillGpsIntoModal(triggerBtn = null) {
+    const prevHtml = triggerBtn ? triggerBtn.innerHTML : '';
+    if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.textContent = 'Alınıyor...';
+    }
+    try {
+        const { lat, lng } = await requestDeviceGpsCoords();
+        currentUserCoords = { lat, lng };
+        const { suggestedName, address } = await reverseGeocodePoint(lat, lng);
+        applyResolvedLocation(lat, lng, suggestedName, address);
+        showToast('GPS koordinatları dolduruldu.', 'success');
+    } catch (err) {
+        if (err && (err.code === 1 || err.PERMISSION_DENIED)) {
+            openLocationPermissionModal(err);
+        } else {
+            showToast('GPS konumu alınamadı.', 'warning');
+        }
+    } finally {
+        if (triggerBtn) {
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = prevHtml;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+}
+
+export async function handleIncomingPlaceIntent({ mode = '', text = '' } = {}) {
+    if (mode === 'checkin') {
+        await checkinCurrentLocation();
+        return;
+    }
+    if (text) {
+        openPlaceModal(null, { searchQuery: text });
+        await handleLocationSearch();
+    }
 }
 
 /**
@@ -1836,13 +1982,32 @@ async function handlePlaceFormSubmit(e) {
     }
 
     try {
+        let savedRecord = null;
         if (placeId) {
-            await db.updatePlace(placeId, payload);
+            savedRecord = await db.updatePlace(placeId, payload);
             showToast("Mekan başarıyla güncellendi!", "success");
         } else {
-            await db.createPlace(payload);
-            showToast("Yeni mekan başarıyla kaydedildi!", "success");
+            savedRecord = await db.createPlace(payload);
+            if (savedRecord?._syncError) {
+                showToast(`Mekan cihaza kaydedildi (Bulut eşitleme bekliyor: ${savedRecord._syncError})`, "warning");
+            } else {
+                showToast("Yeni mekan başarıyla kaydedildi!", "success");
+            }
         }
+
+        // Switch active view to the target trip (unless viewing global all-places map) and reset active filters so the saved place is immediately visible
+        if (state.activeTripId !== 'all-places') {
+            state.activeTripId = payload.trip_id || 'city-guide';
+        }
+        state.activePlaceFilter = 'all';
+        const filterContainer = document.getElementById('places-filter-bar');
+        if (filterContainer) {
+            filterContainer.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            const allPill = filterContainer.querySelector('[data-filter="all"]');
+            if (allPill) allPill.classList.add('active');
+        }
+        const searchBox = document.getElementById('places-search-input');
+        if (searchBox) searchBox.value = '';
 
         closePlaceModal();
         await loadPlacesData();

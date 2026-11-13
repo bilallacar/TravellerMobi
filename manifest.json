@@ -9,6 +9,29 @@
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "categories": ["travel", "lifestyle", "navigation"],
+  "shortcuts": [
+    {
+      "name": "Buradayım (Mekan Ekle)",
+      "short_name": "Buradayım",
+      "url": "./index.html?checkin=1#places",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Masraflar",
+      "short_name": "Masraf",
+      "url": "./index.html#expenses",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "share_target": {
+    "action": "./index.html#places",
+    "method": "GET",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  },
   "icons": [
     {
       "src": "icons/icon-192.png",

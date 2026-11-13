@@ -498,6 +498,9 @@
                             <select id="places-trip-selector" class="select-input compact-select">
                                 <!-- Loaded dynamically -->
                             </select>
+                            <button id="btn-checkin-here" class="btn btn-secondary" title="Anlık GPS konumunu mekan olarak kaydet">
+                                <i data-lucide="locate-fixed"></i> Buradayım
+                            </button>
                             <button id="btn-share-places-route" class="btn btn-secondary" title="Rotayı paylaş">
                                 <i data-lucide="share-2"></i> Paylaş
                             </button>
@@ -690,14 +693,19 @@
                                     <input type="text" id="place-address" placeholder="Örn: Caferağa Mah., Kadıköy" class="text-input">
                                 </div>
 
-                                <div class="form-row">
-                                    <div class="form-group">
+                                <div class="form-row" style="align-items: flex-end;">
+                                    <div class="form-group" style="flex: 1;">
                                         <label for="place-lat">Enlem</label>
                                         <input type="number" step="any" id="place-lat" required class="text-input" placeholder="37.9715">
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" style="flex: 1;">
                                         <label for="place-lng">Boylam</label>
                                         <input type="number" step="any" id="place-lng" required class="text-input" placeholder="23.7257">
+                                    </div>
+                                    <div class="form-group" style="flex: 0 0 auto;">
+                                        <button type="button" id="btn-fill-gps" class="btn btn-secondary" style="height: 44px; white-space: nowrap;" title="Cihaz GPS konumunu doldur">
+                                            <i data-lucide="locate-fixed"></i> GPS Al
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1191,8 +1199,14 @@
                                         <input type="file" id="memory-photo" accept="image/*" class="file-input">
                                         <div class="upload-placeholder" id="photo-upload-placeholder">
                                             <i data-lucide="image"></i>
-                                            <span>Fotoğraf seç</span>
+                                            <span>Galeriden seç</span>
                                         </div>
+                                    </div>
+                                    <div class="mobile-upload-actions">
+                                        <input type="file" id="memory-photo-camera" accept="image/*" capture="environment" class="hidden">
+                                        <label for="memory-photo-camera" class="btn btn-secondary btn-sm">
+                                            <i data-lucide="camera"></i> Kameradan Çek
+                                        </label>
                                     </div>
                                     <div class="upload-progress-container hidden" id="upload-progress-container">
                                         <div class="progress-bar-bg compact">
@@ -1290,6 +1304,15 @@
                                 </div>
                                 <button type="submit" class="btn btn-primary">Tercihleri Kaydet</button>
                             </form>
+                        </div>
+
+                        <!-- Data Backup & Export Card -->
+                        <div class="card glass" id="settings-backup-card">
+                            <h3><i data-lucide="download" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Veri Yedekleme</h3>
+                            <p class="text-sm text-muted" style="margin: 8px 0 14px;">Seyahat, mekan, masraf ve anı kayıtlarını tek dosyada yedekleyin.</p>
+                            <button type="button" id="btn-export-backup" class="btn btn-secondary">
+                                <i data-lucide="file-json"></i> Yedeği İndir (JSON)
+                            </button>
                         </div>
 
                          <!-- Category Management Panel Card -->

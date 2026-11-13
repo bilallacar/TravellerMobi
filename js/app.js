@@ -13,7 +13,7 @@ import { initExpensesEvents, loadExpensesData, updateExpenseFormParticipants } f
 import { initJournalEvents, loadJournalData } from './modules/journal.js';
 import { initDashboardEvents, loadDashboardData, renderDashboard } from './modules/dashboard.js';
 import { loadAdminData } from './modules/admin.js';
-import { initPlacesEvents, loadPlacesData } from './modules/places.js';
+import { initPlacesEvents, loadPlacesData, handleIncomingPlaceIntent } from './modules/places.js';
 import { initShareEvents, loadShareView } from './modules/share.js';
 
 // Global error logging for diagnostics
@@ -108,6 +108,25 @@ function updateActiveNav(hash) {
     }
 }
 
+function extractMobilePlaceIntent() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.toString()) return null;
+    const isCheckin = params.get('checkin') === '1';
+    const sharedParts = [params.get('share_url'), params.get('share_text'), params.get('share_title')]
+        .map(v => (v || '').trim())
+        .filter(Boolean);
+    if (!isCheckin && sharedParts.length === 0) return null;
+    return { mode: isCheckin ? 'checkin' : 'share', text: sharedParts.join(' ') };
+}
+
+async function processPendingMobileIntent() {
+    const intent = extractMobilePlaceIntent();
+    if (!intent) return;
+    // Clear query params once consumed so refresh does not replay
+    window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+    await handleIncomingPlaceIntent(intent);
+}
+
 function initNavigation() {
     window.addEventListener('hashchange', handleRouting);
     handleRouting();
@@ -196,6 +215,12 @@ async function handleRouting() {
     } else {
         layout.classList.remove('no-sidebar');
         if (mobileNav) mobileNav.classList.remove('hidden');
+
+        // Redirect Android Share Target / PWA Shortcut directly to #places when intent query exists
+        if (extractMobilePlaceIntent() && hash !== '#places') {
+            window.location.hash = '#places';
+            return;
+        }
     }
 
     switch(hash) {
@@ -210,6 +235,7 @@ async function handleRouting() {
         case '#places':
             showView('places');
             await loadPlacesData();
+            await processPendingMobileIntent();
             break;
         case '#expenses':
             showView('expenses');

@@ -199,30 +199,40 @@ export function initJournalEvents() {
     }
 
     const fileInput = document.getElementById('memory-photo');
+    const cameraInput = document.getElementById('memory-photo-camera');
     const photoPlaceholder = document.getElementById('photo-upload-placeholder');
     const previewContainer = document.getElementById('photo-preview-container');
     const previewImg = document.getElementById('photo-preview');
     const removePhotoBtn = document.getElementById('btn-remove-photo');
 
+    const handlePhotoSelection = async (file) => {
+        if (!file) return;
+        const compressed = await compressImage(file);
+        state.selectedPhotoFile = compressed;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            previewImg.src = event.target.result;
+            previewContainer.classList.remove('hidden');
+            photoPlaceholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(compressed);
+    };
+
     if (fileInput && photoPlaceholder && previewContainer && previewImg) {
         fileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const compressed = await compressImage(file);
-                state.selectedPhotoFile = compressed;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    previewImg.src = event.target.result;
-                    previewContainer.classList.remove('hidden');
-                    photoPlaceholder.classList.add('hidden');
-                };
-                reader.readAsDataURL(compressed);
-            }
+            await handlePhotoSelection(e.target.files[0]);
         });
+
+        if (cameraInput) {
+            cameraInput.addEventListener('change', async (e) => {
+                await handlePhotoSelection(e.target.files[0]);
+            });
+        }
 
         removePhotoBtn.addEventListener('click', () => {
             state.selectedPhotoFile = null;
             fileInput.value = '';
+            if (cameraInput) cameraInput.value = '';
             previewImg.src = '';
             delete previewImg.dataset.originalPhotoUrl;
             previewContainer.classList.add('hidden');

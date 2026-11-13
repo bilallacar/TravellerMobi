@@ -88,6 +88,26 @@ a {
     transition: color var(--transition-speed);
 }
 
+button, .btn, .nav-item, .mobile-nav-item, .filter-pill {
+    touch-action: manipulation;
+}
+
+.mobile-upload-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.mobile-upload-actions label {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    margin: 0;
+}
+
 a:hover {
     color: var(--color-primary-hover);
 }
