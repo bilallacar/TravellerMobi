@@ -93,6 +93,9 @@
                     <div class="mobile-sync-status" id="mobile-sync-indicator" title="Eşitleme Durumu">
                         <i data-lucide="cloud-lightning" class="sync-icon offline"></i>
                     </div>
+                    <button id="btn-mobile-theme-toggle" type="button" class="btn-header-icon" title="Temayı Değiştir (Açık / Koyu)" aria-label="Temayı Değiştir">
+                        <i data-lucide="sun"></i>
+                    </button>
                     <button id="btn-mobile-logout" type="button" class="btn btn-logout-icon" style="padding: 6px; border-radius: 8px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;" title="Çıkış Yap">
                         <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                     </button>
@@ -527,7 +530,8 @@
                     <div class="places-search-bar margin-bottom-12">
                         <div class="input-icon-wrapper" style="width: 100%;">
                             <i data-lucide="search"></i>
-                            <input type="text" id="places-search-input" placeholder="Mekan, semt veya etiket ara..." class="text-input" style="padding-left: 38px;">
+                            <input type="text" id="places-search-input" placeholder="Mekan, semt veya etiket ara..." class="text-input" style="padding-left: 38px; padding-right: 36px;">
+                            <button type="button" id="btn-clear-places-search" class="btn-clear-search hidden" title="Aramayı temizle" aria-label="Aramayı temizle">&times;</button>
                         </div>
                     </div>
 
@@ -589,7 +593,21 @@
 
                     <!-- Places Cards Grid Section -->
                     <div class="places-section-header margin-top-30">
-                        <h2><i data-lucide="map-pin" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i> Kayıtlı Mekanlar</h2>
+                        <div class="places-section-title-group">
+                            <h2>
+                                <i data-lucide="map-pin" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px;"></i>
+                                Kayıtlı Mekanlar
+                                <span id="places-visible-count" class="places-count-badge">0</span>
+                            </h2>
+                        </div>
+                        <div class="places-view-switch" id="places-view-mode-switch" role="group" aria-label="Görünüm Modu">
+                            <button type="button" class="view-switch-btn active" data-mode="compact" title="Kompakt Liste">
+                                <i data-lucide="list"></i> <span>Liste</span>
+                            </button>
+                            <button type="button" class="view-switch-btn" data-mode="cards" title="Detaylı Kartlar">
+                                <i data-lucide="layout-grid"></i> <span>Kartlar</span>
+                            </button>
+                        </div>
                     </div>
                     <div id="places-cards-container" class="places-grid margin-top-16">
                         <!-- Loaded dynamically -->
@@ -1868,6 +1886,12 @@ create policy "Users can delete own shared routes" on public.shared_routes
             </a>
         </nav>
     </div>
+
+    <!-- Fixed Desktop Top-Right Theme Toggle -->
+    <button type="button" id="btn-desktop-theme-toggle" class="desktop-theme-toggle hidden" title="Temayı Değiştir (Açık / Koyu)">
+        <i data-lucide="sun"></i>
+        <span id="desktop-theme-label">Açık Tema</span>
+    </button>
 
     <!-- Floating Universal Gemini AI Assistant Chatbox -->
     <div id="ai-chatbox-backdrop" class="ai-chatbox-backdrop hidden"></div>

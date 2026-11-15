@@ -18,6 +18,34 @@ import { initShareEvents, loadShareView } from './modules/share.js';
 import { initAiAssistant, setAiLauncherVisible } from './modules/ai_assistant.js';
 
 // Global error logging for diagnostics
+function syncThemeUI(theme) {
+    const isLight = theme === 'light';
+    document.body.className = isLight ? 'light-theme' : 'dark-theme';
+
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+        metaTheme.setAttribute('content', isLight ? '#f6f8fc' : '#0f172a');
+    }
+
+    const mobileBtn = document.getElementById('btn-mobile-theme-toggle');
+    if (mobileBtn) {
+        mobileBtn.innerHTML = `<i data-lucide="${isLight ? 'moon' : 'sun'}"></i>`;
+        mobileBtn.title = isLight ? 'Koyu Temaya Geç' : 'Açık Temaya Geç';
+    }
+
+    const desktopBtn = document.getElementById('btn-desktop-theme-toggle');
+    if (desktopBtn) {
+        desktopBtn.innerHTML = `<i data-lucide="${isLight ? 'moon' : 'sun'}"></i><span>${isLight ? 'Koyu Tema' : 'Açık Tema'}</span>`;
+        desktopBtn.title = isLight ? 'Koyu Temaya Geç' : 'Açık Temaya Geç';
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function setDesktopThemeToggleVisible(visible) {
+    const desktopBtn = document.getElementById('btn-desktop-theme-toggle');
+    if (desktopBtn) desktopBtn.classList.toggle('hidden', !visible);
+}
 let globalErrors = [];
 window.onerror = function(message, source, lineno, colno, error) {
     const errorStr = `Error: ${message} at ${source}:${lineno}:${colno}`;
@@ -145,6 +173,7 @@ async function handleRouting() {
         if (mobileNav) mobileNav.classList.add('hidden');
         showView('share');
         setAiLauncherVisible(false);
+        setDesktopThemeToggleVisible(false);
         db.initSupabase();
         await loadShareView(hash);
         return;
@@ -153,6 +182,7 @@ async function handleRouting() {
     if (!isConfigured()) {
         showView('setup');
         setAiLauncherVisible(false);
+        setDesktopThemeToggleVisible(false);
         return;
     }
 
@@ -201,6 +231,7 @@ async function handleRouting() {
             showView('approval-pending');
             renderApprovalPending();
             setAiLauncherVisible(false);
+        setDesktopThemeToggleVisible(false);
 
             const layout = document.getElementById('layout-container');
             const mobileNav = document.querySelector('.mobile-nav');
@@ -215,11 +246,13 @@ async function handleRouting() {
     
     if (hash === '#auth' || hash === '#setup') {
         setAiLauncherVisible(false);
+        setDesktopThemeToggleVisible(false);
         layout.classList.add('no-sidebar');
         if (mobileNav) mobileNav.classList.add('hidden');
     } else {
         layout.classList.remove('no-sidebar');
         setAiLauncherVisible(true);
+        setDesktopThemeToggleVisible(true);
         if (mobileNav) mobileNav.classList.remove('hidden');
 
         // Redirect Android Share Target / PWA Shortcut directly to #places when intent query exists
@@ -418,7 +451,26 @@ async function fetchExchangeRates() {
 
 // Global Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    document.body.className = config.theme === 'light' ? 'light-theme' : 'dark-theme';
+    syncThemeUI(config.theme);
+
+    const handleQuickThemeToggle = () => {
+        const nextTheme = config.theme === 'light' ? 'dark' : 'light';
+        savePreferences(config.defaultCurrency, nextTheme);
+        syncThemeUI(nextTheme);
+        if (window.location.hash === '#settings') {
+            loadSettingsForm();
+        }
+        showToast(nextTheme === 'light' ? 'Açık tema aktif edildi' : 'Koyu tema aktif edildi', 'info');
+    };
+
+    const mobileThemeBtn = document.getElementById('btn-mobile-theme-toggle');
+    const desktopThemeBtn = document.getElementById('btn-desktop-theme-toggle');
+    if (mobileThemeBtn) mobileThemeBtn.addEventListener('click', handleQuickThemeToggle);
+    if (desktopThemeBtn) desktopThemeBtn.addEventListener('click', handleQuickThemeToggle);
+
+    window.addEventListener('theme-changed', (e) => {
+        syncThemeUI(e.detail?.theme || config.theme);
+    });
 
     initNavigation();
     

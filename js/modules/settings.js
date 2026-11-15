@@ -208,11 +208,13 @@ export function initSettingsEvents() {
         themeDark.addEventListener('click', () => {
             document.body.className = 'dark-theme';
             savePreferences(config.defaultCurrency, 'dark');
+            window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: 'dark' } }));
             loadSettingsForm();
         });
         themeLight.addEventListener('click', () => {
             document.body.className = 'light-theme';
             savePreferences(config.defaultCurrency, 'light');
+            window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: 'light' } }));
             loadSettingsForm();
         });
     }

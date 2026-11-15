@@ -14,6 +14,8 @@ let userLocationMarker = null;
 let userLocationCircle = null;
 let currentUserCoords = null; // { lat, lng }
 let isFullscreenMap = false;
+let placesViewMode = localStorage.getItem('places_view_mode') || 'compact';
+const expandedPlaceIds = new Set();
 
 // Expanded Category icons and colors (Google Maps / Mapstr / Wanderlog inspired)
 export const PLACE_CATEGORIES = {
@@ -106,8 +108,42 @@ export function initPlacesEvents() {
         });
     }
 
-    // Search Input Real-Time Filter
+    // Search Input Real-Time Filter + Clear + View Mode Switch
+    const clearSearchBtn = document.getElementById('btn-clear-places-search');
+    const searchInputEl = document.getElementById('places-search-input');
+    if (searchInputEl && clearSearchBtn) {
+        searchInputEl.addEventListener('input', () => {
+            clearSearchBtn.classList.toggle('hidden', !searchInputEl.value.trim());
+        });
+        clearSearchBtn.addEventListener('click', () => {
+            searchInputEl.value = '';
+            clearSearchBtn.classList.add('hidden');
+            renderPlacesList();
+            renderMapMarkers();
+            searchInputEl.focus();
+        });
+    }
+
+    const viewSwitch = document.getElementById('places-view-mode-switch');
+    if (viewSwitch) {
+        viewSwitch.querySelectorAll('.view-switch-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === placesViewMode);
+        });
+        viewSwitch.addEventListener('click', (e) => {
+            const btn = e.target.closest('.view-switch-btn');
+            if (!btn) return;
+            const nextMode = btn.dataset.mode || 'compact';
+            if (nextMode === placesViewMode) return;
+            placesViewMode = nextMode;
+            localStorage.setItem('places_view_mode', placesViewMode);
+            viewSwitch.querySelectorAll('.view-switch-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.mode === placesViewMode);
+            });
+            renderPlacesList();
+        });
+    }
     const searchInput = document.getElementById('places-search-input');
+
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             renderPlacesList();
@@ -278,7 +314,22 @@ export function initPlacesEvents() {
         });
     }
 
-    // Delegated Delete handler on place cards list (reliable across icon SVG clicks)
+    // Delegated Delete & Compact Accordion handlers on place cards list (reliable across icon SVG clicks)
+    const cardsListEl = document.getElementById('places-cards-container');
+    if (cardsListEl) {
+        cardsListEl.addEventListener('click', (e) => {
+            const toggleSummary = e.target.closest('.place-compact-summary');
+            if (toggleSummary && !e.target.closest('button, a')) {
+                const row = toggleSummary.closest('.place-compact-row');
+                const pid = row?.dataset?.id;
+                if (!row || !pid) return;
+                const willExpand = !row.classList.contains('is-expanded');
+                row.classList.toggle('is-expanded', willExpand);
+                if (willExpand) expandedPlaceIds.add(String(pid));
+                else expandedPlaceIds.delete(String(pid));
+            }
+        });
+    }
     const cardsContainer = document.getElementById('places-cards-container');
     if (cardsContainer) {
         cardsContainer.addEventListener('click', (e) => {
@@ -937,6 +988,7 @@ function getFilteredPlaces() {
 
     // Instant Text Search
     const searchInput = document.getElementById('places-search-input');
+
     const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
     if (query) {
         filtered = filtered.filter(p => {
@@ -966,6 +1018,7 @@ function renderMapMarkers() {
     }
 
     const filtered = getFilteredPlaces();
+
     if (filtered.length === 0) {
         renderRoutePolyline();
         return;
@@ -1343,8 +1396,12 @@ function renderPlacesList() {
 
     const filtered = getFilteredPlaces();
 
+
     if (filtered.length === 0) {
         const isCityGuide = state.activeTripId === 'city-guide';
+        const visibleCountElZero = document.getElementById('places-visible-count');
+        if (visibleCountElZero) visibleCountElZero.textContent = '0';
+        listContainer.className = 'places-compact-list margin-top-16';
         listContainer.innerHTML = `
             <div class="empty-places-card card glass">
                 <i data-lucide="map-pin-off" style="width: 40px; height: 40px; color: var(--text-muted); margin-bottom: 10px;"></i>
@@ -1361,6 +1418,10 @@ function renderPlacesList() {
     }
 
     const sorted = getSortedPlaces(filtered);
+
+    const visibleCountEl = document.getElementById('places-visible-count');
+    if (visibleCountEl) visibleCountEl.textContent = String(filtered.length);
+    listContainer.className = placesViewMode === 'cards' ? 'places-grid margin-top-16' : 'places-compact-list margin-top-16';
 
     listContainer.innerHTML = sorted.map((place, index) => {
         const placeNumber = index + 1;
@@ -1387,6 +1448,21 @@ function renderPlacesList() {
             ? `<span class="pill-rating"><i data-lucide="star" style="width:11px;height:11px;fill:currentColor;vertical-align:-1px;margin-right:2px;"></i> ${place.rating}/5</span>` 
             : '';
         const googleMapsDirUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
+
+        if (placesViewMode === 'compact') {
+            return renderCompactPlaceRow({
+                place,
+                placeNumber,
+                catInfo,
+                isVisited,
+                distanceBadge,
+                ratingBadge,
+                googleMapsDirUrl,
+                mustTry,
+                tags,
+                cleanNotes
+            });
+        }
 
         const mustTryHtml = mustTry ? `
             <div class="place-must-try-box">
@@ -1457,6 +1533,84 @@ function renderPlacesList() {
 /**
  * Focus map on specific latitude & longitude
  */
+function renderCompactPlaceRow({
+    place,
+    placeNumber,
+    catInfo,
+    isVisited,
+    distanceBadge,
+    ratingBadge,
+    googleMapsDirUrl,
+    mustTry,
+    tags,
+    cleanNotes
+}) {
+    const isExpanded = expandedPlaceIds.has(String(place.id));
+    const safeId = escapeHtml(String(place.id));
+    const subtitleParts = [catInfo.name];
+    if (place.address) subtitleParts.push(place.address);
+
+    const mustTryHtml = mustTry ? `
+        <div class="place-must-try-box">
+            <div class="must-try-label"><i data-lucide="sparkles" style="width:11px;height:11px;"></i> Mutlaka Denenmeli</div>
+            <div class="must-try-text">${escapeHtml(mustTry)}</div>
+        </div>
+    ` : '';
+
+    const tagsHtml = tags.length > 0 ? `
+        <div class="place-tags-row">
+            ${tags.map(t => `<span class="place-tag-pill">#${escapeHtml(t)}</span>`).join('')}
+        </div>
+    ` : '';
+
+    return `
+        <div class="place-compact-row card glass ${isVisited ? 'place-visited' : 'place-planned'} ${isExpanded ? 'is-expanded' : ''}" data-id="${safeId}">
+            <div class="place-compact-summary" role="button" tabindex="0" aria-expanded="${isExpanded ? 'true' : 'false'}">
+                <div class="place-compact-left">
+                    <span class="compact-num-badge" style="border-color: ${catInfo.color}40; background: ${catInfo.bg}; color: ${catInfo.color};">#${placeNumber}</span>
+                    <div class="place-compact-main">
+                        <div class="place-compact-title-row">
+                            <span class="place-compact-title ${isVisited ? 'text-strikethrough' : ''}">${escapeHtml(place.name)}</span>
+                            ${ratingBadge}
+                        </div>
+                        <div class="place-compact-sub">${escapeHtml(subtitleParts.join(' • '))}</div>
+                    </div>
+                </div>
+                <div class="place-compact-right">
+                    <button type="button" class="btn-toggle-badge compact-status-btn ${isVisited ? 'badge-visited' : 'badge-planned'}" onclick="window.togglePlaceStatusAction('${safeId}')">
+                        ${isVisited ? 'Gidildi' : 'Gidilecek'}
+                    </button>
+                    <button type="button" class="btn-compact-icon" onclick="window.focusPlaceOnMapAction(${place.latitude}, ${place.longitude}, '${safeId}', ${placeNumber})" title="Haritada Gör">
+                        <i data-lucide="crosshair"></i>
+                    </button>
+                    <span class="place-compact-chevron"><i data-lucide="chevron-down"></i></span>
+                </div>
+            </div>
+            <div class="place-compact-details">
+                ${distanceBadge ? `<div class="margin-bottom-8">${distanceBadge}</div>` : ''}
+                ${mustTryHtml}
+                ${tagsHtml}
+                ${cleanNotes ? `<p class="place-notes">${escapeHtml(cleanNotes)}</p>` : ''}
+                ${place.estimated_cost > 0 ? `<div class="place-cost-tag">Tahmini Masraf: <strong>${place.estimated_cost} ${place.currency || 'TRY'}</strong></div>` : ''}
+                <div class="place-card-actions">
+                    <a href="${googleMapsDirUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+                        <i data-lucide="navigation"></i> Yol Tarifi
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.focusPlaceOnMapAction(${place.latitude}, ${place.longitude}, '${safeId}', ${placeNumber})">
+                        <i data-lucide="crosshair"></i> Haritada Gör
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.editPlaceAction('${safeId}')" title="Düzenle">
+                        <i data-lucide="edit-2"></i>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm btn-delete-place" data-id="${safeId}" title="Sil">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 window.focusPlaceOnMapAction = function(lat, lng, placeId = null, placeNumber = 1) {
     if (!mapInstance) return;
     mapInstance.setView([lat, lng], 16, { animate: true });
