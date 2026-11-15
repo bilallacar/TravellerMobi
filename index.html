@@ -414,13 +414,13 @@
                         </div>
                     </div>
 
-                    <!-- Collapsible Developer Diagnostics at bottom -->
-                    <details class="card glass diagnostics-accordion margin-top-30">
-                        <summary style="cursor:pointer; font-weight:600; color:var(--text-secondary); font-size:13px; display:flex; align-items:center; gap:8px;">
-                            <i data-lucide="terminal"></i> Sistem & Teşhis Bilgileri (Diagnostics)
-                        </summary>
-                        <div id="diagnostics-log" style="white-space: pre-wrap; line-height: 1.5; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 11px; color: var(--text-muted); margin-top:12px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px;">Yükleniyor...</div>
-                    </details>
+
+
+
+
+
+
+
                 </section>
 
                 <!-- 4. TRIPS VIEW -->
@@ -1366,6 +1366,14 @@
                                 </div>
                             </form>
                         </div>
+
+                        <!-- Collapsible Developer Diagnostics (Moved from Home Dashboard) -->
+                        <details class="card glass diagnostics-accordion" style="grid-column: 1 / -1;">
+                            <summary style="cursor:pointer; font-weight:600; color:var(--text-secondary); font-size:13px; display:flex; align-items:center; gap:8px;">
+                                <i data-lucide="terminal"></i> Sistem & Teşhis Bilgileri (Diagnostics)
+                            </summary>
+                            <div id="diagnostics-log" style="white-space: pre-wrap; line-height: 1.5; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 11px; color: var(--text-muted); margin-top:12px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px;">Yükleniyor...</div>
+                        </details>
 
                          <!-- Category Management Panel Card -->
                          <div class="card glass double-span hidden" id="settings-categories-card" style="grid-column: 1 / -1;">
