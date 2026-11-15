@@ -1,10 +1,13 @@
-// config.js - Configuration state for Supabase API and user settings
+// config.js - Configuration state for Supabase API, Gemini AI and user settings
 
 export const config = {
     supabaseUrl: localStorage.getItem('supabase_url') || 'https://pbfriozhmtyspfzgnkkq.supabase.co',
     supabaseKey: localStorage.getItem('supabase_key') || 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM',
     defaultCurrency: localStorage.getItem('default_currency') || 'TRY',
-    theme: localStorage.getItem('theme') || 'dark'
+    theme: localStorage.getItem('theme') || 'dark',
+    geminiApiKey: localStorage.getItem('gemini_api_key') || '',
+    geminiModel: localStorage.getItem('gemini_model') || 'gemini-2.5-flash',
+    geminiAutoApply: localStorage.getItem('gemini_auto_apply') === 'true'
 };
 
 
@@ -36,6 +39,35 @@ export function savePreferences(currency, theme) {
         localStorage.setItem('theme', theme);
         config.theme = theme;
     }
+}
+
+/**
+ * Save Gemini AI Assistant API key and model to device localStorage
+ */
+export function saveGeminiConfig(apiKey, model) {
+    if (typeof apiKey === 'string') {
+        const cleanKey = apiKey.trim();
+        if (cleanKey) {
+            localStorage.setItem('gemini_api_key', cleanKey);
+        } else {
+            localStorage.removeItem('gemini_api_key');
+        }
+        config.geminiApiKey = cleanKey;
+    }
+    if (typeof model === 'string' && model.trim()) {
+        const cleanModel = model.trim();
+        localStorage.setItem('gemini_model', cleanModel);
+        config.geminiModel = cleanModel;
+    }
+}
+
+/**
+ * Save auto-apply preference for AI Assistant write actions
+ */
+export function saveGeminiAutoApply(enabled) {
+    const flag = !!enabled;
+    localStorage.setItem('gemini_auto_apply', flag ? 'true' : 'false');
+    config.geminiAutoApply = flag;
 }
 
 /**

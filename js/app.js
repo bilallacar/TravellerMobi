@@ -15,6 +15,7 @@ import { initDashboardEvents, loadDashboardData, renderDashboard } from './modul
 import { loadAdminData } from './modules/admin.js';
 import { initPlacesEvents, loadPlacesData, handleIncomingPlaceIntent } from './modules/places.js';
 import { initShareEvents, loadShareView } from './modules/share.js';
+import { initAiAssistant, setAiLauncherVisible } from './modules/ai_assistant.js';
 
 // Global error logging for diagnostics
 let globalErrors = [];
@@ -143,6 +144,7 @@ async function handleRouting() {
         if (layout) layout.classList.add('no-sidebar');
         if (mobileNav) mobileNav.classList.add('hidden');
         showView('share');
+        setAiLauncherVisible(false);
         db.initSupabase();
         await loadShareView(hash);
         return;
@@ -150,6 +152,7 @@ async function handleRouting() {
     
     if (!isConfigured()) {
         showView('setup');
+        setAiLauncherVisible(false);
         return;
     }
 
@@ -197,6 +200,7 @@ async function handleRouting() {
         if (!state.userProfile || state.userProfile.status !== 'approved') {
             showView('approval-pending');
             renderApprovalPending();
+            setAiLauncherVisible(false);
 
             const layout = document.getElementById('layout-container');
             const mobileNav = document.querySelector('.mobile-nav');
@@ -210,10 +214,12 @@ async function handleRouting() {
     const mobileNav = document.querySelector('.mobile-nav');
     
     if (hash === '#auth' || hash === '#setup') {
+        setAiLauncherVisible(false);
         layout.classList.add('no-sidebar');
         if (mobileNav) mobileNav.classList.add('hidden');
     } else {
         layout.classList.remove('no-sidebar');
+        setAiLauncherVisible(true);
         if (mobileNav) mobileNav.classList.remove('hidden');
 
         // Redirect Android Share Target / PWA Shortcut directly to #places when intent query exists
@@ -425,6 +431,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initShareEvents();
     initJournalEvents();
     initDashboardEvents();
+    initAiAssistant();
+
+    window.addEventListener('ai-data-mutated', async () => {
+        const currentHash = (window.location.hash || '#dashboard').split('?')[0];
+        if (currentHash === '#dashboard') await loadDashboardData();
+        else if (currentHash === '#trips') await loadTripsData();
+        else if (currentHash === '#places') await loadPlacesData();
+        else if (currentHash === '#expenses') await loadExpensesData();
+        else if (currentHash === '#journal') await loadJournalData();
+    });
 
     setupModal('btn-add-trip', 'trip-modal', 'btn-close-trip-modal');
     setupModal('btn-add-expense', 'expense-modal', 'btn-close-expense-modal');

@@ -1,7 +1,7 @@
 // js/modules/settings.js
 
 import { state } from '../state.js';
-import { config, saveConfig, savePreferences } from '../../config.js';
+import { config, saveConfig, savePreferences, saveGeminiConfig } from '../../config.js';
 import { initSupabase } from '../../db.js';
 import * as db from '../../db.js';
 import { showToast, escapeHtml } from '../utils.js';
@@ -14,6 +14,11 @@ export async function loadSettingsForm() {
     if (urlInput) urlInput.value = config.supabaseUrl || '';
     if (keyInput) keyInput.value = config.supabaseKey || '';
     if (currencySelect) currencySelect.value = config.defaultCurrency || 'TRY';
+
+    const geminiKeyInput = document.getElementById('settings-gemini-key');
+    const geminiModelSelect = document.getElementById('settings-gemini-model');
+    if (geminiKeyInput) geminiKeyInput.value = config.geminiApiKey || '';
+    if (geminiModelSelect) geminiModelSelect.value = config.geminiModel || 'gemini-2.5-flash';
 
     // Highlights active theme button style
     const isDark = config.theme === 'dark';
@@ -154,6 +159,38 @@ export function initSettingsEvents() {
     }
 
     const settingsPrefForm = document.getElementById('settings-preferences-form');
+    const geminiForm = document.getElementById('settings-gemini-form');
+    if (geminiForm) {
+        geminiForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const keyVal = document.getElementById('settings-gemini-key')?.value || '';
+            const modelVal = document.getElementById('settings-gemini-model')?.value || 'gemini-2.5-flash';
+            saveGeminiConfig(keyVal, modelVal);
+            window.dispatchEvent(new CustomEvent('gemini-config-updated'));
+            showToast(keyVal.trim() ? 'Gemini AI ayarları cihaza kaydedildi' : 'Gemini API anahtarı temizlendi', 'success');
+        });
+    }
+
+    const toggleGeminiKeyBtn = document.getElementById('btn-toggle-gemini-key');
+    if (toggleGeminiKeyBtn) {
+        toggleGeminiKeyBtn.addEventListener('click', () => {
+            const keyInput = document.getElementById('settings-gemini-key');
+            if (!keyInput) return;
+            keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+        });
+    }
+
+    const clearGeminiKeyBtn = document.getElementById('btn-clear-gemini-key');
+    if (clearGeminiKeyBtn) {
+        clearGeminiKeyBtn.addEventListener('click', () => {
+            const keyInput = document.getElementById('settings-gemini-key');
+            const modelVal = document.getElementById('settings-gemini-model')?.value || 'gemini-2.5-flash';
+            if (keyInput) keyInput.value = '';
+            saveGeminiConfig('', modelVal);
+            window.dispatchEvent(new CustomEvent('gemini-config-updated'));
+            showToast('Gemini API anahtarı cihazdan silindi', 'info');
+        });
+    }
     if (settingsPrefForm) {
         settingsPrefForm.addEventListener('submit', (e) => {
             e.preventDefault();

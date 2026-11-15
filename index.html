@@ -1315,6 +1315,40 @@
                             </button>
                         </div>
 
+                        <!-- Gemini AI Assistant Configuration Card -->
+                        <div class="card glass" id="settings-gemini-card">
+                            <h3><i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Gemini AI Asistan</h3>
+                            <p class="text-sm text-muted" style="margin: 8px 0 12px;">
+                                Sohbet kutusuyla mekan eklemek, rota planlamak ve masraf kaydetmek için kendi cihazınızda saklanan Gemini API anahtarınızı girin.
+                            </p>
+                            <form id="settings-gemini-form" class="settings-form">
+                                <div class="form-group">
+                                    <label for="settings-gemini-key">Gemini API Key</label>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <input type="password" id="settings-gemini-key" placeholder="AIzaSy..." class="text-input" style="flex:1; margin:0;">
+                                        <button type="button" id="btn-toggle-gemini-key" class="btn btn-secondary btn-sm" title="Anahtarı göster/gizle" style="height:42px;">
+                                            <i data-lucide="eye"></i>
+                                        </button>
+                                    </div>
+                                    <span class="text-xs text-muted" style="display:block; margin-top:6px;">
+                                        Yalnızca bu tarayıcı/cihazda (<code>localStorage</code>) saklanır. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> üzerinden ücretsiz alabilirsiniz.
+                                    </span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="settings-gemini-model">Gemini Modeli</label>
+                                    <select id="settings-gemini-model" class="select-input">
+                                        <option value="gemini-2.5-flash">gemini-2.5-flash (Hızlı & Önerilen)</option>
+                                        <option value="gemini-2.5-pro">gemini-2.5-pro (Gelişmiş Planlama)</option>
+                                        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    <button type="submit" class="btn btn-primary">AI Ayarlarını Kaydet</button>
+                                    <button type="button" id="btn-clear-gemini-key" class="btn btn-secondary">Anahtarı Temizle</button>
+                                </div>
+                            </form>
+                        </div>
+
                          <!-- Category Management Panel Card -->
                          <div class="card glass double-span hidden" id="settings-categories-card" style="grid-column: 1 / -1;">
                              <h3 style="margin-bottom: 15px;"><i data-lucide="tag" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Harcama Kategorileri</h3>
@@ -1834,6 +1868,65 @@ create policy "Users can delete own shared routes" on public.shared_routes
             </a>
         </nav>
     </div>
+
+    <!-- Floating Universal Gemini AI Assistant Chatbox -->
+    <button type="button" id="btn-ai-fab" class="ai-fab hidden" title="TravellerMobi AI Asistan">
+        <i data-lucide="sparkles"></i>
+        <span class="ai-fab-label">AI Asistan</span>
+    </button>
+
+    <aside id="ai-chatbox-panel" class="ai-chatbox-panel glass hidden" aria-label="TravellerMobi AI Asistan">
+        <div class="ai-chat-header">
+            <div class="ai-chat-title-wrap">
+                <div class="ai-chat-avatar"><i data-lucide="sparkles"></i></div>
+                <div>
+                    <h3 class="ai-chat-title">TravellerMobi AI</h3>
+                    <span class="ai-chat-subtitle">Bağlam: <strong id="ai-context-label">Genel</strong></span>
+                </div>
+            </div>
+            <div class="ai-chat-header-actions">
+                <label class="ai-auto-toggle" title="Açıkken mekan ve masraf işlemlerini onay sormadan doğrudan kaydeder">
+                    <input type="checkbox" id="ai-auto-apply-toggle">
+                    <span>Otomatik</span>
+                </label>
+                <button type="button" id="btn-ai-clear" class="btn-icon-sm" title="Sohbeti temizle">
+                    <i data-lucide="trash-2"></i>
+                </button>
+                <button type="button" id="btn-ai-close" class="btn-icon-sm" title="Kapat">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="ai-no-key-banner" class="ai-no-key-banner hidden">
+            <p><strong>Gemini API Anahtarı Gerekli:</strong> Cihazınızda kayıtlı anahtar yok. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>'dan ücretsiz alıp aşağıya kaydedebilirsiniz.</p>
+            <form id="ai-inline-key-form" class="ai-inline-key-form">
+                <input type="password" id="ai-inline-key-input" placeholder="AIzaSy... anahtarınızı yapıştırın" class="text-input">
+                <button type="submit" class="btn btn-primary btn-sm">Kaydet</button>
+            </form>
+        </div>
+
+        <div id="ai-chat-messages" class="ai-chat-messages"></div>
+
+        <div id="ai-quick-prompts" class="ai-quick-prompts">
+            <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Roma seyahati için Kolezyum çevresinde 3 iyi kahveci ve 2 restoran önerip ekle">☕ Mekan öner & ekle</button>
+            <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Şehir Rehberi'ne şu mekanı ekle: ">📍 Şehir Rehberine ekle</button>
+            <button type="button" class="ai-quick-chip" data-mode="send" data-prompt="Mevcut seyahatlerimi, mekan sayılarımı ve harcama durumumu özetle">📊 Bütçe & Özet</button>
+            <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Yeni bir seyahat oluştur: ">✈️ Yeni seyahat aç</button>
+        </div>
+
+        <div id="ai-typing-indicator" class="ai-typing-indicator hidden">
+            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+            <span>Gemini düşünüyor...</span>
+        </div>
+
+        <form id="ai-chat-form" class="ai-chat-input-bar">
+            <textarea id="ai-chat-input" rows="1" placeholder="Örn: Trevi Çeşmesi yakınında 2 pizzacı ekle..." class="ai-chat-textarea"></textarea>
+            <button type="submit" id="btn-ai-send" class="btn btn-primary ai-send-btn" title="Gönder">
+                <i data-lucide="send"></i>
+            </button>
+        </form>
+    </aside>
 
     <!-- Application Script Engine Modules -->
     <script type="module" src="config.js"></script>
