@@ -247,6 +247,39 @@ function pruneSyncQueueByRecord(recordId, actionsToRemove, cascadeTripId = null)
 
 let syncInFlightPromise = null;
 
+/**
+ * Extracts a missing column name from PostgREST/Postgres schema-cache errors
+ * (e.g. "Could not find the 'rating' column of 'places' in the schema cache").
+ */
+function extractMissingColumnName(error) {
+    const msg = error?.message || '';
+    const pgrstMatch = msg.match(/Could not find the '([a-zA-Z0-9_]+)' column of '[^']+' in the schema cache/i);
+    if (pgrstMatch) return pgrstMatch[1];
+    const pgMatch = msg.match(/column "([a-zA-Z0-9_]+)" of relation "[^"]+" does not exist/i);
+    return pgMatch ? pgMatch[1] : null;
+}
+
+/**
+ * Executes a Supabase insert/update operation and automatically strips any
+ * missing columns reported by PostgREST schema cache so older DB schemas
+ * never get permanently stuck in the sync queue.
+ */
+async function executeWithSchemaFallback(operationFn, payload) {
+    const workingPayload = { ...payload };
+    for (let attempt = 0; attempt < 6; attempt++) {
+        const result = await operationFn(workingPayload);
+        if (!result?.error) return result;
+
+        const missingCol = extractMissingColumnName(result.error);
+        if (!missingCol || !(missingCol in workingPayload)) {
+            return result;
+        }
+        console.warn(`Supabase column '${missingCol}' missing in schema cache; retrying without it.`);
+        delete workingPayload[missingCol];
+    }
+    return await operationFn(workingPayload);
+}
+
 async function processOfflineMemoryPhoto(itemData, payload) {
     if (!itemData.photo_base64 || !itemData.photo_name) return;
     const fileBlob = base64ToBlob(itemData.photo_base64);
@@ -343,11 +376,11 @@ async function runOfflineQueueSync(onProgress) {
                 if (error) throw error;
             }
             else if (item.action === 'create_place') {
-                const { error } = await sb.from('places').insert([payload]);
+                const { error } = await executeWithSchemaFallback((clean) => sb.from('places').insert([clean]), payload);
                 if (error) throw error;
             }
             else if (item.action === 'update_place') {
-                const { error } = await sb.from('places').update(payload).eq('id', item.data.id);
+                const { error } = await executeWithSchemaFallback((clean) => sb.from('places').update(clean).eq('id', item.data.id), payload);
                 if (error) throw error;
             }
             else if (item.action === 'delete_place') {
@@ -1273,10 +1306,7 @@ export async function createPlace(placeData) {
         if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
         payload.user_id = user.id;
 
-        const { data, error } = await client
-            .from('places')
-            .insert([payload])
-            .select();
+        const { data, error } = await executeWithSchemaFallback((clean) => client.from('places').insert([clean]).select(), payload);
 
         if (error) throw error;
         return data[0];
@@ -1334,11 +1364,7 @@ export async function updatePlace(placeId, placeData) {
             addToSyncQueue('update_place', payload);
             return payload;
         }
-        const { data, error } = await client
-            .from('places')
-            .update(payload)
-            .eq('id', placeId)
-            .select();
+        const { data, error } = await executeWithSchemaFallback((clean) => client.from('places').update(clean).eq('id', placeId).select(), payload);
 
         if (error) throw error;
         return data[0];
