@@ -1450,6 +1450,49 @@ function renderRoutePolyline() {
 /**
  * Render places list / cards below the map with matching Number Badges (#1, #2, #3...)
  */
+/**
+ * Dynamically renders only filter pills relevant to the active trip's places,
+ * hiding empty categories so users never mistake empty pills for existing places.
+ */
+function renderPlacesFilterBar() {
+    const filterBar = document.getElementById('places-filter-bar');
+    if (!filterBar) return;
+
+    const allPlaces = state.placesList || [];
+    const total = allPlaces.length;
+    const visitedCount = allPlaces.filter(p => p.status === 'visited').length;
+    const plannedCount = total - visitedCount;
+
+    const pills = [
+        { key: 'all', label: `Tümü (${total})` }
+    ];
+
+    if (total > 0) {
+        pills.push({ key: 'radar', label: `<i data-lucide="crosshair" style="width:13px; height:13px; vertical-align:middle; margin-right:4px;"></i> Yakınımda`, rawHtml: true });
+        if (plannedCount > 0) pills.push({ key: 'planned', label: `İstek (${plannedCount})` });
+        if (visitedCount > 0) pills.push({ key: 'visited', label: `Gidildi (${visitedCount})` });
+
+        Object.entries(PLACE_CATEGORIES).forEach(([catKey, catInfo]) => {
+            const count = allPlaces.filter(p => (p.category || 'other') === catKey).length;
+            if (count > 0) {
+                pills.push({ key: catKey, label: `${catInfo.name} (${count})` });
+            }
+        });
+    }
+
+    const validKeys = new Set(pills.map(p => p.key));
+    if (!validKeys.has(state.activePlaceFilter || 'all')) {
+        state.activePlaceFilter = 'all';
+    }
+    const activeKey = state.activePlaceFilter || 'all';
+
+    filterBar.innerHTML = pills.map(p => `
+        <button type="button" class="filter-pill ${p.key === activeKey ? 'active' : ''}" data-filter="${escapeHtml(p.key)}">
+            ${p.rawHtml ? p.label : escapeHtml(p.label)}
+        </button>
+    `).join('');
+}
+
 function renderPlacesList() {
     const listContainer = document.getElementById('places-cards-container');
     const statsEl = document.getElementById('places-summary-stats');
@@ -1469,6 +1512,7 @@ function renderPlacesList() {
         `;
     }
 
+    renderPlacesFilterBar();
     const filtered = getFilteredPlaces();
 
 

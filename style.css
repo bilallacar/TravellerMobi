@@ -5434,3 +5434,18 @@ body.light-theme .dash-res-chip-pnr {
   margin-bottom: 6px;
   object-fit: cover;
 }
+
+
+/* Light-theme contrast fix for radar filter pill */
+body.light-theme .filter-pill[data-filter="radar"] {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+body.light-theme .filter-pill[data-filter="radar"].active,
+body.light-theme .filter-pill[data-filter="radar"]:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
