@@ -13,6 +13,8 @@ let chatMessages = []; // UI messages: { id, role: 'user'|'assistant', text, too
 let geminiHistory = []; // Gemini API contents array: { role: 'user'|'model'|'function', parts: [...] }
 let isSending = false;
 let loadedStorageKey = null;
+let savedScrollY = 0;
+let isMobileScrollLocked = false;
 
 function getStorageKey() {
     const uid = state.activeUser?.id || 'guest';
@@ -60,6 +62,7 @@ function updateContextSubtitle() {
 function syncKeyBannerVisibility() {
     const banner = document.getElementById('ai-no-key-banner');
     const quickPrompts = document.getElementById('ai-quick-prompts');
+    const statusDot = document.getElementById('ai-key-status-dot');
     const hasKey = !!(config.geminiApiKey && config.geminiApiKey.trim());
 
     if (banner) {
@@ -68,6 +71,47 @@ function syncKeyBannerVisibility() {
     if (quickPrompts) {
         quickPrompts.classList.toggle('hidden', chatMessages.length > 0);
     }
+    if (statusDot) {
+        statusDot.classList.toggle('is-ready', hasKey);
+        statusDot.classList.toggle('is-missing', !hasKey);
+        statusDot.title = hasKey ? `Bağlı (${config.geminiModel || 'gemini-2.5-flash'})` : 'Gemini API Anahtarı Gerekli';
+    }
+}
+
+function syncVisualViewportHeight() {
+    const panel = document.getElementById('ai-chatbox-panel');
+    if (!panel || panel.classList.contains('hidden')) return;
+    if (window.visualViewport) {
+        panel.style.setProperty('--ai-vh', `${Math.round(window.visualViewport.height)}px`);
+    }
+}
+
+function lockBackgroundScroll() {
+    if (window.innerWidth <= 768 && !isMobileScrollLocked) {
+        savedScrollY = window.scrollY || window.pageYOffset || 0;
+        isMobileScrollLocked = true;
+        document.documentElement.classList.add('ai-scroll-locked');
+        document.body.classList.add('ai-scroll-locked');
+        document.body.style.top = `-${savedScrollY}px`;
+    }
+    syncVisualViewportHeight();
+}
+
+function unlockBackgroundScroll() {
+    if (isMobileScrollLocked) {
+        isMobileScrollLocked = false;
+        document.documentElement.classList.remove('ai-scroll-locked');
+        document.body.classList.remove('ai-scroll-locked');
+        document.body.style.top = '';
+        window.scrollTo(0, savedScrollY);
+    }
+}
+
+function autoResizeTextarea(textarea) {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const nextHeight = Math.min(textarea.scrollHeight, 116);
+    textarea.style.height = `${Math.max(nextHeight, 38)}px`;
 }
 
 /**
@@ -833,9 +877,16 @@ function renderChatMessages() {
     if (chatMessages.length === 0) {
         listEl.innerHTML = `
             <div class="ai-welcome-box">
+                <div class="ai-welcome-glow"></div>
                 <div class="ai-welcome-icon"><i data-lucide="sparkles"></i></div>
-                <h4>TravellerMobi AI Hazır</h4>
-                <p>Mekan ekleyin, yeni seyahat açın, harcama girin veya bütçe/rota tavsiyesi isteyin.</p>
+                <h4>TravellerMobi AI Asistan</h4>
+                <p>Doğal dille yaz; mekanları haritana, harcamaları bütçene ve anılarını günlüğüne doğrudan işleyeyim.</p>
+                <div class="ai-capability-grid">
+                    <span class="ai-cap-pill"><i data-lucide="map-pin"></i> Mekan & Rehber</span>
+                    <span class="ai-cap-pill"><i data-lucide="compass"></i> Seyahat & Rota</span>
+                    <span class="ai-cap-pill"><i data-lucide="wallet"></i> Masraf & Bütçe</span>
+                    <span class="ai-cap-pill"><i data-lucide="book-open"></i> Anı & Not</span>
+                </div>
             </div>
         `;
         if (window.lucide) window.lucide.createIcons();
@@ -898,6 +949,7 @@ function renderChatMessages() {
 
         return `
             <div class="ai-msg ai-msg-assistant ${msg.error ? 'is-error' : ''}">
+                <div class="ai-msg-avatar-mini"><i data-lucide="sparkles"></i></div>
                 <div class="ai-msg-bubble">
                     ${chipsHtml}
                     <div class="ai-msg-text">${formatAssistantText(msg.text)}</div>
@@ -948,23 +1000,29 @@ function renderChatMessages() {
 
 export function openAiChatbox() {
     const panel = document.getElementById('ai-chatbox-panel');
+    const backdrop = document.getElementById('ai-chatbox-backdrop');
     const fab = document.getElementById('btn-ai-fab');
+    if (backdrop) backdrop.classList.remove('hidden');
     if (panel) panel.classList.remove('hidden');
     if (fab) fab.classList.add('is-open');
+    lockBackgroundScroll();
     updateContextSubtitle();
     syncKeyBannerVisibility();
     renderChatMessages();
     const input = document.getElementById('ai-chat-input');
     if (input && config.geminiApiKey) {
-        setTimeout(() => input.focus(), 100);
+        setTimeout(() => input.focus({ preventScroll: true }), 100);
     }
 }
 
 export function closeAiChatbox() {
     const panel = document.getElementById('ai-chatbox-panel');
+    const backdrop = document.getElementById('ai-chatbox-backdrop');
     const fab = document.getElementById('btn-ai-fab');
     if (panel) panel.classList.add('hidden');
+    if (backdrop) backdrop.classList.add('hidden');
     if (fab) fab.classList.remove('is-open');
+    unlockBackgroundScroll();
 }
 
 export function setAiLauncherVisible(visible) {
@@ -983,6 +1041,8 @@ export function initAiAssistant() {
 
     const fab = document.getElementById('btn-ai-fab');
     const panel = document.getElementById('ai-chatbox-panel');
+    const backdrop = document.getElementById('ai-chatbox-backdrop');
+    const messagesEl = document.getElementById('ai-chat-messages');
     const closeBtn = document.getElementById('btn-ai-close');
     const clearBtn = document.getElementById('btn-ai-clear');
     const form = document.getElementById('ai-chat-form');
@@ -1001,6 +1061,36 @@ export function initAiAssistant() {
     if (closeBtn) {
         closeBtn.addEventListener('click', closeAiChatbox);
     }
+
+    if (backdrop) {
+        backdrop.addEventListener('click', closeAiChatbox);
+        backdrop.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    }
+
+    if (panel && messagesEl) {
+        panel.addEventListener('wheel', (e) => {
+            const insideMessages = messagesEl.contains(e.target);
+            if (!insideMessages) {
+                e.preventDefault();
+                return;
+            }
+            const atTop = messagesEl.scrollTop <= 0 && e.deltaY < 0;
+            const atBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 1 && e.deltaY > 0;
+            if (atTop || atBottom) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncVisualViewportHeight);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panel && !panel.classList.contains('hidden')) {
+            closeAiChatbox();
+        }
+    });
 
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
@@ -1051,7 +1141,8 @@ export function initAiAssistant() {
                 sendPromptToGemini(prompt);
             } else if (input) {
                 input.value = prompt;
-                input.focus();
+                autoResizeTextarea(input);
+                input.focus({ preventScroll: true });
             }
         });
     }
@@ -1062,8 +1153,11 @@ export function initAiAssistant() {
             const text = input.value.trim();
             if (!text || isSending) return;
             input.value = '';
+            autoResizeTextarea(input);
             await sendPromptToGemini(text);
         });
+
+        input.addEventListener('input', () => autoResizeTextarea(input));
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {

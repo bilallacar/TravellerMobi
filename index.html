@@ -1870,18 +1870,29 @@ create policy "Users can delete own shared routes" on public.shared_routes
     </div>
 
     <!-- Floating Universal Gemini AI Assistant Chatbox -->
+    <div id="ai-chatbox-backdrop" class="ai-chatbox-backdrop hidden"></div>
+
     <button type="button" id="btn-ai-fab" class="ai-fab hidden" title="TravellerMobi AI Asistan">
-        <i data-lucide="sparkles"></i>
+        <span class="ai-fab-icon"><i data-lucide="sparkles"></i></span>
         <span class="ai-fab-label">AI Asistan</span>
     </button>
 
     <aside id="ai-chatbox-panel" class="ai-chatbox-panel glass hidden" aria-label="TravellerMobi AI Asistan">
+        <div class="ai-sheet-handle-bar">
+            <span class="ai-sheet-handle"></span>
+        </div>
         <div class="ai-chat-header">
             <div class="ai-chat-title-wrap">
-                <div class="ai-chat-avatar"><i data-lucide="sparkles"></i></div>
-                <div>
+                <div class="ai-chat-avatar">
+                    <i data-lucide="sparkles"></i>
+                    <span id="ai-key-status-dot" class="ai-status-dot" title="API Durumu"></span>
+                </div>
+                <div class="ai-chat-title-meta">
                     <h3 class="ai-chat-title">TravellerMobi AI</h3>
-                    <span class="ai-chat-subtitle">Bağlam: <strong id="ai-context-label">Genel</strong></span>
+                    <span class="ai-chat-subtitle">
+                        <i data-lucide="compass"></i>
+                        <strong id="ai-context-label">Genel</strong>
+                    </span>
                 </div>
             </div>
             <div class="ai-chat-header-actions">
@@ -1889,17 +1900,20 @@ create policy "Users can delete own shared routes" on public.shared_routes
                     <input type="checkbox" id="ai-auto-apply-toggle">
                     <span>Otomatik</span>
                 </label>
-                <button type="button" id="btn-ai-clear" class="btn-icon-sm" title="Sohbeti temizle">
+                <button type="button" id="btn-ai-clear" class="ai-header-icon-btn" title="Sohbeti temizle">
                     <i data-lucide="trash-2"></i>
                 </button>
-                <button type="button" id="btn-ai-close" class="btn-icon-sm" title="Kapat">
+                <button type="button" id="btn-ai-close" class="ai-header-icon-btn" title="Kapat">
                     <i data-lucide="x"></i>
                 </button>
             </div>
         </div>
 
         <div id="ai-no-key-banner" class="ai-no-key-banner hidden">
-            <p><strong>Gemini API Anahtarı Gerekli:</strong> Cihazınızda kayıtlı anahtar yok. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>'dan ücretsiz alıp aşağıya kaydedebilirsiniz.</p>
+            <div class="ai-no-key-head">
+                <i data-lucide="key-round"></i>
+                <span><strong>Gemini API Anahtarı Gerekli:</strong> Cihazınıza özel ücretsiz anahtarı <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>'dan alıp yapıştırın.</span>
+            </div>
             <form id="ai-inline-key-form" class="ai-inline-key-form">
                 <input type="password" id="ai-inline-key-input" placeholder="AIzaSy... anahtarınızı yapıştırın" class="text-input">
                 <button type="submit" class="btn btn-primary btn-sm">Kaydet</button>
@@ -1910,21 +1924,23 @@ create policy "Users can delete own shared routes" on public.shared_routes
 
         <div id="ai-quick-prompts" class="ai-quick-prompts">
             <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Roma seyahati için Kolezyum çevresinde 3 iyi kahveci ve 2 restoran önerip ekle">☕ Mekan öner & ekle</button>
-            <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Şehir Rehberi'ne şu mekanı ekle: ">📍 Şehir Rehberine ekle</button>
+            <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Şehir Rehberi'ne şu mekanı ekle: ">📍 Şehir Rehberi</button>
             <button type="button" class="ai-quick-chip" data-mode="send" data-prompt="Mevcut seyahatlerimi, mekan sayılarımı ve harcama durumumu özetle">📊 Bütçe & Özet</button>
-            <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Yeni bir seyahat oluştur: ">✈️ Yeni seyahat aç</button>
+            <button type="button" class="ai-quick-chip" data-mode="prefill" data-prompt="Yeni bir seyahat oluştur: ">✈️ Yeni seyahat</button>
         </div>
 
         <div id="ai-typing-indicator" class="ai-typing-indicator hidden">
             <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-            <span>Gemini düşünüyor...</span>
+            <span>Gemini planlıyor...</span>
         </div>
 
         <form id="ai-chat-form" class="ai-chat-input-bar">
-            <textarea id="ai-chat-input" rows="1" placeholder="Örn: Trevi Çeşmesi yakınında 2 pizzacı ekle..." class="ai-chat-textarea"></textarea>
-            <button type="submit" id="btn-ai-send" class="btn btn-primary ai-send-btn" title="Gönder">
-                <i data-lucide="send"></i>
-            </button>
+            <div class="ai-composer-box">
+                <textarea id="ai-chat-input" rows="1" placeholder="Mekan ekle, rota sor, masraf yaz..." class="ai-chat-textarea"></textarea>
+                <button type="submit" id="btn-ai-send" class="btn btn-primary ai-send-btn" title="Gönder">
+                    <i data-lucide="arrow-up"></i>
+                </button>
+            </div>
         </form>
     </aside>
 
