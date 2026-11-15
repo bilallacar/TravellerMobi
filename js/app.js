@@ -9,6 +9,7 @@ import { showToast } from './utils.js';
 import { initAuthEvents, renderApprovalPending, checkResetPasswordMode } from './modules/auth.js';
 import { initSettingsEvents, loadSettingsForm } from './modules/settings.js';
 import { initTripsEvents, loadTripsData, renderParticipantTags } from './modules/trips.js';
+import { initReservationEvents } from './modules/reservations.js';
 import { initExpensesEvents, loadExpensesData, updateExpenseFormParticipants } from './modules/expenses.js';
 import { initJournalEvents, loadJournalData } from './modules/journal.js';
 import { initDashboardEvents, loadDashboardData, renderDashboard } from './modules/dashboard.js';
@@ -478,6 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuthEvents();
     initSettingsEvents();
     initTripsEvents();
+    initReservationEvents();
     initExpensesEvents();
     initPlacesEvents();
     initShareEvents();

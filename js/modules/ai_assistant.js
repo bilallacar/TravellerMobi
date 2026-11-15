@@ -15,6 +15,74 @@ let isSending = false;
 let loadedStorageKey = null;
 let savedScrollY = 0;
 let isMobileScrollLocked = false;
+let pendingImageAttachment = null; // { mimeType, base64, previewUrl, name }
+
+function compressImageToJpeg(file, maxDim = 1280, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Fotoğraf okunamadı.'));
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Geçersiz görsel dosyası.'));
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxDim || height > maxDim) {
+                    const ratio = Math.min(maxDim / width, maxDim / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                const base64 = dataUrl.split(',')[1] || '';
+
+                // Small thumbnail for chat bubble/sessionStorage
+                const thumbCanvas = document.createElement('canvas');
+                const thumbRatio = Math.min(280 / width, 280 / height, 1);
+                thumbCanvas.width = Math.max(1, Math.round(width * thumbRatio));
+                thumbCanvas.height = Math.max(1, Math.round(height * thumbRatio));
+                thumbCanvas.getContext('2d').drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height);
+
+                resolve({
+                    mimeType: 'image/jpeg',
+                    base64,
+                    previewUrl: thumbCanvas.toDataURL('image/jpeg', 0.65),
+                    name: file.name || 'bilet.jpg'
+                });
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderPendingImagePreview() {
+    const bar = document.getElementById('ai-image-preview-bar');
+    if (!bar) return;
+    if (!pendingImageAttachment) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        return;
+    }
+    bar.innerHTML = `
+        <div class="ai-image-preview-chip">
+            <img src="${pendingImageAttachment.previewUrl}" alt="Eklenen görsel">
+            <span>${escapeHtml(pendingImageAttachment.name)}</span>
+            <button type="button" id="btn-ai-remove-image" aria-label="Görseli kaldır">&times;</button>
+        </div>
+    `;
+    bar.classList.remove('hidden');
+    const rmBtn = document.getElementById('btn-ai-remove-image');
+    if (rmBtn) {
+        rmBtn.addEventListener('click', () => {
+            pendingImageAttachment = null;
+            renderPendingImagePreview();
+        });
+    }
+}
 
 function getStorageKey() {
     const uid = state.activeUser?.id || 'guest';
@@ -23,9 +91,13 @@ function getStorageKey() {
 
 function saveChatSession() {
     try {
+        const leanHistory = geminiHistory.slice(-MAX_HISTORY_TURNS).map(turn => ({
+            ...turn,
+            parts: (turn.parts || []).filter(p => !p.inlineData)
+        }));
         sessionStorage.setItem(getStorageKey(), JSON.stringify({
             chatMessages: chatMessages.slice(-30),
-            geminiHistory: geminiHistory.slice(-MAX_HISTORY_TURNS)
+            geminiHistory: leanHistory
         }));
     } catch (_) {}
 }
@@ -203,8 +275,9 @@ MASRAF KATEGORİLERİ:
 ${expenseCats}
 
 DAVRANIŞ KURALLARI:
-1. Kullanıcı bir yer, rota, masraf, seyahat veya anı sormak/incelemek istediğinde önce ilgili okuma aracını (list_trips, list_places, list_expenses, list_memories) çağırıp gerçek veriye göre yanıt ver.
-2. Kullanıcı "ekle", "kaydet", "planla", "oluştur", "gittim işaretle", "masraf yaz", "anı ekle" gibi bir işlem istediğinde uygun yazma aracını (add_places, create_trip, update_place_status, add_expense, add_memory) çağır.
+1. Kullanıcı bir yer, rota, masraf, seyahat, bilet/rezervasyon veya anı sormak/incelemek istediğinde önce ilgili okuma aracını (list_trips, list_places, list_expenses, list_memories, list_reservations) çağırıp gerçek veriye göre yanıt ver.
+2. Kullanıcı "ekle", "kaydet", "planla", "oluştur", "gittim işaretle", "masraf yaz", "rezervasyon ekle", "bilet kaydet", "anı ekle" gibi bir işlem istediğinde veya bilet/otel onay metni/ekran görüntüsü/fiş paylaştığında uygun yazma aracını (add_places, create_trip, update_place_status, add_expense, add_memory, add_reservation) çağır.
+3. Uçuş (Pegasus, THY vb.), otel (Booking, Airbnb vb.) veya müze/giriş bileti ekran görüntüsü ya da onay maili verildiğinde PNR kodunu, uçuş numarasını, güzergahı, tarih/saati ("YYYY-MM-DDTHH:mm") ve terminal/adres bilgisini çıkarıp add_reservation çağır. Fiş fotoğrafı ise add_expense kullan; yabancı restoran menüsü ise çevirip öne çıkan yemekleri öner.
 3. add_places çağırırken her mekan için GERÇEKÇİ ve DOĞRU latitude/longitude koordinatları, doğru category kodu, adres, kısa not, ne denenmeli (must_try) ve varsa tahmini maliyet (estimated_cost, currency) bilgilerini doldur.
 4. Kullanıcı "Şehir Rehberi'ne" veya genel bir günlük mekana (belirli bir seyahate değil) eklemek isterse target: "city-guide" kullan. Belirli bir seyahat adı verirse target: "trip" ve trip_id / trip_name belirt. Belirtmezse aktif seyahati (veya Şehir Rehberi aktifse city-guide) seç.
 5. Kullanıcı aynı anda hem yeni seyahat açıp hem içine mekan eklemek isterse create_trip ile birlikte add_places çağırabilirsin (trip_name alanını yeni seyahat adıyla aynı ver).
@@ -373,13 +446,43 @@ function getToolDeclarations() {
                         },
                         required: ['title']
                     }
+                },
+                {
+                    name: 'list_reservations',
+                    description: 'Kayıtlı uçuş, otel ve müze/etkinlik rezervasyonlarını ve PNR kodlarını listeler.',
+                    parameters: {
+                        type: 'OBJECT',
+                        properties: {
+                            trip_id: { type: 'STRING', description: 'Opsiyonel seyahat UUID.' }
+                        }
+                    }
+                },
+                {
+                    name: 'add_reservation',
+                    description: 'Uçuş (Pegasus, THY vb.), otel konaklaması, müze/etkinlik bileti veya transfer rezervasyonunu seyahate kaydeder.',
+                    parameters: {
+                        type: 'OBJECT',
+                        properties: {
+                            trip_id: { type: 'STRING', description: 'Seyahat UUID (varsa)' },
+                            trip_name: { type: 'STRING', description: 'Seyahat adı (örn: İtalya)' },
+                            type: { type: 'STRING', enum: ['flight', 'hotel', 'ticket', 'transport', 'other'] },
+                            title: { type: 'STRING', description: 'Kısa başlık (örn: Pegasus SAW → FCO veya Kolezyum Bileti)' },
+                            provider: { type: 'STRING', description: 'Firma veya uçuş kodu (örn: Pegasus · PC 1217, Booking.com)' },
+                            pnr: { type: 'STRING', description: 'PNR, rezervasyon veya bilet referans kodu' },
+                            start_datetime: { type: 'STRING', description: 'YYYY-MM-DDTHH:mm formatında kalkış / giriş tarihi ve saati' },
+                            end_datetime: { type: 'STRING', description: 'Varsa YYYY-MM-DDTHH:mm formatında varış / çıkış tarihi ve saati' },
+                            location: { type: 'STRING', description: 'Havalimanı, terminal, otel adresi veya giriş kapısı' },
+                            notes: { type: 'STRING', description: 'Bagaj hakkı, koltuk no veya ek notlar' }
+                        },
+                        required: ['type', 'title']
+                    }
                 }
             ]
         }
     ];
 }
 
-const READ_TOOLS = new Set(['list_trips', 'list_places', 'list_expenses', 'list_memories']);
+const READ_TOOLS = new Set(['list_trips', 'list_places', 'list_expenses', 'list_memories', 'list_reservations']);
 
 async function executeReadTool(name, args = {}) {
     if (name === 'list_trips') {
@@ -464,6 +567,25 @@ async function executeReadTool(name, args = {}) {
                 location: m.location,
                 date: m.date,
                 description: m.description
+            }))
+        };
+    }
+
+    if (name === 'list_reservations') {
+        const reservations = await db.getReservations(args.trip_id || null);
+        return {
+            count: reservations.length,
+            reservations: reservations.slice(0, 40).map(r => ({
+                id: r.id,
+                trip_id: r.trip_id,
+                type: r.type,
+                title: r.title,
+                provider: r.provider,
+                pnr: r.pnr,
+                start_datetime: r.start_datetime,
+                end_datetime: r.end_datetime,
+                location: r.location,
+                notes: r.notes
             }))
         };
     }
@@ -602,6 +724,22 @@ async function executeWriteAction(action, runtimeTrips) {
         return { type: 'memories', message: `Anı kaydedildi: ${args.title}` };
     }
 
+    if (name === 'add_reservation') {
+        const targetTripId = resolveTripId(args.trip_id, args.trip_name, trips);
+        await db.createReservation({
+            trip_id: targetTripId,
+            type: args.type || 'other',
+            title: args.title || 'Rezervasyon',
+            provider: args.provider || '',
+            pnr: args.pnr || '',
+            start_datetime: args.start_datetime || '',
+            end_datetime: args.end_datetime || '',
+            location: args.location || '',
+            notes: args.notes || ''
+        });
+        return { type: 'reservations', message: `Rezervasyon kaydedildi: ${args.title}` };
+    }
+
     throw new Error(`Desteklenmeyen işlem: ${name}`);
 }
 
@@ -677,6 +815,13 @@ function describeAction(action) {
             subtitle: args.location ? `Konum: ${args.location}` : (args.date || 'Bugün')
         };
     }
+    if (name === 'add_reservation') {
+        return {
+            icon: 'ticket',
+            title: `Rezervasyon: ${args.title || 'Bilet'}`,
+            subtitle: [args.provider, args.pnr ? `PNR: ${args.pnr}` : '', args.start_datetime].filter(Boolean).join(' • ')
+        };
+    }
     return { icon: 'sparkles', title: name, subtitle: '' };
 }
 
@@ -724,10 +869,13 @@ async function callGeminiAPI(contents) {
 /**
  * Sends a user prompt through Gemini multi-turn tool loop
  */
-async function sendPromptToGemini(userText) {
+async function sendPromptToGemini(userText, imageAttachment = null) {
     if (isSending) return;
-    const text = (userText || '').trim();
-    if (!text) return;
+    const rawText = (userText || '').trim();
+    const hasImage = !!(imageAttachment && imageAttachment.base64);
+    if (!rawText && !hasImage) return;
+
+    const text = rawText || 'Bu görseli incele ve uygun şekilde seyahatime (bilet/rezervasyon, masraf veya mekan olarak) kaydet.';
 
     if (!config.geminiApiKey) {
         showToast('Önce Gemini API anahtarınızı kaydetmelisiniz.', 'warning');
@@ -741,10 +889,21 @@ async function sendPromptToGemini(userText) {
     const userMsg = {
         id: `u_${Date.now()}`,
         role: 'user',
-        text
+        text: rawText || '📷 Görsel gönderildi',
+        imageThumb: hasImage ? imageAttachment.previewUrl : null
     };
+    const userParts = [{ text }];
+    if (hasImage) {
+        userParts.push({
+            inlineData: {
+                mimeType: imageAttachment.mimeType || 'image/jpeg',
+                data: imageAttachment.base64
+            }
+        });
+    }
+
     chatMessages.push(userMsg);
-    geminiHistory.push({ role: 'user', parts: [{ text }] });
+    geminiHistory.push({ role: 'user', parts: userParts });
     if (geminiHistory.length > MAX_HISTORY_TURNS) {
         geminiHistory = geminiHistory.slice(-MAX_HISTORY_TURNS);
     }
@@ -856,6 +1015,7 @@ function formatReadChip(toolName, result) {
     if (toolName === 'list_places') return `📍 ${result.count || 0} mekan incelendi`;
     if (toolName === 'list_expenses') return `💳 ${result.count || 0} masraf incelendi`;
     if (toolName === 'list_memories') return `📸 ${result.count || 0} anı incelendi`;
+    if (toolName === 'list_reservations') return `🎫 ${result.count || 0} rezervasyon incelendi`;
     return `✓ ${toolName}`;
 }
 
@@ -895,9 +1055,10 @@ function renderChatMessages() {
 
     listEl.innerHTML = chatMessages.map(msg => {
         if (msg.role === 'user') {
+            const imgHtml = msg.imageThumb ? `<img src="${msg.imageThumb}" class="ai-msg-image" alt="Eklenen görsel">` : '';
             return `
                 <div class="ai-msg ai-msg-user">
-                    <div class="ai-msg-bubble">${escapeHtml(msg.text).replace(/\n/g, '<br>')}</div>
+                    <div class="ai-msg-bubble">${imgHtml}${escapeHtml(msg.text).replace(/\n/g, '<br>')}</div>
                 </div>
             `;
         }
@@ -1147,14 +1308,34 @@ export function initAiAssistant() {
         });
     }
 
+    const attachBtn = document.getElementById('btn-ai-attach-image');
+    const imageInput = document.getElementById('ai-image-input');
+    if (attachBtn && imageInput) {
+        attachBtn.addEventListener('click', () => imageInput.click());
+        imageInput.addEventListener('change', async () => {
+            const file = imageInput.files?.[0];
+            imageInput.value = '';
+            if (!file) return;
+            try {
+                pendingImageAttachment = await compressImageToJpeg(file);
+                renderPendingImagePreview();
+            } catch (err) {
+                showToast('Görsel eklenemedi: ' + err.message, 'danger');
+            }
+        });
+    }
+
     if (form && input) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = input.value.trim();
-            if (!text || isSending) return;
+            if ((!text && !pendingImageAttachment) || isSending) return;
+            const imgToSend = pendingImageAttachment;
+            pendingImageAttachment = null;
+            renderPendingImagePreview();
             input.value = '';
             autoResizeTextarea(input);
-            await sendPromptToGemini(text);
+            await sendPromptToGemini(text, imgToSend);
         });
 
         input.addEventListener('input', () => autoResizeTextarea(input));

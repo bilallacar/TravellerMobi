@@ -5124,3 +5124,313 @@ body.light-theme .weather-chip-rain {
     font-size: 0.72rem;
   }
 }
+
+
+/* =====================================================
+   TRIP RESERVATIONS, TICKETS & PNR CARDS + AI ATTACH
+   ===================================================== */
+.reservations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.res-empty-card {
+  padding: 26px 18px;
+}
+
+.reservation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.res-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.res-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.res-type-badge i,
+.res-type-badge svg {
+  width: 13px;
+  height: 13px;
+}
+
+.res-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.res-card-title {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.res-card-provider {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-primary-light);
+}
+
+body.light-theme .res-card-provider {
+  color: var(--color-primary);
+}
+
+.res-meta-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.res-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.res-meta-line i,
+.res-meta-line svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.res-pnr-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px dashed rgba(99, 102, 241, 0.45);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.res-pnr-pill:hover {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: var(--color-primary);
+}
+
+.res-pnr-pill i,
+.res-pnr-pill svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-primary-light);
+}
+
+body.light-theme .res-pnr-pill {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.res-card-notes {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-color);
+}
+
+.res-smart-paste-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.res-smart-paste-box label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary-light);
+}
+
+body.light-theme .res-smart-paste-box label {
+  color: var(--color-primary);
+}
+
+.res-smart-paste-box button {
+  align-self: flex-end;
+}
+
+/* Dashboard Reservations Quick Bar */
+.dash-reservations-strip {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+}
+
+.dash-reservations-strip.hidden {
+  display: none;
+}
+
+.dash-res-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.dash-res-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dash-res-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+body.light-theme .dash-res-chip {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.dash-res-chip:hover {
+  border-color: var(--color-primary);
+}
+
+.dash-res-chip i,
+.dash-res-chip svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.dash-res-chip-title {
+  font-weight: 600;
+}
+
+.dash-res-chip-time {
+  color: var(--text-secondary);
+}
+
+.dash-res-chip-pnr {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.16);
+  color: var(--color-primary-light);
+  font-weight: 700;
+}
+
+body.light-theme .dash-res-chip-pnr {
+  color: var(--color-primary);
+}
+
+/* AI Assistant Image Upload & Preview */
+.ai-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ai-attach-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-primary-light);
+}
+
+.ai-attach-btn i,
+.ai-attach-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ai-image-preview-bar {
+  margin-bottom: 8px;
+}
+
+.ai-image-preview-bar.hidden {
+  display: none;
+}
+
+.ai-image-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.ai-image-preview-chip img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.ai-image-preview-chip button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.ai-msg-image {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  object-fit: cover;
+}

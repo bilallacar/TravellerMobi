@@ -3,6 +3,7 @@
 import { state } from '../state.js';
 import * as db from '../../db.js';
 import { showToast, convertCurrency, escapeHtml } from '../utils.js';
+import { loadReservationsData } from './reservations.js';
 
 export async function loadTripsData() {
     const [trips, expenses] = await Promise.all([
@@ -12,6 +13,7 @@ export async function loadTripsData() {
     state.tripsList = trips;
     state.expensesList = expenses;
     renderTrips();
+    await loadReservationsData();
 }
 
 export function renderTrips() {

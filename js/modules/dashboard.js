@@ -5,6 +5,7 @@ import { config } from '../../config.js';
 import * as db from '../../db.js';
 import { convertCurrency, escapeHtml } from '../utils.js';
 import { fetchTripWeather, renderDashboardWeather } from './weather.js';
+import { renderDashboardReservationsStrip } from './reservations.js';
 
 let dashboardWeatherRequestToken = 0;
 
@@ -255,6 +256,7 @@ export function renderDashboard() {
 
     updateConverterResult();
     updateDashboardWeather(activeTrip);
+    renderDashboardReservationsStrip(activeTrip?.id || null);
 
     if (window.lucide) window.lucide.createIcons();
     

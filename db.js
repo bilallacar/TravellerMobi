@@ -148,6 +148,7 @@ const CACHE_KEYS = {
     EXPENSES: 'cached_expenses',
     MEMORIES: 'cached_memories',
     PLACES: 'cached_places',
+    RESERVATIONS: 'cached_reservations',
     QUEUE: 'offline_sync_queue'
 };
 
@@ -246,6 +247,17 @@ function pruneSyncQueueByRecord(recordId, actionsToRemove, cascadeTripId = null)
 }
 
 let syncInFlightPromise = null;
+
+let reservationsCloudTableMissing = false;
+
+/**
+ * Checks whether a Supabase error indicates a missing optional table (e.g. reservations before SQL migration).
+ */
+function isMissingTableError(error) {
+    const code = String(error?.code || '');
+    const msg = String(error?.message || '');
+    return code === 'PGRST205' || code === '42P01' || /Could not find the table|relation .* does not exist/i.test(msg);
+}
 
 /**
  * Extracts a missing column name from PostgREST/Postgres schema-cache errors
@@ -388,6 +400,40 @@ async function runOfflineQueueSync(onProgress) {
                 if (error) throw error;
             }
 
+
+            else if (item.action === 'create_reservation') {
+                const { error } = await executeWithSchemaFallback((clean) => sb.from('reservations').insert([clean]), payload);
+                if (error) {
+                    if (isMissingTableError(error)) {
+                        reservationsCloudTableMissing = true;
+                        console.warn('Reservations table missing in Supabase; keeping locally cached.');
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+            else if (item.action === 'update_reservation') {
+                const { error } = await executeWithSchemaFallback((clean) => sb.from('reservations').update(clean).eq('id', item.data.id), payload);
+                if (error) {
+                    if (isMissingTableError(error)) {
+                        reservationsCloudTableMissing = true;
+                        console.warn('Reservations table missing in Supabase; keeping locally cached.');
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+            else if (item.action === 'delete_reservation') {
+                const { error } = await sb.from('reservations').delete().eq('id', item.data.id);
+                if (error) {
+                    if (isMissingTableError(error)) {
+                        reservationsCloudTableMissing = true;
+                        console.warn('Reservations table missing in Supabase; keeping locally cached.');
+                    } else {
+                        throw error;
+                    }
+                }
+            }
 
             // Remove item from remaining list after success
             const index = remainingQueue.findIndex(q => q.id === item.id);
@@ -1445,6 +1491,228 @@ export async function deletePlace(placeId) {
     } catch (err) {
         console.error("DB error deleting place:", err);
         addToSyncQueue('delete_place', { id: placeId });
+        return { success: true };
+    }
+}
+
+/* ==========================================================================
+   RESERVATIONS & TICKETS RESOURCE API (Cloud + Zero-Friction Local Fallback)
+   ========================================================================== */
+
+const RESERVATION_QUEUE_CONFIG = {
+    createAction: 'create_reservation',
+    updateAction: 'update_reservation',
+    deleteAction: 'delete_reservation'
+};
+
+function mergeReservationsWithCache(remoteList, localAll, tripId) {
+    const mergedRemote = mergePendingRecords(remoteList || [], {
+        ...RESERVATION_QUEUE_CONFIG,
+        filterFn: (r) => !tripId || String(r?.trip_id) === String(tripId)
+    });
+    const mergedIds = new Set(mergedRemote.map(r => String(r.id)));
+    const localOnlyItems = (localAll || []).filter(r => {
+        if (!r || !r.id || mergedIds.has(String(r.id))) return false;
+        if (!r._localOnly) return false;
+        return !tripId || String(r.trip_id) === String(tripId);
+    });
+    return deduplicateById(mergedRemote.concat(localOnlyItems));
+}
+
+export async function getReservations(tripId = null) {
+    const localAll = getLocalCache(CACHE_KEYS.RESERVATIONS);
+    const filterCache = (items) => {
+        const list = items || [];
+        const filtered = !tripId ? list : list.filter(r => String(r?.trip_id) === String(tripId));
+        return [...filtered].sort((a, b) => String(a.start_datetime || '').localeCompare(String(b.start_datetime || '')));
+    };
+
+    if (!isOnline() || reservationsCloudTableMissing) {
+        return filterCache(mergePendingRecords(localAll, RESERVATION_QUEUE_CONFIG));
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) return filterCache(mergePendingRecords(localAll, RESERVATION_QUEUE_CONFIG));
+
+        let query = client
+            .from('reservations')
+            .select('*')
+            .order('start_datetime', { ascending: true });
+
+        if (tripId) {
+            query = query.eq('trip_id', tripId);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            if (isMissingTableError(error)) {
+                reservationsCloudTableMissing = true;
+                return filterCache(localAll);
+            }
+            throw error;
+        }
+
+        const mergedTripItems = mergeReservationsWithCache(data || [], localAll, tripId);
+        const updatedCache = tripId
+            ? deduplicateById(localAll.filter(r => String(r.trip_id) !== String(tripId)).concat(mergedTripItems))
+            : mergedTripItems;
+        setLocalCache(CACHE_KEYS.RESERVATIONS, updatedCache);
+        return filterCache(mergedTripItems);
+    } catch (err) {
+        console.warn('Error fetching reservations, falling back to local cache:', err);
+        return filterCache(mergePendingRecords(localAll, RESERVATION_QUEUE_CONFIG));
+    }
+}
+
+export async function createReservation(resData) {
+    const payload = {
+        id: generateUUID(),
+        trip_id: resData.trip_id || null,
+        type: resData.type || 'other',
+        title: (resData.title || '').trim(),
+        provider: (resData.provider || '').trim(),
+        pnr: (resData.pnr || '').trim().toUpperCase(),
+        start_datetime: resData.start_datetime || '',
+        end_datetime: resData.end_datetime || '',
+        location: (resData.location || '').trim(),
+        notes: (resData.notes || '').trim(),
+        created_at: new Date().toISOString()
+    };
+
+    const cached = getLocalCache(CACHE_KEYS.RESERVATIONS);
+    cached.push(payload);
+    setLocalCache(CACHE_KEYS.RESERVATIONS, cached);
+
+    if (!isOnline() || reservationsCloudTableMissing) {
+        if (reservationsCloudTableMissing) {
+            payload._localOnly = true;
+            setLocalCache(CACHE_KEYS.RESERVATIONS, cached);
+        } else {
+            addToSyncQueue('create_reservation', payload);
+        }
+        return payload;
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            addToSyncQueue('create_reservation', payload);
+            return payload;
+        }
+        const user = await getCurrentUser();
+        if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
+        payload.user_id = user.id;
+
+        const { data, error } = await executeWithSchemaFallback(
+            (clean) => client.from('reservations').insert([clean]).select(),
+            payload
+        );
+        if (error) {
+            if (isMissingTableError(error)) {
+                reservationsCloudTableMissing = true;
+                payload._localOnly = true;
+                setLocalCache(CACHE_KEYS.RESERVATIONS, cached);
+                return payload;
+            }
+            throw error;
+        }
+        return data[0] || payload;
+    } catch (err) {
+        console.warn('Queued reservation creation offline:', err);
+        addToSyncQueue('create_reservation', payload);
+        return payload;
+    }
+}
+
+export async function updateReservation(resId, resData) {
+    const cached = getLocalCache(CACHE_KEYS.RESERVATIONS);
+    const existing = cached.find(r => String(r.id) === String(resId)) || {};
+    const payload = {
+        id: resId,
+        trip_id: resData.trip_id !== undefined ? (resData.trip_id || null) : (existing.trip_id || null),
+        type: resData.type || existing.type || 'other',
+        title: (resData.title ?? existing.title ?? '').trim(),
+        provider: (resData.provider ?? existing.provider ?? '').trim(),
+        pnr: (resData.pnr ?? existing.pnr ?? '').trim().toUpperCase(),
+        start_datetime: resData.start_datetime ?? existing.start_datetime ?? '',
+        end_datetime: resData.end_datetime ?? existing.end_datetime ?? '',
+        location: (resData.location ?? existing.location ?? '').trim(),
+        notes: (resData.notes ?? existing.notes ?? '').trim()
+    };
+
+    const idx = cached.findIndex(r => String(r.id) === String(resId));
+    if (idx > -1) {
+        cached[idx] = { ...cached[idx], ...payload };
+        setLocalCache(CACHE_KEYS.RESERVATIONS, cached);
+    }
+
+    if (!isOnline() || reservationsCloudTableMissing) {
+        if (!reservationsCloudTableMissing) {
+            addToSyncQueue('update_reservation', payload);
+        }
+        return payload;
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            addToSyncQueue('update_reservation', payload);
+            return payload;
+        }
+        const { data, error } = await executeWithSchemaFallback(
+            (clean) => client.from('reservations').update(clean).eq('id', resId).select(),
+            payload
+        );
+        if (error) {
+            if (isMissingTableError(error)) {
+                reservationsCloudTableMissing = true;
+                return payload;
+            }
+            throw error;
+        }
+        return data[0] || payload;
+    } catch (err) {
+        console.warn('Queued reservation update offline:', err);
+        addToSyncQueue('update_reservation', payload);
+        return payload;
+    }
+}
+
+export async function deleteReservation(resId) {
+    const targetId = String(resId);
+    const cached = getLocalCache(CACHE_KEYS.RESERVATIONS);
+    const targetItem = cached.find(r => String(r.id) === targetId);
+    setLocalCache(CACHE_KEYS.RESERVATIONS, cached.filter(r => String(r.id) !== targetId));
+
+    const hadPendingCreate = pruneSyncQueueByRecord(targetId, ['create_reservation', 'update_reservation', 'delete_reservation']);
+    if (hadPendingCreate || targetItem?._localOnly || reservationsCloudTableMissing) {
+        return { success: true };
+    }
+
+    if (!isOnline()) {
+        addToSyncQueue('delete_reservation', { id: resId });
+        return { success: true };
+    }
+
+    try {
+        const client = await getSupabase();
+        if (!client) {
+            addToSyncQueue('delete_reservation', { id: resId });
+            return { success: true };
+        }
+        const { error } = await client.from('reservations').delete().eq('id', resId);
+        if (error) {
+            if (isMissingTableError(error)) {
+                reservationsCloudTableMissing = true;
+                return { success: true };
+            }
+            throw error;
+        }
+        return { success: true };
+    } catch (err) {
+        console.warn('Queued reservation deletion offline:', err);
+        addToSyncQueue('delete_reservation', { id: resId });
         return { success: true };
     }
 }
