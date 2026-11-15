@@ -4,6 +4,9 @@ import { state } from '../state.js';
 import * as db from '../../db.js';
 import { showToast, escapeHtml, calculateDistance, isValidCoord } from '../utils.js';
 import { openStoryModal, initStoryExportEvents } from './story_export.js';
+import { fetchTripWeather, renderPlacesWeatherPill } from './weather.js';
+
+let placesWeatherRequestToken = 0;
 
 let mapInstance = null;
 let markersLayer = null;
@@ -166,6 +169,12 @@ export function initPlacesEvents() {
             renderPlacesList();
             renderMapMarkers();
         });
+    }
+
+    // Multi-Stop Google Maps Walking Route Button
+    const btnExportGmaps = document.getElementById('btn-export-gmaps-route');
+    if (btnExportGmaps) {
+        btnExportGmaps.addEventListener('click', () => openMultiStopGoogleMapsRoute());
     }
 
     // Smart Route Optimizer Button (En az yürüme mesafesi sıralayıcı)
@@ -401,6 +410,7 @@ export async function loadPlacesData() {
 
         try {
             initOrUpdateMap();
+            updatePlacesWeather();
         } catch (mapErr) {
             console.error("Failed to initialize or update map:", mapErr);
         }
@@ -740,6 +750,71 @@ function updatePlacesMapZoomClass() {
  * calculates walking distance savings, updates visit_order in database and local cache,
  * and re-renders the route polyline and cards.
  */
+/**
+ * Updates live weather badge in the Places map header for the active trip/city.
+ */
+async function updatePlacesWeather() {
+    const pillEl = document.getElementById('places-weather-badge');
+    if (!pillEl) return;
+    const token = ++placesWeatherRequestToken;
+    const activeTrip = (state.tripsList || []).find(t => String(t.id) === String(state.activeTripId)) || null;
+    const weather = await fetchTripWeather({ places: state.placesList, trip: activeTrip });
+    if (token !== placesWeatherRequestToken) return;
+    renderPlacesWeatherPill(pillEl, weather);
+}
+
+/**
+ * Opens filtered/sorted stops (up to 10) in Google Maps as a multi-stop walking route.
+ */
+function openMultiStopGoogleMapsRoute() {
+    const candidates = getSortedPlaces(getFilteredPlaces()).filter(p => p && isValidCoord(p.latitude, p.longitude));
+    if (candidates.length === 0) {
+        showToast("Rota oluşturmak için konum bilgili en az 1 mekan gerekli.", "warning");
+        return;
+    }
+
+    const unvisited = candidates.filter(p => p.status !== 'visited');
+    const sourceList = unvisited.length > 0 ? unvisited : candidates;
+    const maxStops = 10;
+    const stops = sourceList.slice(0, maxStops);
+
+    const startFromGps = currentUserCoords &&
+        calculateDistance(
+            currentUserCoords.lat,
+            currentUserCoords.lng,
+            parseFloat(stops[0].latitude),
+            parseFloat(stops[0].longitude)
+        ) < 50000;
+
+    const params = new URLSearchParams({
+        api: '1',
+        travelmode: 'walking'
+    });
+
+    if (!startFromGps && stops.length === 1) {
+        params.set('destination', `${stops[0].latitude},${stops[0].longitude}`);
+    } else {
+        const originCoord = startFromGps
+            ? `${currentUserCoords.lat},${currentUserCoords.lng}`
+            : `${stops[0].latitude},${stops[0].longitude}`;
+        const routeStops = startFromGps ? stops : stops.slice(1);
+        const lastStop = routeStops[routeStops.length - 1];
+        const waypoints = routeStops.slice(0, -1).map(p => `${p.latitude},${p.longitude}`);
+
+        params.set('origin', originCoord);
+        params.set('destination', `${lastStop.latitude},${lastStop.longitude}`);
+        if (waypoints.length > 0) {
+            params.set('waypoints', waypoints.join('|'));
+        }
+    }
+
+    const url = `https://www.google.com/maps/dir/?${params.toString()}`;
+    window.open(url, '_blank', 'noopener');
+
+    const extraNote = sourceList.length > maxStops ? ` (ilk ${maxStops} durak)` : '';
+    showToast(`${stops.length} duraklık Google Maps yürüyüş rotası açılıyor${extraNote}...`, "success");
+}
+
 export async function optimizeRouteOrder() {
     const validPlaces = state.placesList.filter(p => p && p.latitude && p.longitude);
 

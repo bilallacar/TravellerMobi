@@ -4,6 +4,18 @@ import { state } from '../state.js';
 import { config } from '../../config.js';
 import * as db from '../../db.js';
 import { convertCurrency, escapeHtml } from '../utils.js';
+import { fetchTripWeather, renderDashboardWeather } from './weather.js';
+
+let dashboardWeatherRequestToken = 0;
+
+async function updateDashboardWeather(activeTrip) {
+    const stripEl = document.getElementById('dash-weather-strip');
+    if (!stripEl) return;
+    const token = ++dashboardWeatherRequestToken;
+    const weather = await fetchTripWeather({ places: state.placesList, trip: activeTrip });
+    if (token !== dashboardWeatherRequestToken) return;
+    renderDashboardWeather(stripEl, weather);
+}
 
 export async function loadDashboardData() {
     state.tripsList = await db.getTrips();
@@ -242,6 +254,7 @@ export function renderDashboard() {
     }
 
     updateConverterResult();
+    updateDashboardWeather(activeTrip);
 
     if (window.lucide) window.lucide.createIcons();
     

@@ -4991,3 +4991,136 @@ body.light-theme .pill-rating {
     height: 28px;
   }
 }
+
+
+/* =====================================================
+   LIVE TRIP WEATHER WIDGET (DASHBOARD & MAP)
+   ===================================================== */
+.weather-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+}
+
+.weather-strip.hidden {
+  display: none;
+}
+
+body.light-theme .weather-strip {
+  background: rgba(99, 102, 241, 0.06);
+  border-color: rgba(99, 102, 241, 0.18);
+}
+
+.weather-current-col {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.weather-current-emoji {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.weather-current-temp {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.weather-current-loc {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.weather-days-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.weather-day-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 9px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  font-size: 0.76rem;
+  color: var(--text-primary);
+}
+
+.weather-chip-day {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.weather-chip-temp small {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.weather-chip-rain {
+  font-size: 0.7rem;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+body.light-theme .weather-chip-rain {
+  color: #0284c7;
+}
+
+.places-weather-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.places-weather-pill:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.places-weather-pill.hidden {
+  display: none;
+}
+
+.weather-pill-meta {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .weather-strip {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .weather-days-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .weather-day-chip {
+    flex: 1;
+    justify-content: center;
+    padding: 5px 6px;
+    font-size: 0.72rem;
+  }
+}

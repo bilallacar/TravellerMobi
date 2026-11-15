@@ -314,6 +314,9 @@
                                     </div>
                                 </div>
 
+                                <!-- Trip Weather Strip -->
+                                <div id="dash-weather-strip" class="weather-strip hidden"></div>
+
                                 <!-- Budget Progress Row -->
                                 <div class="budget-progress-container" style="margin-top:16px;">
                                     <div class="budget-text-row">
@@ -558,8 +561,12 @@
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                                 <span class="map-tip"><i data-lucide="info"></i> Pinlere dokunarak detayları görün.</span>
                                 <div id="places-route-total-summary" class="places-route-summary-pill hidden"></div>
+                                <div id="places-weather-badge" class="places-weather-pill hidden" role="button" tabindex="0" title="4 günlük tahmin için dokunun"></div>
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-gmaps-route" title="Gidilecek mekanları Google Maps çoklu yürüyüş rotası olarak aç">
+                                    <i data-lucide="navigation"></i> <span>Maps Rota</span>
+                                </button>
                                 <button type="button" class="btn btn-secondary btn-sm" id="btn-optimize-route" title="En kısa yürüyüş rotasına göre sırala">
                                     <i data-lucide="sparkles"></i> <span>Akıllı Sırala</span>
                                 </button>
