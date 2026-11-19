@@ -2249,38 +2249,64 @@ export async function deleteNewsSource(id) {
 
 export async function recordSiteVisit(payload) {
     if (!hasInternet() || !payload?.visitor_id) return false;
+    const rpcBody = {
+        p_visitor_id: payload.visitor_id,
+        p_session_id: payload.session_id || null,
+        p_event_type: payload.event_type || 'page_view',
+        p_page_path: payload.page_path || '#explore',
+        p_post_slug: payload.post_slug || null,
+        p_post_title: payload.post_title || null,
+        p_referrer: payload.referrer || null,
+        p_referrer_domain: payload.referrer_domain || null,
+        p_utm_source: payload.utm_source || null,
+        p_utm_medium: payload.utm_medium || null,
+        p_utm_campaign: payload.utm_campaign || null,
+        p_device_type: payload.device_type || null,
+        p_os: payload.os || null,
+        p_browser: payload.browser || null,
+        p_language: payload.language || null,
+        p_screen_resolution: payload.screen_resolution || null,
+        p_timezone: payload.timezone || null,
+        p_country: payload.country || null,
+        p_city: payload.city || null,
+        p_region: payload.region || null,
+        p_is_pwa: !!payload.is_pwa,
+        p_user_id: payload.user_id || null,
+        p_user_email: payload.user_email || null,
+        p_scroll_depth: typeof payload.scroll_depth === 'number' ? Math.round(payload.scroll_depth) : null,
+        p_duration_seconds: typeof payload.duration_seconds === 'number' ? Math.round(payload.duration_seconds) : null,
+        p_search_query: payload.search_query ? String(payload.search_query).slice(0, 120) : null,
+        p_search_results_count: typeof payload.search_results_count === 'number' ? Math.round(payload.search_results_count) : null
+    };
+
     try {
+        // Use keepalive fetch for outbound clicks & page-exit reading events so iOS Safari never cancels them
+        if (payload._keepalive && config.supabaseUrl && config.supabaseKey) {
+            let authToken = config.supabaseKey;
+            try {
+                if (supabase?.auth) {
+                    const { data } = await supabase.auth.getSession();
+                    if (data?.session?.access_token) authToken = data.session.access_token;
+                }
+            } catch (_) {}
+
+            const url = `${config.supabaseUrl.replace(/\/$/, '')}/rest/v1/rpc/record_site_visit`;
+            const res = await fetch(url, {
+                method: 'POST',
+                keepalive: true,
+                headers: {
+                    'apikey': config.supabaseKey,
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(rpcBody)
+            });
+            return res.ok;
+        }
+
         const client = await getSupabase();
         if (!client) return false;
-        const { error } = await client.rpc('record_site_visit', {
-            p_visitor_id: payload.visitor_id,
-            p_session_id: payload.session_id || null,
-            p_event_type: payload.event_type || 'page_view',
-            p_page_path: payload.page_path || '#explore',
-            p_post_slug: payload.post_slug || null,
-            p_post_title: payload.post_title || null,
-            p_referrer: payload.referrer || null,
-            p_referrer_domain: payload.referrer_domain || null,
-            p_utm_source: payload.utm_source || null,
-            p_utm_medium: payload.utm_medium || null,
-            p_utm_campaign: payload.utm_campaign || null,
-            p_device_type: payload.device_type || null,
-            p_os: payload.os || null,
-            p_browser: payload.browser || null,
-            p_language: payload.language || null,
-            p_screen_resolution: payload.screen_resolution || null,
-            p_timezone: payload.timezone || null,
-            p_country: payload.country || null,
-            p_city: payload.city || null,
-            p_region: payload.region || null,
-            p_is_pwa: !!payload.is_pwa,
-            p_user_id: payload.user_id || null,
-            p_user_email: payload.user_email || null,
-            p_scroll_depth: typeof payload.scroll_depth === 'number' ? Math.round(payload.scroll_depth) : null,
-            p_duration_seconds: typeof payload.duration_seconds === 'number' ? Math.round(payload.duration_seconds) : null,
-            p_search_query: payload.search_query ? String(payload.search_query).slice(0, 120) : null,
-            p_search_results_count: typeof payload.search_results_count === 'number' ? Math.round(payload.search_results_count) : null
-        });
+        const { error } = await client.rpc('record_site_visit', rpcBody);
         if (error) {
             if (!isMissingTableError(error)) {
                 console.warn("record_site_visit RPC error:", error.message);

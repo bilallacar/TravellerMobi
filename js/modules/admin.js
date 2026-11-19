@@ -388,6 +388,7 @@ export function clearAdminViewState() {
         'analytics-locations-list',
         'analytics-sources-list',
         'analytics-top-posts-list',
+        'analytics-top-news-list',
         'analytics-reading-quality-list',
         'analytics-search-terms-list',
         'admin-analytics-funnel',
@@ -1062,11 +1063,12 @@ function renderAdminAnalytics() {
         `).join('');
     }
 
-    // 2. Breakdowns + Reading Quality + Search Terms
+    // 2. Breakdowns + Reading Quality + Search Terms + Top News Clicks
     const deviceCounts = {};
     const locationCounts = {};
     const sourceCounts = {};
     const postCounts = {};
+    const newsClickCounts = {};
     const postEngagementMap = {};
     const searchStatsMap = {};
 
@@ -1088,6 +1090,9 @@ function renderAdminAnalytics() {
     for (const ev of events) {
         if (ev.event_type === 'post_view' && ev.post_title) {
             postCounts[ev.post_title] = (postCounts[ev.post_title] || 0) + 1;
+        }
+        if (ev.event_type === 'news_click' && ev.post_title) {
+            newsClickCounts[ev.post_title] = (newsClickCounts[ev.post_title] || 0) + 1;
         }
         if (ev.event_type === 'post_engagement' && (ev.post_title || ev.post_slug)) {
             const key = ev.post_title || ev.post_slug;
@@ -1117,6 +1122,7 @@ function renderAdminAnalytics() {
     renderBreakdownBars('analytics-locations-list', locationCounts, 'Konum verisi henüz oluşmadı');
     renderBreakdownBars('analytics-sources-list', sourceCounts, 'Kaynak verisi henüz oluşmadı');
     renderBreakdownBars('analytics-top-posts-list', postCounts, 'Henüz okunan blog yazısı yok');
+    renderBreakdownBars('analytics-top-news-list', newsClickCounts, 'Henüz tıklanan seyahat haberi yok');
 
     // Render Blog Reading Quality (Scroll Depth & Time)
     const qualityEl = document.getElementById('analytics-reading-quality-list');
@@ -1207,9 +1213,13 @@ function renderAdminAnalytics() {
             ? `UTM: ${v.first_utm_source}${v.first_utm_campaign ? ' / ' + v.first_utm_campaign : ''}`
             : (v.first_referrer_domain || 'Doğrudan');
 
-        const readMeta = (Number(v.max_scroll_depth) || 0) > 0
-            ? `<div class="text-xs text-muted">Maks okuma: %${v.max_scroll_depth}</div>`
-            : '';
+        const vEvents = visitorEventsMap.get(v.visitor_id) || [];
+        const newsClicksForVisitor = vEvents.filter(e => e.event_type === 'news_click').length;
+        const readMeta = [
+            (Number(v.max_scroll_depth) || 0) > 0 ? `Maks okuma: %${v.max_scroll_depth}` : '',
+            newsClicksForVisitor > 0 ? `${newsClicksForVisitor} haber tıklaması` : ''
+        ].filter(Boolean).join(' · ');
+        const readMetaHtml = readMeta ? `<div class="text-xs text-muted">${escapeHtml(readMeta)}</div>` : '';
 
         const deviceDisp = inferDeviceDisplay(v);
         const regionHtml = v.region
@@ -1233,7 +1243,7 @@ function renderAdminAnalytics() {
                     <strong>${escapeHtml(sourceStr)}</strong>
                     <div class="text-xs text-muted">İlk: ${escapeHtml(v.first_landing_page || '#explore')}</div>
                     ${v.last_page ? `<div class="text-xs text-muted">Son: ${escapeHtml(v.last_page)}</div>` : ''}
-                    ${readMeta}
+                    ${readMetaHtml}
                 </td>
                 <td><strong>${v.visit_count || 1}</strong></td>
                 <td>

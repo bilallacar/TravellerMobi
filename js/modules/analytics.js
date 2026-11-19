@@ -304,7 +304,7 @@ export async function trackEvent(eventType = 'page_view', extra = {}) {
     if (shouldSkipTracking()) return;
 
     const pagePath = extra.page_path || (window.location.hash || '#explore').slice(0, 180);
-    const dedupeKey = `${eventType}|${pagePath}|${extra.post_slug || ''}|${extra.search_query || ''}`;
+    const dedupeKey = `${eventType}|${pagePath}|${extra.post_slug || ''}|${extra.post_title || ''}|${extra.search_query || ''}`;
     const now = Date.now();
     if (eventType !== 'post_engagement' && dedupeKey === lastTrackedKey && now - lastTrackedAt < 2500) {
         return;
@@ -320,6 +320,7 @@ export async function trackEvent(eventType = 'page_view', extra = {}) {
         const source = extractTrafficSource();
 
         await db.recordSiteVisit({
+            _keepalive: eventType === 'news_click' || eventType === 'post_engagement' || eventType === 'auth_cta_click',
             visitor_id: getVisitorId(),
             session_id: getSessionId(),
             event_type: eventType,
