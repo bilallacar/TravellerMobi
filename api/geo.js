@@ -15,13 +15,19 @@ export default function handler(req, res) {
 
     const country = safeDecodeHeader(req.headers['x-vercel-ip-country'] || '');
     const city = safeDecodeHeader(req.headers['x-vercel-ip-city'] || '');
-    const region = safeDecodeHeader(req.headers['x-vercel-ip-country-region'] || '');
+    const rawRegion = safeDecodeHeader(req.headers['x-vercel-ip-country-region'] || '');
+    const postalCode = safeDecodeHeader(req.headers['x-vercel-ip-postal-code'] || '');
     const timezone = safeDecodeHeader(req.headers['x-vercel-ip-timezone'] || '');
+
+    const regionParts = [];
+    if (rawRegion && rawRegion !== city) regionParts.push(rawRegion);
+    if (postalCode) regionParts.push(`PK ${postalCode}`);
 
     return res.status(200).json({
         country: country || null,
         city: city || null,
-        region: region || null,
+        region: regionParts.join(' · ') || null,
+        postalCode: postalCode || null,
         timezone: timezone || null
     });
 }

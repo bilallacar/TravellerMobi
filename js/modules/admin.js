@@ -955,9 +955,57 @@ async function openVisitorTimelineModal(visitor) {
     }
 }
 
+function isBotOrLocalVisitorRecord(v) {
+    if (!v) return false;
+    const osStr = String(v.os || '');
+    const resStr = String(v.screen_resolution || '');
+    // Filter out historical headless preview crawlers (Linux + 800x600)
+    if (/^Linux/i.test(osStr) && resStr.startsWith('800x600') && !v.user_id) return true;
+    // Filter out historical localhost dev rows that had no geo country/city
+    if (!v.country && !v.city && !v.user_id && String(v.timezone || '') === 'Europe/Istanbul' && /^Windows/i.test(osStr)) {
+        return true;
+    }
+    return false;
+}
+
+function inferDeviceDisplay(v) {
+    const typeLabel = v.device_type === 'mobile' ? 'Mobil' : v.device_type === 'tablet' ? 'Tablet' : 'Masaüstü';
+    const rawOs = String(v.os || '-');
+    const rawRes = String(v.screen_resolution || '');
+
+    // If new tracker already attached model via "OS · Model", split cleanly
+    if (rawOs.includes(' · ')) {
+        const [osPart, modelPart] = rawOs.split(' · ');
+        return { primary: modelPart || typeLabel, secondary: `${osPart} • ${v.browser || '-'}` };
+    }
+
+    // Infer Apple model family for existing iOS records from logical viewport resolution
+    if (/^iOS/i.test(rawOs)) {
+        const baseRes = rawRes.split(' ')[0];
+        const iosResMap = {
+            '440x956': 'iPhone 16 Pro Max',
+            '402x874': 'iPhone 16 Pro',
+            '430x932': 'iPhone 14/15/16 Plus·Max',
+            '393x852': 'iPhone 14 Pro / 15 / 16',
+            '428x926': 'iPhone 12/13/14 Pro Max',
+            '390x844': 'iPhone 12 / 13 / 14',
+            '375x812': 'iPhone X/XS/11 Pro/mini',
+            '414x896': 'iPhone 11 / XR / XS Max',
+            '375x667': 'iPhone SE / 8'
+        };
+        if (iosResMap[baseRes]) {
+            return { primary: iosResMap[baseRes], secondary: `${rawOs} • ${v.browser || '-'}` };
+        }
+    }
+
+    return { primary: typeLabel, secondary: `${rawOs} • ${v.browser || '-'}` };
+}
+
 function renderAdminAnalytics() {
-    const visitors = adminAnalytics.visitors || [];
-    const events = adminAnalytics.events || [];
+    const rawVisitors = adminAnalytics.visitors || [];
+    const visitors = rawVisitors.filter(v => !isBotOrLocalVisitorRecord(v));
+    const allowedVisitorIds = new Set(visitors.map(v => v.visitor_id));
+    const events = (adminAnalytics.events || []).filter(ev => allowedVisitorIds.has(ev.visitor_id));
 
     // Group events by visitor_id for segmentation & funnel
     const visitorEventsMap = new Map();
@@ -1163,16 +1211,22 @@ function renderAdminAnalytics() {
             ? `<div class="text-xs text-muted">Maks okuma: %${v.max_scroll_depth}</div>`
             : '';
 
+        const deviceDisp = inferDeviceDisplay(v);
+        const regionHtml = v.region
+            ? `<div class="text-xs text-muted">${escapeHtml(v.region)}</div>`
+            : '';
+
         return `
             <tr class="visitor-clickable-row" data-visitor-id="${escapeHtml(v.visitor_id)}" title="Ziyaretçi yolculuğunu incelemek için tıklayın">
                 <td>${identityHtml}</td>
                 <td>
-                    <strong>${escapeHtml(v.device_type === 'mobile' ? 'Mobil' : v.device_type === 'tablet' ? 'Tablet' : 'Masaüstü')}</strong>
-                    <div class="text-xs text-muted">${escapeHtml(v.os || '-')} • ${escapeHtml(v.browser || '-')}</div>
+                    <strong>${escapeHtml(deviceDisp.primary)}</strong>
+                    <div class="text-xs text-muted">${escapeHtml(deviceDisp.secondary)}</div>
                     <div class="text-xs text-muted">${escapeHtml(v.screen_resolution || '')} ${v.is_pwa ? '• PWA' : ''}</div>
                 </td>
                 <td>
                     <strong>${escapeHtml(locationStr)}</strong>
+                    ${regionHtml}
                     <div class="text-xs text-muted">${escapeHtml(v.language || '')}</div>
                 </td>
                 <td>
