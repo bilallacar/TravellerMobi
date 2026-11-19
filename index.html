@@ -43,6 +43,10 @@
                 <span class="logo-text">TravellerMobi</span>
             </div>
             <nav class="sidebar-nav">
+                <a href="#explore" class="nav-item" id="nav-explore">
+                    <i data-lucide="newspaper"></i>
+                    <span>Keşfet</span>
+                </a>
                 <a href="#dashboard" class="nav-item active" id="nav-dash">
                     <i data-lucide="layout-dashboard"></i>
                     <span>Özet</span>
@@ -67,6 +71,10 @@
                     <i data-lucide="settings"></i>
                     <span>Ayarlar</span>
                 </a>
+                <a href="#admin" class="nav-item hidden" id="nav-admin">
+                    <i data-lucide="shield-check"></i>
+                    <span>Yönetim Paneli</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="user-profile-info" id="user-info">
@@ -89,7 +97,10 @@
                     <span class="logo-mark"><i data-lucide="compass"></i></span>
                     <span class="logo-text">TravellerMobi</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <a href="#explore" id="m-nav-explore" class="btn-header-icon" title="Keşfet (Blog & Seyahat Haberleri)" aria-label="Keşfet">
+                        <i data-lucide="newspaper"></i>
+                    </a>
                     <div class="mobile-sync-status" id="mobile-sync-indicator" title="Eşitleme Durumu">
                         <i data-lucide="cloud-lightning" class="sync-icon offline"></i>
                     </div>
@@ -104,6 +115,16 @@
 
             <!-- Active View Container -->
             <main id="app-content" class="app-content">
+                <!-- Global Network Offline Status Bar -->
+                <div id="global-offline-banner" class="global-offline-banner hidden" role="status" aria-live="polite">
+                    <div class="global-offline-left">
+                        <i data-lucide="wifi-off"></i>
+                        <span><strong>Çevrimdışı Mod:</strong> İnternet erişimi algılanamadı. Önbellekteki verilerinizle devam edebilirsiniz; bağlantı kurulduğunda otomatik eşitlenir.</span>
+                    </div>
+                    <button type="button" id="btn-global-retry-network" class="btn btn-secondary btn-sm">
+                        <i data-lucide="refresh-cw"></i> Kontrol Et
+                    </button>
+                </div>
                 <!-- PWA Install Prompt Banner -->
                 <div id="pwa-install-banner" class="pwa-install-banner hidden">
                     <div class="pwa-install-content">
@@ -127,6 +148,16 @@
                         <div class="auth-header">
                             <h1>TravellerMobi</h1>
                             <p>Anılarınızı ve masraflarınızı bulutta saklayın</p>
+                        </div>
+
+                        <!-- Offline Warning Banner on Login/Register -->
+                        <div id="auth-offline-banner" class="auth-offline-banner hidden" role="alert">
+                            <div class="auth-offline-icon"><i data-lucide="wifi-off"></i></div>
+                            <div class="auth-offline-text">
+                                <strong>İnternet Bağlantısı Algılanamadı</strong>
+                                <p>Giriş yapmak, yeni hesap oluşturmak veya şifre sıfırlamak için aktif bir internet erişimi gereklidir.</p>
+                            </div>
+                            <button type="button" id="btn-auth-retry-network" class="btn btn-secondary btn-sm">Tekrar Dene</button>
                         </div>
 
                         <!-- Login & Register Container -->
@@ -180,6 +211,107 @@
                                 </button>
                             </form>
                         </div>
+
+                        <div class="auth-public-footer">
+                            <a href="#explore" class="auth-explore-link">
+                                <i data-lucide="newspaper"></i>
+                                <span>Üye olmadan Blog & Seyahat Haberlerini Keşfet</span>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 1B. PUBLIC EXPLORE VIEW (Blog & Automatic Travel News - No Login Required) -->
+                <section id="view-explore" class="app-view hidden">
+                    <!-- Guest Public Top Header (Hidden automatically when logged in) -->
+                    <header id="explore-public-header" class="explore-public-header glass">
+                        <a href="#explore" class="explore-brand">
+                            <span class="logo-mark"><i data-lucide="compass"></i></span>
+                            <span class="logo-text">TravellerMobi</span>
+                        </a>
+                        <div class="explore-public-actions">
+                            <button type="button" id="btn-explore-theme-toggle" class="btn-header-icon" title="Temayı Değiştir" aria-label="Temayı Değiştir">
+                                <i data-lucide="sun"></i>
+                            </button>
+                            <a href="#auth" id="btn-explore-auth-cta" class="btn btn-primary btn-sm">
+                                <i data-lucide="log-in"></i>
+                                <span>Giriş Yap</span>
+                            </a>
+                        </div>
+                    </header>
+
+                    <!-- Editorial Hero & Search -->
+                    <div class="explore-hero card glass">
+                        <div class="explore-hero-content">
+                            <span class="explore-eyebrow"><i data-lucide="globe"></i> TravellerMobi Keşfet</span>
+                            <h1>Seyahat Rehberleri & Güncel Turizm Haberleri</h1>
+                            <p class="text-muted">Dünyadan son havacılık, vize ve seyahat gelişmelerini canlı takip edin; özenle hazırlanan gezi bloglarıyla bir sonraki rotanıza ilham bulun.</p>
+                        </div>
+                        <div class="explore-toolbar">
+                            <div class="explore-tabs-group">
+                                <button type="button" class="explore-main-tab active" data-tab="all"><i data-lucide="sparkles"></i> Tümü</button>
+                                <button type="button" class="explore-main-tab" data-tab="blog"><i data-lucide="book-open"></i> Blog Yazıları</button>
+                                <button type="button" class="explore-main-tab" data-tab="news"><i data-lucide="radio"></i> Seyahat Haberleri</button>
+                            </div>
+                            <div class="explore-search-wrap">
+                                <i data-lucide="search"></i>
+                                <input type="search" id="explore-search-input" class="text-input" placeholder="Blog veya haberlerde ara (Örn: Roma, vize, THY)...">
+                            </div>
+                            <a href="#admin" id="btn-explore-admin-shortcut" class="btn btn-secondary btn-sm hidden">
+                                <i data-lucide="shield-check"></i> İçerik Paneli
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Featured Blog Post Slot -->
+                    <div id="explore-featured-post" class="explore-featured-wrap hidden"></div>
+
+                    <!-- Manual Blog Posts Section -->
+                    <div id="explore-blog-section" class="explore-section">
+                        <div class="explore-section-head">
+                            <div>
+                                <h2><i data-lucide="book-open"></i> Seyahat Blogu</h2>
+                                <span id="explore-blog-count" class="text-xs text-muted">0 yazı</span>
+                            </div>
+                            <div id="explore-blog-categories" class="explore-category-pills hidden"></div>
+                        </div>
+                        <div id="explore-blog-grid" class="explore-blog-grid">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Automatic Travel News Feed Section -->
+                    <div id="explore-news-section" class="explore-section">
+                        <div class="explore-section-head">
+                            <div>
+                                <h2><i data-lucide="radio"></i> Canlı Seyahat Haberleri</h2>
+                                <span id="explore-news-updated" class="text-xs text-muted">Otomatik canlı akış</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <div id="explore-news-categories" class="explore-category-pills"></div>
+                                <button type="button" id="btn-refresh-travel-news" class="btn btn-secondary btn-sm" title="Haberleri Yenile">
+                                    <i data-lucide="refresh-cw"></i> Yenile
+                                </button>
+                            </div>
+                        </div>
+                        <div id="explore-news-grid" class="explore-news-grid">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 1C. PUBLIC BLOG POST DETAIL VIEW -->
+                <section id="view-post" class="app-view hidden">
+                    <div class="post-detail-topbar" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <a href="#explore" class="btn btn-secondary btn-sm">
+                            <i data-lucide="arrow-left"></i> Keşfet'e Dön
+                        </a>
+                        <a href="#auth" id="btn-post-top-auth" class="btn btn-primary btn-sm">
+                            <i data-lucide="log-in"></i> Giriş Yap
+                        </a>
+                    </div>
+                    <div id="post-detail-container" class="post-detail-container">
+                        <!-- Rendered dynamically -->
                     </div>
                 </section>
 
@@ -1436,15 +1568,15 @@
                             </button>
                         </div>
 
-                        <!-- Gemini AI Assistant Configuration Card -->
+                        <!-- Mobi AI Assistant Configuration Card -->
                         <div class="card glass" id="settings-gemini-card">
-                            <h3><i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Gemini AI Asistan</h3>
+                            <h3><i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Mobi AI Asistan</h3>
                             <p class="text-sm text-muted" style="margin: 8px 0 12px;">
-                                Sohbet kutusuyla mekan eklemek, rota planlamak ve masraf kaydetmek için kendi cihazınızda saklanan Gemini API anahtarınızı girin.
+                                Sohbet kutusuyla mekan eklemek, rota planlamak ve masraf kaydetmek için kendi cihazınızda saklanan Mobi AI API anahtarınızı girin.
                             </p>
                             <form id="settings-gemini-form" class="settings-form">
                                 <div class="form-group">
-                                    <label for="settings-gemini-key">Gemini API Key</label>
+                                    <label for="settings-gemini-key">Mobi AI API Key</label>
                                     <div style="display:flex; gap:8px; align-items:center;">
                                         <input type="password" id="settings-gemini-key" placeholder="AIzaSy..." class="text-input" style="flex:1; margin:0;">
                                         <button type="button" id="btn-toggle-gemini-key" class="btn btn-secondary btn-sm" title="Anahtarı göster/gizle" style="height:42px;">
@@ -1456,15 +1588,15 @@
                                     </span>
                                 </div>
                                 <div class="form-group">
-                                    <label for="settings-gemini-model">Gemini Modeli</label>
+                                    <label for="settings-gemini-model">Yapay Zeka Modeli</label>
                                     <select id="settings-gemini-model" class="select-input">
-                                        <option value="gemini-2.5-flash">gemini-2.5-flash (Hızlı & Önerilen)</option>
-                                        <option value="gemini-2.5-pro">gemini-2.5-pro (Gelişmiş Planlama)</option>
-                                        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                                        <option value="gemini-2.5-flash">Hızlı & Dengeli (Önerilen)</option>
+                                        <option value="gemini-2.5-pro">Gelişmiş Planlama (Pro)</option>
+                                        <option value="gemini-2.0-flash">Klasik Hızlı Model</option>
                                     </select>
                                 </div>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    <button type="submit" class="btn btn-primary">AI Ayarlarını Kaydet</button>
+                                    <button type="submit" class="btn btn-primary">Mobi AI Ayarlarını Kaydet</button>
                                     <button type="button" id="btn-clear-gemini-key" class="btn btn-secondary">Anahtarı Temizle</button>
                                 </div>
                             </form>
@@ -1517,8 +1649,9 @@
 
                         <!-- Admin Panel Card -->
                         <div class="card glass double-span nav-admin-only hidden" id="settings-admin-card">
-                            <h3 style="margin-bottom: 14px;"><i data-lucide="users" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Üye Yönetimi</h3>
-                            <a href="#admin" class="btn btn-primary"><i data-lucide="users"></i> Üyeleri Yönet</a>
+                            <h3 style="margin-bottom: 8px;"><i data-lucide="shield-check" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Yönetim Paneli</h3>
+                            <p class="text-sm text-muted" style="margin-bottom: 14px;">Blog yazılarını yayınlayın, otomatik haber kaynaklarını yönetin, ziyaretçi trafiğini ve üye onaylarını takip edin.</p>
+                            <a href="#admin" class="btn btn-primary"><i data-lucide="shield-check"></i> Yönetim Panelini Aç</a>
                         </div>
 
                         <!-- Database Script / Help -->
@@ -1644,27 +1777,49 @@ alter table memories enable row level security;
 alter table public.places enable row level security;
 alter table public.categories enable row level security;
 
--- 10. Onay Kontrol Fonksiyonu
+-- 10. Onay Kontrol Fonksiyonları (Sıkı Admin Güvenliği)
+alter table public.roles enable row level security;
+
+drop policy if exists "Authenticated users can read roles" on public.roles;
+create policy "Authenticated users can read roles" on public.roles
+  for select using (auth.uid() is not null);
+
 create or replace function public.is_approved_user(user_uuid uuid)
-returns boolean as $$
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
+  if user_uuid is null then
+    return false;
+  end if;
   return exists (
     select 1 from public.profiles
     where id = user_uuid and status = 'approved'
   );
 end;
-$$ language plpgsql security definer;
+$$;
 
 create or replace function public.is_admin_user(user_uuid uuid)
-returns boolean as $$
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
+  if user_uuid is null then
+    return false;
+  end if;
   return exists (
     select 1 from public.profiles p
     join public.roles r on p.role_id = r.id
-    where p.id = user_uuid and r.name = 'admin'
+    where p.id = user_uuid
+      and p.status = 'approved'
+      and r.name = 'admin'
   );
 end;
-$$ language plpgsql security definer;
+$$;
 
 -- 11. Güvenlik Politikaları
 drop policy if exists "Users can perform all actions on their own trips" on trips;
@@ -1699,7 +1854,11 @@ create policy "Users can read their own profile" on public.profiles
 
 drop policy if exists "Users can insert their own profile" on public.profiles;
 create policy "Users can insert their own profile" on public.profiles
-  for insert with check (auth.uid() = id and status = 'pending');
+  for insert with check (
+    auth.uid() = id
+    and status = 'pending'
+    and (role_id is null or role_id &lt;&gt; (select id from public.roles where name = 'admin' limit 1))
+  );
 
 drop policy if exists "Admins can perform all actions on all profiles" on public.profiles;
 create policy "Admins can perform all actions on all profiles" on public.profiles
@@ -1816,6 +1975,337 @@ alter table public.reservations enable row level security;
 drop policy if exists "Users can manage own reservations" on public.reservations;
 create policy "Users can manage own reservations" on public.reservations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- 17. Herkese Açık Blog Yazıları Tablosu (CMS)
+create table if not exists public.blog_posts (
+  id uuid default uuid_generate_v4() primary key,
+  slug text not null unique,
+  title text not null,
+  summary text,
+  content text not null,
+  cover_image_url text,
+  category text default 'Şehir Rehberi' not null,
+  tags text[] default '{}',
+  author_name text default 'TravellerMobi Editör',
+  author_id uuid references auth.users,
+  status text default 'draft' not null,
+  is_featured boolean default false not null,
+  read_time_minutes integer default 3,
+  view_count integer default 0 not null,
+  published_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.blog_posts enable row level security;
+
+drop policy if exists "Public can read published blog posts" on public.blog_posts;
+create policy "Public can read published blog posts" on public.blog_posts
+  for select using (status = 'published' or public.is_admin_user(auth.uid()));
+
+drop policy if exists "Only admins can manage blog posts" on public.blog_posts;
+create policy "Only admins can manage blog posts" on public.blog_posts
+  for all using (public.is_admin_user(auth.uid())) with check (public.is_admin_user(auth.uid()));
+
+create or replace function public.increment_blog_view(p_slug text)
+returns void as $$
+begin
+  update public.blog_posts
+  set view_count = coalesce(view_count, 0) + 1
+  where slug = p_slug and status = 'published';
+end;
+$$ language plpgsql security definer;
+
+-- 18. Herkese Açık Blog Kapak Görselleri Storage Bucket (Public)
+insert into storage.buckets (id, name, public)
+values ('public-content', 'public-content', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Anyone can view public content images" on storage.objects;
+create policy "Anyone can view public content images" on storage.objects
+  for select using (bucket_id = 'public-content');
+
+drop policy if exists "Only admins can upload public content images" on storage.objects;
+create policy "Only admins can upload public content images" on storage.objects
+  for insert with check (bucket_id = 'public-content' and public.is_admin_user(auth.uid()));
+
+drop policy if exists "Only admins can delete public content images" on storage.objects;
+create policy "Only admins can delete public content images" on storage.objects
+  for delete using (bucket_id = 'public-content' and public.is_admin_user(auth.uid()));
+
+-- 19. Otomatik Seyahat Haber Kaynakları Tablosu (Özel RSS)
+create table if not exists public.news_sources (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null,
+  rss_url text not null,
+  category text default 'Seyahat' not null,
+  is_enabled boolean default true not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.news_sources enable row level security;
+
+drop policy if exists "Anyone can read enabled news sources" on public.news_sources;
+create policy "Anyone can read enabled news sources" on public.news_sources
+  for select using (is_enabled = true or public.is_admin_user(auth.uid()));
+
+drop policy if exists "Only admins can manage news sources" on public.news_sources;
+create policy "Only admins can manage news sources" on public.news_sources
+  for all using (public.is_admin_user(auth.uid())) with check (public.is_admin_user(auth.uid()));
+
+-- 20. Ziyaretçi Trafiği, Okuma Derinliği, Arama & Üye Eşleştirme Analitiği (Sıkı Admin RLS)
+create table if not exists public.site_visitors (
+  visitor_id text primary key,
+  user_id uuid references auth.users on delete set null,
+  user_email text,
+  first_seen_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  last_seen_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  visit_count integer default 1 not null,
+  first_referrer text,
+  first_referrer_domain text,
+  first_landing_page text,
+  last_page text,
+  first_utm_source text,
+  first_utm_medium text,
+  first_utm_campaign text,
+  device_type text,
+  os text,
+  browser text,
+  language text,
+  screen_resolution text,
+  timezone text,
+  country text,
+  city text,
+  region text,
+  is_pwa boolean default false,
+  clicked_auth boolean default false,
+  max_scroll_depth integer default 0,
+  total_read_seconds integer default 0
+);
+
+alter table public.site_visitors add column if not exists clicked_auth boolean default false;
+alter table public.site_visitors add column if not exists max_scroll_depth integer default 0;
+alter table public.site_visitors add column if not exists total_read_seconds integer default 0;
+
+create table if not exists public.site_events (
+  id uuid default uuid_generate_v4() primary key,
+  visitor_id text references public.site_visitors(visitor_id) on delete cascade not null,
+  session_id text,
+  user_id uuid references auth.users on delete set null,
+  event_type text default 'page_view' not null,
+  page_path text,
+  post_slug text,
+  post_title text,
+  referrer_domain text,
+  country text,
+  city text,
+  device_type text,
+  scroll_depth integer,
+  duration_seconds integer,
+  search_query text,
+  search_results_count integer,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.site_events add column if not exists scroll_depth integer;
+alter table public.site_events add column if not exists duration_seconds integer;
+alter table public.site_events add column if not exists search_query text;
+alter table public.site_events add column if not exists search_results_count integer;
+
+alter table public.site_visitors enable row level security;
+alter table public.site_events enable row level security;
+
+-- Sadece yönetici okuyabilir; doğrudan tablo yazma yetkisi kapalıdır (yalnızca kontrollü RPC üzerinden)
+revoke insert, update, delete on public.site_visitors, public.site_events from anon, authenticated;
+
+drop policy if exists "Only admins can read site visitors" on public.site_visitors;
+create policy "Only admins can read site visitors" on public.site_visitors
+  for select using (public.is_admin_user(auth.uid()));
+
+drop policy if exists "Only admins can read site events" on public.site_events;
+create policy "Only admins can read site events" on public.site_events
+  for select using (public.is_admin_user(auth.uid()));
+
+create or replace function public.record_site_visit(
+  p_visitor_id text,
+  p_session_id text default null,
+  p_event_type text default 'page_view',
+  p_page_path text default '#explore',
+  p_post_slug text default null,
+  p_post_title text default null,
+  p_referrer text default null,
+  p_referrer_domain text default null,
+  p_utm_source text default null,
+  p_utm_medium text default null,
+  p_utm_campaign text default null,
+  p_device_type text default null,
+  p_os text default null,
+  p_browser text default null,
+  p_language text default null,
+  p_screen_resolution text default null,
+  p_timezone text default null,
+  p_country text default null,
+  p_city text default null,
+  p_region text default null,
+  p_is_pwa boolean default false,
+  p_user_id uuid default null,
+  p_user_email text default null,
+  p_scroll_depth integer default null,
+  p_duration_seconds integer default null,
+  p_search_query text default null,
+  p_search_results_count integer default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_auth_uid uuid := auth.uid();
+  v_safe_email text := null;
+  v_is_auth_click boolean := (p_event_type = 'auth_cta_click' or coalesce(p_page_path, '') like '#auth%');
+  v_safe_scroll integer := case when p_scroll_depth is not null then least(greatest(p_scroll_depth, 0), 100) else null end;
+  v_safe_dur integer := case when p_duration_seconds is not null then least(greatest(p_duration_seconds, 0), 3600) else null end;
+begin
+  if p_visitor_id is null or length(trim(p_visitor_id)) &lt; 6 then
+    return;
+  end if;
+
+  if v_auth_uid is not null then
+    select email into v_safe_email from public.profiles where id = v_auth_uid limit 1;
+    v_safe_email := coalesce(v_safe_email, p_user_email);
+  end if;
+
+  insert into public.site_visitors (
+    visitor_id, user_id, user_email, first_seen_at, last_seen_at, visit_count,
+    first_referrer, first_referrer_domain, first_landing_page, last_page,
+    first_utm_source, first_utm_medium, first_utm_campaign,
+    device_type, os, browser, language, screen_resolution, timezone,
+    country, city, region, is_pwa, clicked_auth, max_scroll_depth, total_read_seconds
+  ) values (
+    p_visitor_id, v_auth_uid, v_safe_email, timezone('utc'::text, now()), timezone('utc'::text, now()), 1,
+    p_referrer, p_referrer_domain, p_page_path, p_page_path,
+    p_utm_source, p_utm_medium, p_utm_campaign,
+    p_device_type, p_os, p_browser, p_language, p_screen_resolution, p_timezone,
+    p_country, p_city, p_region, coalesce(p_is_pwa, false),
+    v_is_auth_click, coalesce(v_safe_scroll, 0), coalesce(v_safe_dur, 0)
+  )
+  on conflict (visitor_id) do update set
+    last_seen_at = timezone('utc'::text, now()),
+    visit_count = public.site_visitors.visit_count + case when p_event_type in ('page_view', 'post_view') then 1 else 0 end,
+    last_page = coalesce(p_page_path, public.site_visitors.last_page),
+    user_id = coalesce(v_auth_uid, public.site_visitors.user_id),
+    user_email = coalesce(v_safe_email, public.site_visitors.user_email),
+    device_type = coalesce(p_device_type, public.site_visitors.device_type),
+    os = coalesce(p_os, public.site_visitors.os),
+    browser = coalesce(p_browser, public.site_visitors.browser),
+    country = coalesce(p_country, public.site_visitors.country),
+    city = coalesce(p_city, public.site_visitors.city),
+    region = coalesce(p_region, public.site_visitors.region),
+    is_pwa = coalesce(p_is_pwa, public.site_visitors.is_pwa),
+    clicked_auth = (public.site_visitors.clicked_auth or v_is_auth_click),
+    max_scroll_depth = greatest(coalesce(public.site_visitors.max_scroll_depth, 0), coalesce(v_safe_scroll, 0)),
+    total_read_seconds = coalesce(public.site_visitors.total_read_seconds, 0) + coalesce(v_safe_dur, 0);
+
+  insert into public.site_events (
+    visitor_id, session_id, user_id, event_type, page_path, post_slug, post_title,
+    referrer_domain, country, city, device_type,
+    scroll_depth, duration_seconds, search_query, search_results_count
+  ) values (
+    p_visitor_id, p_session_id, v_auth_uid, coalesce(p_event_type, 'page_view'),
+    p_page_path, p_post_slug, p_post_title, p_referrer_domain, p_country, p_city, p_device_type,
+    v_safe_scroll, v_safe_dur, p_search_query, p_search_results_count
+  );
+end;
+$$;
+
+create or replace function public.link_visitor_to_user(
+  p_visitor_id text,
+  p_user_id uuid,
+  p_user_email text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_auth_uid uuid := auth.uid();
+  v_safe_email text;
+begin
+  if v_auth_uid is null or v_auth_uid &lt;&gt; p_user_id then
+    raise exception 'Unauthorized visitor link attempt';
+  end if;
+
+  select email into v_safe_email from public.profiles where id = v_auth_uid limit 1;
+  v_safe_email := coalesce(v_safe_email, p_user_email);
+
+  update public.site_visitors
+  set user_id = v_auth_uid,
+      user_email = coalesce(v_safe_email, user_email),
+      last_seen_at = timezone('utc'::text, now())
+  where visitor_id = p_visitor_id;
+
+  update public.site_events
+  set user_id = v_auth_uid
+  where visitor_id = p_visitor_id and user_id is null;
+end;
+$$;
+
+-- 21. İlk Özgün Blog Yazısı (Keşfet Başlangıç İçeriği)
+insert into public.blog_posts (
+  slug, title, summary, content, cover_image_url, category, tags,
+  author_name, status, is_featured, read_time_minutes, published_at
+) values (
+  'belgradda-48-saat-knez-mihailovanin-disina-cikmak',
+  'Belgrad''da 48 Saat: Knez Mihailova''yı Hızlı Geçip Şehrin Asıl Sokaklarına İnmek',
+  'Hafta sonu vizesiz kaçamak için Belgrad''a giden herkesin düştüğü küçük tuzaklar, nakit dinar meselesi ve Dorćol''dan Zemun''a uzanan iki günlük yürüyüş notları.',
+  'Cuma akşamı İstanbul''dan uçağa binip bir buçuk saat sonra Nikola Tesla Havalimanı''na inince insanın kafasında hep aynı soru oluyor: iki günde ne yetişir, neye hiç vakit kaybetmemeli? Ben ilk gidişimde klasik listeyi açıp neredeyse bütün cumartesi gününü Knez Mihailova çevresinde eritmiştim. İkinci gidişimde haritayı biraz yana kaydırınca şehrin bambaşka bir ritmi olduğunu fark ettim.
+
+## Havalimanından Merkeze İnerken İlk Küçük Tuzak
+
+Valizi alıp çıkış kapısına yürüdüğünüzde hemen önünüzde bekleyen taksiciler oluyor. Çoğuyla pazarlık yapmak yerine içerideki resmi **Taxi Info** bankosundan gideceğiniz bölgeye göre sabit fiyat fişi almak çok daha rahat. O fişi şoföre verdiğinizde taksimetre sürprizi yaşamıyorsunuz.
+
+Eğer tek başınaysanız ve bavulunuz ağırca değilse A1 minibüsü Slavija Meydanı''na kadar gidiyor. Burada önemli bir detay: minibüste kart geçmiyor, elinizde mutlaka bozuk Sırp Dinarı (RSD) olması lazım. Havalimanındaki ilk döviz bürosunda kur biraz düşük oluyor, o yüzden sadece ulaşım ve ilk kahve için ufak bir miktar bozdurup geri kalanını şehir merkezindeki *Menjačnica* tabelalı yerlerde halletmek epey fark ettiriyor.
+
+## Cumartesi Sabahı: Knez Mihailova''yı Erken Bitirip Dorćol''a Sapmak
+
+Knez Mihailova güzel cadde ama saat 11''den sonra İstiklal''in kalabalık halinden pek farkı kalmıyor. Sabah 08.30-09.00 gibi sakinliğinde boydan boya yürüyüp doğrudan **Kalemegdan** surlarına çıkmak en mantıklısı. Tuna ile Sava''nın birleştiği noktaya sabah serinliğinde bakıp kahvenizi orada değil, hemen aşağı inerek **Dorćol** mahallesinde için.
+
+Dorćol''un ağaçlı ara sokakları (özellikle Strahinjića Bana ve çevresi) şehrin en keyifli bölgesi. Burada üçüncü nesil kahvecilerle 40 yıllık mahalle fırınları yan yana duruyor. Bir *pekara*ya girip sıcak peynirli börek (*burek sa sirom*) yanına da bir bardak içilebilir yoğurt alırsanız öğlene kadar tok kalıyorsunuz; üstelik iki üç euro civarına.
+
+&gt; Küçük not: Belgrad''da birçok yerel mekanın içinde hâlâ sigara içiliyor. Duman hassasiyetiniz varsa kapıdan girmeden "non-smoking" bölümü olup olmadığını sormakta fayda var.
+
+## Akşam Yemeği: Skadarlija Yerine Bir Sokak Ötesi
+
+Skadarlija''nın taşlı sokağı fotoğraf çekmek için güzel ama akşam oturduğunuzda masaya gelen hesapla yediğiniz etin kalitesi her zaman örtüşmüyor. Sokağı bir tur gezip canlı müziğin havasını aldıktan sonra, birkaç dakikalık yürüme mesafesindeki daha yerel *kafana*lara geçmek çok daha iyi sonuç veriyor.
+
+Sipariş verirken porsiyonları hafife almayın. Bir tabak *ćevapi* ya da *pljeskavica* yanında *kajmak* (bizim kaymağa benzeyen ama tuzlu, hafif ekşi harika bir sos) ve *šopska* salatası söylediğinizde iki kişi bile zor bitirebiliyor. Masaya gelen ekmek ve mezelerin fiyatını hesaba dahil etmeyi unutmayın; çoğu yerde kişi başı ufak bir kuver ekleniyor.
+
+## Pazar Günü: Köprüyü Geçip Zemun''da Yavaşlamak
+
+İkinci günü mutlaka nehrin karşı yakasındaki **Zemun**''a ayırın. Merkezden otobüsle 15-20 dakika sürüyor ama yürümeyi seviyorsanız hava güzelse Sava kıyısından yürümek de ayrı bir keyif. Zemun eskiden Avusturya-Macaristan sınırında kaldığı için mimarisi Belgrad merkezinden tamamen farklı; tek katlı pastel evler, dar arnavutkaldırımları ve bambaşka bir sakinlik var.
+
+- Sabah **Zemun Pazarı**''na uğrayıp mevsim meyvesi ve yerel peynir bakın.
+- Ardından biraz terleyerek **Gardoš Kulesi**''ne çıkın; kırmızı kiremitli çatılar ve Tuna manzarası Kalemegdan''dan bile daha samimi duruyor.
+- Dönüşte nehir kenarındaki yürüyüş yolunda kuğuların hemen yanında oturan yerel kahvecilerden birinde mola verin.
+
+## Dönmeden Önce Aklımda Kalan 3 Pratik Şey
+
+- **İnternet:** Sırbistan AB dolaşımına dahil değil, operatör paketleri pahalıya gelebiliyor. Uçaktan inmeden eSIM kurmak ya da şehirde A1/Yettel ön ödemeli turist hattı almak çok rahatlatıyor.
+- **Yürüyüş Ayakkabısı:** Özellikle Kalemegdan, Skadarlija ve Zemun''da eski taş yollar çok; şık ama ince tabanlı ayakkabılar ikinci gün pişman ediyor.
+- **Kart ve Nakit Dengesi:** Kafe ve restoranların çoğunda temassız kart sorunsuz çalışıyor ama fırınlar, pazarlar ve bazı küçük kafanalar hâlâ sadece nakit kabul ediyor.
+
+Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir kahve masasında bir saat oyalanıp ara sokaklarda kaybolunca gerçekten tadı çıkıyor.',
+  'https://images.unsplash.com/photo-1580394693539-5e99a834572c?auto=format&fit=crop&w=1400&q=80',
+  'Şehir Rehberi',
+  array['belgrad', 'vizesiz', 'hafta-sonu', 'balkanlar', 'rota'],
+  'TravellerMobi Editör',
+  'published',
+  true,
+  4,
+  timezone('utc'::text, now())
+) on conflict (slug) do nothing;
                             </pre>
                             <button id="btn-copy-sql" class="btn btn-secondary btn-sm"><i data-lucide="copy"></i> Kodu Kopyala</button>
 
@@ -1825,30 +2315,339 @@ create policy "Users can manage own reservations" on public.reservations
                     </div>
                 </section>
 
-                <!-- 8. ADMIN USER MANAGEMENT VIEW -->
+                <!-- 8. ADMIN MANAGEMENT HUB VIEW (Analytics, Blog CMS, Auto News, Members) -->
                 <section id="view-admin" class="app-view hidden">
                     <div class="section-title-row">
                         <div>
-                            <h1><i data-lucide="users" style="width:20px;height:20px;vertical-align:-2px;margin-right:8px;"></i> Üye Yönetim Paneli</h1>
+                            <h1><i data-lucide="shield-check" style="width:22px;height:22px;vertical-align:-3px;margin-right:8px;"></i> Yönetim Paneli</h1>
+                            <p class="text-sm text-muted">Site trafiği, blog yazıları, otomatik haber kaynakları ve üye onayları</p>
                         </div>
-                        <a href="#settings" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Ayarlara Dön</a>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <a href="#explore" class="btn btn-secondary btn-sm"><i data-lucide="newspaper"></i> Keşfet'i Gör</a>
+                            <a href="#settings" class="btn btn-secondary btn-sm"><i data-lucide="arrow-left"></i> Ayarlara Dön</a>
+                        </div>
                     </div>
-                    
-                    <div class="card glass">
-                        <div class="table-responsive">
-                            <table class="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th>E-posta</th>
-                                        <th>Kayıt Tarihi</th>
-                                        <th>Durum</th>
-                                        <th>İşlemler</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-users-list">
-                                    <!-- Rendered dynamically -->
-                                </tbody>
-                            </table>
+
+                    <!-- Admin Hub Tabs -->
+                    <div class="admin-tabs-bar">
+                        <button type="button" class="admin-tab-btn active" data-admin-tab="analytics">
+                            <i data-lucide="bar-chart-3"></i> Trafik & Ziyaretçiler
+                        </button>
+                        <button type="button" class="admin-tab-btn" data-admin-tab="blog">
+                            <i data-lucide="pen-tool"></i> Blog Yönetimi
+                        </button>
+                        <button type="button" class="admin-tab-btn" data-admin-tab="news">
+                            <i data-lucide="radio"></i> Haber Akışı
+                        </button>
+                        <button type="button" class="admin-tab-btn" data-admin-tab="users">
+                            <i data-lucide="users"></i> Üyeler
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: ANALYTICS & VISITOR IDENTITY STITCHING -->
+                    <div id="admin-panel-analytics" class="admin-tab-panel">
+                        <div id="admin-analytics-sql-notice" class="info-alert hidden" style="margin-bottom:16px;"></div>
+
+                        <div class="admin-kpi-grid">
+                            <div class="card glass admin-kpi-card">
+                                <span class="text-xs text-muted">Toplam Ziyaret</span>
+                                <strong id="stat-admin-total-views">0</strong>
+                                <span class="text-xs text-muted">Sayfa / etkileşim</span>
+                            </div>
+                            <div class="card glass admin-kpi-card">
+                                <span class="text-xs text-muted">Tekil Ziyaretçi</span>
+                                <strong id="stat-admin-unique-visitors">0</strong>
+                                <span class="text-xs text-muted">Cihaz / tarayıcı</span>
+                            </div>
+                            <div class="card glass admin-kpi-card">
+                                <span class="text-xs text-muted">Üyeyle Eşleşen</span>
+                                <strong id="stat-admin-identified-visitors" style="color:var(--color-success);">0</strong>
+                                <span class="text-xs text-muted">Gerçek kişi bağlantısı</span>
+                            </div>
+                            <div class="card glass admin-kpi-card">
+                                <span class="text-xs text-muted">Yayındaki Blog</span>
+                                <strong id="stat-admin-published-blogs">0</strong>
+                                <span class="text-xs text-muted">Herkese açık yazı</span>
+                            </div>
+                        </div>
+
+                        <!-- Conversion Funnel Strip -->
+                        <div class="card glass margin-top-20">
+                            <h3 style="margin-bottom:12px;"><i data-lucide="filter" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Dönüşüm Hunisi (Ziyaretçi → Üye)</h3>
+                            <div id="admin-analytics-funnel" class="admin-funnel-grid"></div>
+                        </div>
+
+                        <!-- Phase 2: Reading Depth & Search Terms Analytics -->
+                        <div class="admin-analytics-breakdown-grid margin-top-20">
+                            <div class="card glass">
+                                <h3><i data-lucide="book-open-check"></i> Blog Okuma Derinliği & Süre</h3>
+                                <p class="text-xs text-muted" style="margin-top:4px;">Ortalama kaydırma yüzdesi, okuma süresi ve 10 sn altı hızlı çıkış oranı</p>
+                                <div id="analytics-reading-quality-list" class="analytics-bars-list margin-top-12"></div>
+                            </div>
+                            <div class="card glass">
+                                <h3><i data-lucide="search"></i> Site İçi Aramalar & İçerik Fırsatları</h3>
+                                <p class="text-xs text-muted" style="margin-top:4px;">0 sonuç dönen aramalar yeni blog konuları için doğrudan ipucudur</p>
+                                <div id="analytics-search-terms-list" class="analytics-bars-list margin-top-12"></div>
+                            </div>
+                        </div>
+
+                        <div class="admin-analytics-breakdown-grid margin-top-20">
+                            <div class="card glass">
+                                <h3><i data-lucide="smartphone"></i> Cihaz & İşletim Sistemi</h3>
+                                <div id="analytics-devices-list" class="analytics-bars-list margin-top-12"></div>
+                            </div>
+                            <div class="card glass">
+                                <h3><i data-lucide="map-pin"></i> Konum (Şehir / Ülke)</h3>
+                                <div id="analytics-locations-list" class="analytics-bars-list margin-top-12"></div>
+                            </div>
+                            <div class="card glass">
+                                <h3><i data-lucide="compass"></i> Trafik Kaynakları (Referrer / UTM)</h3>
+                                <div id="analytics-sources-list" class="analytics-bars-list margin-top-12"></div>
+                            </div>
+                            <div class="card glass">
+                                <h3><i data-lucide="flame"></i> En Çok Okunan Bloglar</h3>
+                                <div id="analytics-top-posts-list" class="analytics-bars-list margin-top-12"></div>
+                            </div>
+                        </div>
+
+                        <div class="card glass margin-top-20">
+                            <div class="section-title-row" style="margin-bottom:14px;">
+                                <div>
+                                    <h3><i data-lucide="activity"></i> Ziyaretçi Kayıtları, Segmentler & Üye Eşleşmeleri</h3>
+                                    <p class="text-xs text-muted">Adım adım yolculuk zaman çizelgesini görmek için herhangi bir ziyaretçi satırına tıklayın.</p>
+                                </div>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                                    <button type="button" class="filter-pill active" data-visitor-filter="all">Tümü</button>
+                                    <button type="button" class="filter-pill" data-visitor-filter="identified">Aktif Üye</button>
+                                    <button type="button" class="filter-pill" data-visitor-filter="warm">Sıcak Aday</button>
+                                    <button type="button" class="filter-pill" data-visitor-filter="returning">Geri Dönen</button>
+                                    <button type="button" class="filter-pill" data-visitor-filter="anonymous">Anonim</button>
+                                    <button type="button" id="btn-admin-refresh-analytics" class="btn btn-secondary btn-sm"><i data-lucide="refresh-cw"></i></button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Segment & Kimlik</th>
+                                            <th>Cihaz & Tarayıcı</th>
+                                            <th>Konum & Dil</th>
+                                            <th>Kaynak & Sayfa</th>
+                                            <th>Ziyaret</th>
+                                            <th>Son Görülme</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-visitors-table-body">
+                                        <tr><td colspan="6" class="text-center text-muted">Yükleniyor...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Visitor Journey Timeline Modal (Admin Only) -->
+                        <div id="modal-visitor-timeline" class="modal hidden">
+                            <div class="modal-content glass" style="max-width: 640px;">
+                                <div class="modal-header">
+                                    <h2 id="visitor-timeline-title" style="font-size:18px; margin:0;">Ziyaretçi Yolculuğu</h2>
+                                    <button type="button" id="btn-close-visitor-timeline" class="btn-close-modal">&times;</button>
+                                </div>
+                                <p id="visitor-timeline-meta" class="text-xs text-muted" style="margin:8px 0 16px; line-height:1.5;"></p>
+                                <div id="visitor-timeline-list" class="visitor-timeline-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: MANUAL BLOG CMS -->
+                    <div id="admin-panel-blog" class="admin-tab-panel hidden">
+                        <div class="card glass">
+                            <h3 id="blog-form-heading" style="margin-bottom: 14px;">Yeni Blog Yazısı Oluştur</h3>
+                            <form id="admin-blog-form" class="admin-blog-form">
+                                <input type="hidden" id="blog-form-id">
+                                <div class="admin-form-grid-2">
+                                    <div class="form-group">
+                                        <label for="blog-form-title">Başlık *</label>
+                                        <input type="text" id="blog-form-title" class="text-input" required placeholder="Örn: Roma'da 3 Günde Gezilecek En İyi Yerler">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blog-form-slug">URL Kısa Adı (Slug)</label>
+                                        <input type="text" id="blog-form-slug" class="text-input" placeholder="roma-3-gunde-gezilecek-yerler">
+                                    </div>
+                                </div>
+
+                                <div class="admin-form-grid-3">
+                                    <div class="form-group">
+                                        <label for="blog-form-category">Kategori</label>
+                                        <select id="blog-form-category" class="select-input">
+                                            <option value="Şehir Rehberi">Şehir Rehberi</option>
+                                            <option value="Rota Önerisi">Rota Önerisi</option>
+                                            <option value="Bütçe & İpucu">Bütçe & İpucu</option>
+                                            <option value="Yeme İçme">Yeme İçme</option>
+                                            <option value="Konaklama">Konaklama</option>
+                                            <option value="Deneyim">Deneyim</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blog-form-author">Yazar Adı</label>
+                                        <input type="text" id="blog-form-author" class="text-input" value="TravellerMobi Editör">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blog-form-read-time">Okuma Süresi (dk)</label>
+                                        <input type="number" id="blog-form-read-time" class="text-input" min="1" max="60" value="3">
+                                    </div>
+                                </div>
+
+                                <div class="admin-form-grid-2">
+                                    <div class="form-group">
+                                        <label for="blog-form-cover-file">Kapak Görseli Yükle (Cihazdan)</label>
+                                        <input type="file" id="blog-form-cover-file" accept="image/*" class="text-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blog-form-cover-url">veya Kapak Görseli URL</label>
+                                        <input type="url" id="blog-form-cover-url" class="text-input" placeholder="https://images.unsplash.com/...">
+                                    </div>
+                                </div>
+
+                                <div id="blog-cover-preview-wrap" class="blog-cover-preview-wrap hidden">
+                                    <img id="blog-cover-preview-img" src="" alt="Kapak önizleme">
+                                    <button type="button" id="btn-blog-clear-cover" class="btn btn-secondary btn-sm">Görseli Kaldır</button>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="blog-form-summary">Kısa Özet (Kartlarda görünür)</label>
+                                    <textarea id="blog-form-summary" rows="2" class="textarea-input" placeholder="Yazının 1-2 cümlelik dikkat çekici özeti..."></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                        <label for="blog-form-content" style="margin:0;">Yazı İçeriği * (Markdown destekler: ## Başlık, **kalın**, - liste)</label>
+                                        <button type="button" id="btn-blog-toggle-preview" class="btn btn-secondary btn-sm">İçeriği Önizle</button>
+                                    </div>
+                                    <textarea id="blog-form-content" rows="10" class="textarea-input" required placeholder="## İlk Durak: Kolezyum&#10;&#10;Sabah erken saatlerde gitmek kuyruklardan kurtarır..."></textarea>
+                                    <div id="blog-markdown-preview" class="post-detail-body blog-markdown-preview hidden"></div>
+                                </div>
+
+                                <div class="admin-form-grid-3">
+                                    <div class="form-group">
+                                        <label for="blog-form-tags">Etiketler (virgülle ayırın)</label>
+                                        <input type="text" id="blog-form-tags" class="text-input" placeholder="italya, roma, bütçe">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blog-form-status">Yayın Durumu</label>
+                                        <select id="blog-form-status" class="select-input">
+                                            <option value="published">Yayında (Herkese Açık)</option>
+                                            <option value="draft">Taslak (Sadece Admin)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="display:flex; align-items:flex-end; padding-bottom:10px;">
+                                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+                                            <input type="checkbox" id="blog-form-featured">
+                                            <span>Keşfet'te Öne Çıkar</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                                    <button type="submit" id="btn-blog-form-submit" class="btn btn-primary">Yazıyı Kaydet</button>
+                                    <button type="button" id="btn-blog-form-reset" class="btn btn-secondary">Formu Temizle</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="card glass margin-top-20">
+                            <h3 style="margin-bottom:14px;">Tüm Blog Yazıları</h3>
+                            <div class="table-responsive">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Yazı</th>
+                                            <th>Durum</th>
+                                            <th>Okunma</th>
+                                            <th>Tarih</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-blog-list">
+                                        <tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: AUTOMATIC TRAVEL NEWS SOURCES -->
+                    <div id="admin-panel-news" class="admin-tab-panel hidden">
+                        <div class="card glass">
+                            <div class="section-title-row" style="margin-bottom:12px;">
+                                <div>
+                                    <h3>Otomatik Seyahat Haber Akışı</h3>
+                                    <p class="text-sm text-muted">Turizm, Havacılık, Vize & Pasaport ve Destinasyon kategorileri <code>/api/travel-news</code> üzerinden otomatik güncellenir. Aşağıdan ekstra özel RSS kaynakları da ekleyebilirsiniz.</p>
+                                </div>
+                                <button type="button" id="btn-admin-test-news-feed" class="btn btn-primary btn-sm">
+                                    <i data-lucide="refresh-cw"></i> Akışı Şimdi Test Et
+                                </button>
+                            </div>
+                            <div id="admin-news-live-preview" class="admin-news-live-preview"></div>
+                        </div>
+
+                        <div class="card glass margin-top-20">
+                            <h3 style="margin-bottom:12px;">Özel RSS Kaynağı Ekle</h3>
+                            <form id="admin-news-source-form" class="admin-form-grid-3" style="align-items:end;">
+                                <div class="form-group" style="margin:0;">
+                                    <label for="news-source-name">Kaynak Adı</label>
+                                    <input type="text" id="news-source-name" class="text-input" required placeholder="Örn: Turizm Güncel">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label for="news-source-url">RSS Adresi (https://)</label>
+                                    <input type="url" id="news-source-url" class="text-input" required placeholder="https://.../rss.xml">
+                                </div>
+                                <div class="form-group" style="margin:0; display:flex; gap:8px;">
+                                    <select id="news-source-category" class="select-input" style="flex:1;">
+                                        <option value="Turizm">Turizm</option>
+                                        <option value="Havacılık">Havacılık</option>
+                                        <option value="Vize & Pasaport">Vize & Pasaport</option>
+                                        <option value="Destinasyon">Destinasyon</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-primary">Ekle</button>
+                                </div>
+                            </form>
+
+                            <div class="table-responsive margin-top-20">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Kaynak</th>
+                                            <th>Kategori</th>
+                                            <th>Durum</th>
+                                            <th>İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-news-sources-list">
+                                        <tr><td colspan="4" class="text-center text-muted">Yükleniyor...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: MEMBERS MANAGEMENT -->
+                    <div id="admin-panel-users" class="admin-tab-panel hidden">
+                        <div class="card glass">
+                            <h3 style="margin-bottom:14px;">Üye Onayları</h3>
+                            <div class="table-responsive">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>E-posta</th>
+                                            <th>Kayıt Tarihi</th>
+                                            <th>Durum</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-users-list">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -2025,15 +2824,15 @@ create policy "Users can manage own reservations" on public.reservations
         <span id="desktop-theme-label">Açık Tema</span>
     </button>
 
-    <!-- Floating Universal Gemini AI Assistant Chatbox -->
+    <!-- Floating Universal Mobi AI Assistant Chatbox -->
     <div id="ai-chatbox-backdrop" class="ai-chatbox-backdrop hidden"></div>
 
-    <button type="button" id="btn-ai-fab" class="ai-fab hidden" title="TravellerMobi AI Asistan">
+    <button type="button" id="btn-ai-fab" class="ai-fab hidden" title="Mobi AI Asistan">
         <span class="ai-fab-icon"><i data-lucide="sparkles"></i></span>
-        <span class="ai-fab-label">AI Asistan</span>
+        <span class="ai-fab-label">Mobi AI</span>
     </button>
 
-    <aside id="ai-chatbox-panel" class="ai-chatbox-panel glass hidden" aria-label="TravellerMobi AI Asistan">
+    <aside id="ai-chatbox-panel" class="ai-chatbox-panel glass hidden" aria-label="Mobi AI Asistan">
         <div class="ai-sheet-handle-bar">
             <span class="ai-sheet-handle"></span>
         </div>
@@ -2044,7 +2843,7 @@ create policy "Users can manage own reservations" on public.reservations
                     <span id="ai-key-status-dot" class="ai-status-dot" title="API Durumu"></span>
                 </div>
                 <div class="ai-chat-title-meta">
-                    <h3 class="ai-chat-title">TravellerMobi AI</h3>
+                    <h3 class="ai-chat-title">Mobi AI</h3>
                     <span class="ai-chat-subtitle">
                         <i data-lucide="compass"></i>
                         <strong id="ai-context-label">Genel</strong>
@@ -2068,7 +2867,7 @@ create policy "Users can manage own reservations" on public.reservations
         <div id="ai-no-key-banner" class="ai-no-key-banner hidden">
             <div class="ai-no-key-head">
                 <i data-lucide="key-round"></i>
-                <span><strong>Gemini API Anahtarı Gerekli:</strong> Cihazınıza özel ücretsiz anahtarı <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>'dan alıp yapıştırın.</span>
+                <span><strong>Mobi AI API Anahtarı Gerekli:</strong> Cihazınıza özel ücretsiz anahtarı <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>'dan alıp yapıştırın.</span>
             </div>
             <form id="ai-inline-key-form" class="ai-inline-key-form">
                 <input type="password" id="ai-inline-key-input" placeholder="AIzaSy... anahtarınızı yapıştırın" class="text-input">
@@ -2087,7 +2886,7 @@ create policy "Users can manage own reservations" on public.reservations
 
         <div id="ai-typing-indicator" class="ai-typing-indicator hidden">
             <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-            <span>Gemini planlıyor...</span>
+            <span id="ai-typing-label">Mobi AI düşünüyor...</span>
         </div>
 
         <form id="ai-chat-form" class="ai-chat-input-bar">
@@ -2097,13 +2896,22 @@ create policy "Users can manage own reservations" on public.reservations
                 <button type="button" id="btn-ai-attach-image" class="ai-attach-btn" title="Bilet, fiş veya menü fotoğrafı ekle" aria-label="Fotoğraf ekle">
                     <i data-lucide="image-plus"></i>
                 </button>
-                <textarea id="ai-chat-input" rows="1" placeholder="Mekan ekle, bilet fotoğrafı at, masraf yaz..." class="ai-chat-textarea"></textarea>
+                <textarea id="ai-chat-input" rows="1" placeholder="Mobi AI'a yaz: mekan ekle, bilet fotoğrafı at, masraf kaydet..." class="ai-chat-textarea"></textarea>
                 <button type="submit" id="btn-ai-send" class="btn btn-primary ai-send-btn" title="Gönder">
                     <i data-lucide="arrow-up"></i>
                 </button>
             </div>
         </form>
     </aside>
+
+    <!-- Subtle Privacy / Analytics Notice Banner -->
+    <div id="privacy-notice-banner" class="privacy-notice-banner glass hidden" role="dialog" aria-label="Gizlilik Bilgilendirmesi">
+        <div class="privacy-notice-text">
+            <i data-lucide="shield"></i>
+            <span>İçeriklerimizi ve seyahat deneyiminizi geliştirmek için anonim cihaz/trafik istatistikleri kullanılır.</span>
+        </div>
+        <button type="button" id="btn-accept-privacy-notice" class="btn btn-primary btn-sm">Anladım</button>
+    </div>
 
     <!-- Application Script Engine Modules -->
     <script type="module" src="config.js"></script>

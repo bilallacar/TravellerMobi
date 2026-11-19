@@ -3,14 +3,52 @@
 import { state } from '../state.js';
 import * as db from '../../db.js';
 import { showToast } from '../utils.js';
+import { identifyVisitor, trackEvent } from './analytics.js';
+import { clearAdminViewState } from './admin.js';
 
 let authMode = 'login'; // 'login' or 'register'
+
+export function syncAuthNetworkUI() {
+    const offlineBanner = document.getElementById('auth-offline-banner');
+    const submitBtn = document.getElementById('btn-auth-submit');
+    const forgotBtn = document.getElementById('btn-send-reset-link');
+    const online = db.hasInternet();
+
+    if (offlineBanner) {
+        offlineBanner.classList.toggle('hidden', online);
+    }
+    if (submitBtn && submitBtn.textContent !== 'İşleniyor...') {
+        submitBtn.classList.toggle('is-offline-guarded', !online);
+    }
+    if (forgotBtn && forgotBtn.textContent !== 'Gönderiliyor...') {
+        forgotBtn.classList.toggle('is-offline-guarded', !online);
+    }
+    if (window.lucide) window.lucide.createIcons();
+}
 
 export function initAuthEvents() {
     const tabLogin = document.getElementById('tab-login');
     const tabRegister = document.getElementById('tab-register');
     const authForm = document.getElementById('auth-form');
     const submitBtn = document.getElementById('btn-auth-submit');
+
+    syncAuthNetworkUI();
+    window.addEventListener('network-status-changed', () => {
+        syncAuthNetworkUI();
+    });
+
+    const retryNetBtn = document.getElementById('btn-auth-retry-network');
+    if (retryNetBtn) {
+        retryNetBtn.addEventListener('click', async () => {
+            syncAuthNetworkUI();
+            if (db.hasInternet()) {
+                await db.initSupabase();
+                showToast('İnternet bağlantısı aktif! Giriş yapabilirsiniz.', 'success');
+            } else {
+                showToast('Hâlâ internet bağlantısı algılanamadı. Wi-Fi veya mobil verinizi kontrol edin.', 'warning');
+            }
+        });
+    }
 
     if (tabLogin && tabRegister && submitBtn) {
         tabLogin.addEventListener('click', () => {
@@ -30,6 +68,11 @@ export function initAuthEvents() {
     if (authForm && submitBtn) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!db.hasInternet()) {
+                syncAuthNetworkUI();
+                showToast('İnternet bağlantısı yok. Giriş veya kayıt işlemi için internet erişimi gereklidir.', 'warning');
+                return;
+            }
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             
@@ -38,7 +81,11 @@ export function initAuthEvents() {
 
             try {
                 if (authMode === 'login') {
-                    await db.signIn(email, password);
+                    const loggedInUser = await db.signIn(email, password);
+                    if (loggedInUser) {
+                        identifyVisitor(loggedInUser.id, loggedInUser.email);
+                        trackEvent('auth_login', { page_path: '#auth' });
+                    }
                     showToast('Giriş başarılı!', 'success');
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Giriş Yap';
@@ -48,6 +95,11 @@ export function initAuthEvents() {
                     
                     if (signUpUser && signUpUser.identities && signUpUser.identities.length === 0) {
                         throw new Error("Bu e-posta adresi zaten kayıtlıdır. Lütfen giriş yapın.");
+                    }
+
+                    if (signUpUser) {
+                        identifyVisitor(signUpUser.id, signUpUser.email || email);
+                        trackEvent('auth_signup', { page_path: '#auth' });
                     }
                     
                     const user = await db.getCurrentUser();
@@ -96,6 +148,11 @@ export function initAuthEvents() {
     if (forgotForm && btnSendReset) {
         forgotForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!db.hasInternet()) {
+                syncAuthNetworkUI();
+                showToast('İnternet bağlantısı yok. Şifre sıfırlama bağlantısı gönderilemez.', 'warning');
+                return;
+            }
             const email = document.getElementById('forgot-email').value;
             if (!email) return;
 
@@ -167,6 +224,10 @@ export function initAuthEvents() {
         if (e) e.preventDefault();
         try {
             await db.signOut();
+            state.activeUser = null;
+            state.userProfile = null;
+            state.isAdmin = false;
+            clearAdminViewState();
             showToast('Çıkış yapıldı', 'info');
             window.location.hash = '#auth';
         } catch (err) {

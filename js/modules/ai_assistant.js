@@ -146,7 +146,7 @@ function syncKeyBannerVisibility() {
     if (statusDot) {
         statusDot.classList.toggle('is-ready', hasKey);
         statusDot.classList.toggle('is-missing', !hasKey);
-        statusDot.title = hasKey ? `Bağlı (${config.geminiModel || 'gemini-2.5-flash'})` : 'Gemini API Anahtarı Gerekli';
+        statusDot.title = hasKey ? 'Mobi AI Bağlı' : 'Mobi AI API Anahtarı Gerekli';
     }
 }
 
@@ -829,10 +829,13 @@ function describeAction(action) {
  * Calls Gemini REST API generateContent
  */
 async function callGeminiAPI(contents) {
+    if (!db.hasInternet()) {
+        throw new Error('İnternet bağlantısı yok. Mobi AI yanıt verebilmek için internet erişimine ihtiyaç duyar.');
+    }
     const apiKey = (config.geminiApiKey || '').trim();
     const model = (config.geminiModel || 'gemini-2.5-flash').trim();
     if (!apiKey) {
-        throw new Error('Gemini API anahtarı bulunamadı. Lütfen yukarıdan veya Ayarlar sayfasından anahtarınızı girin.');
+        throw new Error('Mobi AI API anahtarı bulunamadı. Lütfen yukarıdan veya Ayarlar sayfasından anahtarınızı girin.');
     }
 
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -855,19 +858,19 @@ async function callGeminiAPI(contents) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
         const msg = data?.error?.message || `HTTP ${response.status}`;
-        throw new Error(`Gemini API Hatası: ${msg}`);
+        throw new Error(`Mobi AI Bağlantı Hatası: ${msg}`);
     }
 
     const candidate = data?.candidates?.[0];
     if (!candidate || !candidate.content) {
-        throw new Error('Gemini boş bir yanıt döndürdü.');
+        throw new Error('Mobi AI boş bir yanıt döndürdü.');
     }
 
     return candidate.content;
 }
 
 /**
- * Sends a user prompt through Gemini multi-turn tool loop
+ * Sends a user prompt through Mobi AI multi-turn tool loop
  */
 async function sendPromptToGemini(userText, imageAttachment = null) {
     if (isSending) return;
@@ -875,16 +878,21 @@ async function sendPromptToGemini(userText, imageAttachment = null) {
     const hasImage = !!(imageAttachment && imageAttachment.base64);
     if (!rawText && !hasImage) return;
 
+    if (!db.hasInternet()) {
+        showToast('İnternet bağlantısı yok. Mobi AI yalnızca çevrimiçi modda çalışır.', 'warning');
+        return;
+    }
+
     const text = rawText || 'Bu görseli incele ve uygun şekilde seyahatime (bilet/rezervasyon, masraf veya mekan olarak) kaydet.';
 
     if (!config.geminiApiKey) {
-        showToast('Önce Gemini API anahtarınızı kaydetmelisiniz.', 'warning');
+        showToast('Önce Mobi AI API anahtarınızı kaydetmelisiniz.', 'warning');
         syncKeyBannerVisibility();
         return;
     }
 
     isSending = true;
-    setSendingUIState(true);
+    setSendingUIState(true, 'Mobi AI düşünüyor...');
 
     const userMsg = {
         id: `u_${Date.now()}`,
@@ -933,6 +941,7 @@ async function sendPromptToGemini(userText, imageAttachment = null) {
                 break;
             }
 
+            setSendingUIState(true, 'Mobi AI verileri işliyor...');
             const functionResponseParts = [];
             for (const fc of fnCalls) {
                 if (READ_TOOLS.has(fc.name)) {
@@ -1019,12 +1028,14 @@ function formatReadChip(toolName, result) {
     return `✓ ${toolName}`;
 }
 
-function setSendingUIState(busy) {
+function setSendingUIState(busy, statusText = 'Mobi AI düşünüyor...') {
     const sendBtn = document.getElementById('btn-ai-send');
     const input = document.getElementById('ai-chat-input');
     const typingEl = document.getElementById('ai-typing-indicator');
+    const typingLabel = document.getElementById('ai-typing-label');
     if (sendBtn) sendBtn.disabled = busy;
     if (input) input.disabled = busy;
+    if (typingLabel && statusText) typingLabel.textContent = statusText;
     if (typingEl) typingEl.classList.toggle('hidden', !busy);
 }
 
@@ -1039,7 +1050,7 @@ function renderChatMessages() {
             <div class="ai-welcome-box">
                 <div class="ai-welcome-glow"></div>
                 <div class="ai-welcome-icon"><i data-lucide="sparkles"></i></div>
-                <h4>TravellerMobi AI Asistan</h4>
+                <h4>Mobi AI Asistan</h4>
                 <p>Doğal dille yaz; mekanları haritana, harcamaları bütçene ve anılarını günlüğüne doğrudan işleyeyim.</p>
                 <div class="ai-capability-grid">
                     <span class="ai-cap-pill"><i data-lucide="map-pin"></i> Mekan & Rehber</span>
@@ -1281,14 +1292,14 @@ export function initAiAssistant() {
             const keyInput = document.getElementById('ai-inline-key-input');
             const val = (keyInput?.value || '').trim();
             if (!val) {
-                showToast('Lütfen geçerli bir Gemini API anahtarı girin.', 'warning');
+                showToast('Lütfen geçerli bir Mobi AI API anahtarı girin.', 'warning');
                 return;
             }
             saveGeminiConfig(val, config.geminiModel);
             if (keyInput) keyInput.value = '';
             window.dispatchEvent(new CustomEvent('gemini-config-updated'));
             syncKeyBannerVisibility();
-            showToast('Gemini API anahtarı cihaza kaydedildi!', 'success');
+            showToast('Mobi AI API anahtarı cihaza kaydedildi!', 'success');
         });
     }
 

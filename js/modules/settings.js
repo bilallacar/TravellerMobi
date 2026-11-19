@@ -167,7 +167,7 @@ export function initSettingsEvents() {
             const modelVal = document.getElementById('settings-gemini-model')?.value || 'gemini-2.5-flash';
             saveGeminiConfig(keyVal, modelVal);
             window.dispatchEvent(new CustomEvent('gemini-config-updated'));
-            showToast(keyVal.trim() ? 'Gemini AI ayarları cihaza kaydedildi' : 'Gemini API anahtarı temizlendi', 'success');
+            showToast(keyVal.trim() ? 'Mobi AI ayarları cihaza kaydedildi' : 'Mobi AI API anahtarı temizlendi', 'success');
         });
     }
 
@@ -188,7 +188,7 @@ export function initSettingsEvents() {
             if (keyInput) keyInput.value = '';
             saveGeminiConfig('', modelVal);
             window.dispatchEvent(new CustomEvent('gemini-config-updated'));
-            showToast('Gemini API anahtarı cihazdan silindi', 'info');
+            showToast('Mobi AI API anahtarı cihazdan silindi', 'info');
         });
     }
     if (settingsPrefForm) {

@@ -6,19 +6,31 @@ import { state } from './state.js';
 import { showToast } from './utils.js';
 
 // Import View Modules
-import { initAuthEvents, renderApprovalPending, checkResetPasswordMode } from './modules/auth.js';
+import { initAuthEvents, renderApprovalPending, checkResetPasswordMode, syncAuthNetworkUI } from './modules/auth.js';
 import { initSettingsEvents, loadSettingsForm } from './modules/settings.js';
 import { initTripsEvents, loadTripsData, renderParticipantTags } from './modules/trips.js';
 import { initReservationEvents } from './modules/reservations.js';
 import { initExpensesEvents, loadExpensesData, updateExpenseFormParticipants } from './modules/expenses.js';
 import { initJournalEvents, loadJournalData } from './modules/journal.js';
 import { initDashboardEvents, loadDashboardData, renderDashboard } from './modules/dashboard.js';
-import { loadAdminData } from './modules/admin.js';
+import { loadAdminData, initAdminEvents, clearAdminViewState } from './modules/admin.js';
 import { initPlacesEvents, loadPlacesData, handleIncomingPlaceIntent } from './modules/places.js';
 import { initShareEvents, loadShareView } from './modules/share.js';
 import { initAiAssistant, setAiLauncherVisible } from './modules/ai_assistant.js';
+import { initExploreEvents, loadExploreView, loadBlogPostDetailView } from './modules/explore.js';
+import { trackPageView, identifyVisitor, initPrivacyNotice, flushReadingSession } from './modules/analytics.js';
 
-// Global error logging for diagnostics
+let lastIdentifiedUserId = null;
+
+function syncGlobalOfflineBanner() {
+    const banner = document.getElementById('global-offline-banner');
+    if (!banner) return;
+    const online = db.hasInternet();
+    banner.classList.toggle('hidden', online);
+    if (window.lucide) window.lucide.createIcons();
+}
+
+// Theme UI Synchronizer
 function syncThemeUI(theme) {
     const isLight = theme === 'light';
     document.body.className = isLight ? 'light-theme' : 'dark-theme';
@@ -40,6 +52,12 @@ function syncThemeUI(theme) {
         desktopBtn.title = isLight ? 'Koyu Temaya Geç' : 'Açık Temaya Geç';
     }
 
+    const exploreThemeBtn = document.getElementById('btn-explore-theme-toggle');
+    if (exploreThemeBtn) {
+        exploreThemeBtn.innerHTML = `<i data-lucide="${isLight ? 'moon' : 'sun'}"></i>`;
+        exploreThemeBtn.title = isLight ? 'Koyu Temaya Geç' : 'Açık Temaya Geç';
+    }
+
     if (window.lucide) window.lucide.createIcons();
 }
 
@@ -47,6 +65,8 @@ function setDesktopThemeToggleVisible(visible) {
     const desktopBtn = document.getElementById('btn-desktop-theme-toggle');
     if (desktopBtn) desktopBtn.classList.toggle('hidden', !visible);
 }
+
+// Global error logging for diagnostics
 let globalErrors = [];
 window.onerror = function(message, source, lineno, colno, error) {
     const errorStr = `Error: ${message} at ${source}:${lineno}:${colno}`;
@@ -65,10 +85,11 @@ window.onunhandledrejection = function(event) {
 function updateDiagnosticsUI() {
     const diagLog = document.getElementById('diagnostics-log');
     if (!diagLog) return;
-    
+
     let logs = [];
     logs.push(`Uygulama Durumu (App State):`);
-    logs.push(`- Çevrimiçi mi? (isOnline): ${db.isOnline()}`);
+    logs.push(`- İnternet Erişimi (hasInternet): ${db.hasInternet()}`);
+    logs.push(`- Bulut Bağlantısı (isOnline): ${db.isOnline()}`);
     logs.push(`- Giriş Yapan Kullanıcı: ${state.activeUser ? state.activeUser.email : 'Giriş yapılmamış'}`);
     logs.push(`- Kullanıcı ID: ${state.activeUser ? state.activeUser.id : 'null'}`);
     logs.push(`- Yönetici mi? (isAdmin): ${state.isAdmin}`);
@@ -77,13 +98,13 @@ function updateDiagnosticsUI() {
     logs.push(`- Seyahat Sayısı: ${state.tripsList.length}`);
     logs.push(`- Toplam Harcama Sayısı: ${state.expensesList.length}`);
     logs.push(`- Toplam Anı Sayısı: ${state.memoriesList.length}`);
-    
+
     if (state.tripsList.length > 0) {
-        logs.push(`- Seyahatler: ${state.tripsList.map(t => `${t.name} (ID: ${t.id ? t.id.substring(0,6) : 'null'}...)`).join(', ')}`);
+        logs.push(`- Seyahatler: ${state.tripsList.map(t => `${t.name} (ID: ${t.id ? t.id.substring(0, 6) : 'null'}...)`).join(', ')}`);
     }
-    
+
     if (state.expensesList.length > 0) {
-        logs.push(`- Son 3 Harcama: ${state.expensesList.slice(0, 3).map(e => `${e.title} (${e.amount} ${e.currency}, Seyahat ID: ${e.trip_id ? e.trip_id.substring(0,6) : 'Genel'}...)`).join(', ')}`);
+        logs.push(`- Son 3 Harcama: ${state.expensesList.slice(0, 3).map(e => `${e.title} (${e.amount} ${e.currency}, Seyahat ID: ${e.trip_id ? e.trip_id.substring(0, 6) : 'Genel'}...)`).join(', ')}`);
     }
 
     if (globalErrors.length > 0) {
@@ -103,6 +124,8 @@ function updateDiagnosticsUI() {
 const views = {
     auth: document.getElementById('view-auth'),
     setup: document.getElementById('view-setup'),
+    explore: document.getElementById('view-explore'),
+    post: document.getElementById('view-post'),
     dashboard: document.getElementById('view-dashboard'),
     trips: document.getElementById('view-trips'),
     expenses: document.getElementById('view-expenses'),
@@ -121,6 +144,10 @@ function updateActiveNav(hash) {
     });
 
     const mapping = {
+        '#explore': ['nav-explore', 'm-nav-explore'],
+        '#blog': ['nav-explore', 'm-nav-explore'],
+        '#news': ['nav-explore', 'm-nav-explore'],
+        '#post': ['nav-explore', 'm-nav-explore'],
         '#dashboard': ['nav-dash', 'm-nav-dash'],
         '#trips': ['nav-trips', 'm-nav-trips'],
         '#places': ['nav-places', 'm-nav-places'],
@@ -152,7 +179,6 @@ function extractMobilePlaceIntent() {
 async function processPendingMobileIntent() {
     const intent = extractMobilePlaceIntent();
     if (!intent) return;
-    // Clear query params once consumed so refresh does not replay
     window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
     await handleIncomingPlaceIntent(intent);
 }
@@ -163,11 +189,12 @@ function initNavigation() {
 }
 
 async function handleRouting() {
-    const hash = window.location.hash || '#dashboard';
-    updateActiveNav(hash);
+    flushReadingSession();
+    const rawHash = window.location.hash || '';
+    syncGlobalOfflineBanner();
 
     // Handle Read-Only Guest Share View (#share?id=... or #s=...)
-    if (hash.startsWith('#share') || hash.startsWith('#s=') || hash.startsWith('#s?')) {
+    if (rawHash.startsWith('#share') || rawHash.startsWith('#s=') || rawHash.startsWith('#s?')) {
         const layout = document.getElementById('layout-container');
         const mobileNav = document.querySelector('.mobile-nav');
         if (layout) layout.classList.add('no-sidebar');
@@ -176,10 +203,11 @@ async function handleRouting() {
         setAiLauncherVisible(false);
         setDesktopThemeToggleVisible(false);
         db.initSupabase();
-        await loadShareView(hash);
+        await loadShareView(rawHash);
+        trackPageView(rawHash);
         return;
     }
-    
+
     if (!isConfigured()) {
         showView('setup');
         setAiLauncherVisible(false);
@@ -188,64 +216,108 @@ async function handleRouting() {
     }
 
     db.initSupabase();
-
     checkResetPasswordMode();
 
     state.activeUser = await db.getCurrentUser();
-    
-    if (!state.activeUser && hash !== '#auth' && !hash.startsWith('#reset-password') && !hash.includes('type=recovery')) {
-        window.location.hash = '#auth';
-        return;
-    }
+
+    // Guests land on #explore (Blog & Travel News); signed-in users land on #dashboard
+    const hash = rawHash || (state.activeUser ? '#dashboard' : '#explore');
+    const cleanHash = hash.split('?')[0];
+    const isPublicExploreRoute = cleanHash === '#explore' || cleanHash === '#blog' || cleanHash === '#news' || cleanHash === '#post';
+
+    updateActiveNav(hash);
 
     state.userProfile = null;
     state.isAdmin = false;
     if (state.activeUser) {
-        // Apply email fallback immediately in case DB queries fail/throw
+        if (lastIdentifiedUserId !== state.activeUser.id) {
+            lastIdentifiedUserId = state.activeUser.id;
+            identifyVisitor(state.activeUser.id, state.activeUser.email);
+        }
+
         state.isAdmin = state.activeUser.email === 'bllacrr@gmail.com';
-        
+
         try {
             state.userProfile = await db.getUserProfile(state.activeUser.id);
-            if (!state.userProfile) {
+            if (!state.userProfile && db.hasInternet()) {
                 state.userProfile = await db.createUserProfile(state.activeUser.id, state.activeUser.email);
             }
-            // Resolve isAdmin role based on dynamic roles join output with independent email fallback
+            if (!state.userProfile && !db.hasInternet()) {
+                state.userProfile = {
+                    id: state.activeUser.id,
+                    email: state.activeUser.email,
+                    status: 'approved',
+                    role: { name: state.isAdmin ? 'admin' : 'member' }
+                };
+            }
             state.isAdmin = !!(
                 (state.userProfile && state.userProfile.role && state.userProfile.role.name === 'admin') ||
                 (state.activeUser && state.activeUser.email === 'bllacrr@gmail.com')
             );
         } catch (profileErr) {
             console.error("Profile resolution failed:", profileErr);
-            showToast("Profil doğrulanamadı. SQL şemasını çalıştırdığınızdan emin olun.", "danger");
+            if (db.hasInternet()) {
+                showToast("Profil doğrulanamadı. SQL şemasını çalıştırdığınızdan emin olun.", "danger");
+            }
         }
     }
 
-    // Toggle admin layouts elements dynamically
     const adminLink = document.getElementById('nav-admin');
     if (adminLink) {
         if (state.isAdmin) adminLink.classList.remove('hidden');
         else adminLink.classList.add('hidden');
     }
 
-    if (state.activeUser) {
-        if (!state.userProfile || state.userProfile.status !== 'approved') {
-            showView('approval-pending');
-            renderApprovalPending();
-            setAiLauncherVisible(false);
-        setDesktopThemeToggleVisible(false);
-
-            const layout = document.getElementById('layout-container');
-            const mobileNav = document.querySelector('.mobile-nav');
-            if (layout) layout.classList.add('no-sidebar');
-            if (mobileNav) mobileNav.classList.add('hidden');
-            return;
-        }
+    const isApprovedLoggedIn = !!(state.activeUser && state.userProfile && state.userProfile.status === 'approved');
+    if (!isApprovedLoggedIn || !state.isAdmin) {
+        clearAdminViewState();
     }
-
     const layout = document.getElementById('layout-container');
     const mobileNav = document.querySelector('.mobile-nav');
-    
-    if (hash === '#auth' || hash === '#setup') {
+
+    // Public Explore & Blog Detail Views (Accessible WITH or WITHOUT login)
+    if (isPublicExploreRoute) {
+        if (isApprovedLoggedIn) {
+            layout.classList.remove('no-sidebar');
+            setAiLauncherVisible(true);
+            setDesktopThemeToggleVisible(true);
+            if (mobileNav) mobileNav.classList.remove('hidden');
+        } else {
+            layout.classList.add('no-sidebar');
+            setAiLauncherVisible(false);
+            setDesktopThemeToggleVisible(false);
+            if (mobileNav) mobileNav.classList.add('hidden');
+        }
+
+        if (cleanHash === '#post') {
+            showView('post');
+            await loadBlogPostDetailView(hash);
+        } else {
+            showView('explore');
+            const initialTab = cleanHash === '#blog' ? 'blog' : cleanHash === '#news' ? 'news' : 'all';
+            await loadExploreView(initialTab);
+            trackPageView(hash);
+        }
+        return;
+    }
+
+    if (!state.activeUser && cleanHash !== '#auth' && !hash.startsWith('#reset-password') && !hash.includes('type=recovery')) {
+        window.location.hash = '#explore';
+        return;
+    }
+
+    if (state.activeUser && !isApprovedLoggedIn) {
+        showView('approval-pending');
+        renderApprovalPending();
+        setAiLauncherVisible(false);
+        setDesktopThemeToggleVisible(false);
+
+        if (layout) layout.classList.add('no-sidebar');
+        if (mobileNav) mobileNav.classList.add('hidden');
+        return;
+    }
+
+    if (cleanHash === '#auth' || cleanHash === '#setup') {
         setAiLauncherVisible(false);
         setDesktopThemeToggleVisible(false);
         layout.classList.add('no-sidebar');
@@ -256,14 +328,13 @@ async function handleRouting() {
         setDesktopThemeToggleVisible(true);
         if (mobileNav) mobileNav.classList.remove('hidden');
 
-        // Redirect Android Share Target / PWA Shortcut directly to #places when intent query exists
-        if (extractMobilePlaceIntent() && hash !== '#places') {
+        if (extractMobilePlaceIntent() && cleanHash !== '#places') {
             window.location.hash = '#places';
             return;
         }
     }
 
-    switch(hash) {
+    switch (cleanHash) {
         case '#dashboard':
             showView('dashboard');
             await loadDashboardData();
@@ -290,11 +361,13 @@ async function handleRouting() {
             loadSettingsForm();
             break;
         case '#admin':
-            if (state.isAdmin) {
+            if (isApprovedLoggedIn && state.isAdmin) {
                 showView('admin');
                 await loadAdminData();
             } else {
-                window.location.hash = '#dashboard';
+                clearAdminViewState();
+                showToast('Bu alana yalnızca yetkili yönetici erişebilir.', 'danger');
+                window.location.hash = isApprovedLoggedIn ? '#dashboard' : '#explore';
             }
             break;
         case '#auth':
@@ -302,11 +375,14 @@ async function handleRouting() {
                 window.location.hash = '#dashboard';
             } else {
                 showView('auth');
+                syncAuthNetworkUI();
             }
             break;
         default:
             showView('dashboard');
     }
+
+    trackPageView(hash);
 }
 
 function showView(viewName) {
@@ -414,6 +490,7 @@ function loadCachedExchangeRates() {
 
 async function fetchExchangeRates() {
     loadCachedExchangeRates();
+    if (!db.hasInternet()) return;
 
     const applyLiveRates = (rates, updatedAt = new Date().toISOString()) => {
         state.exchangeRates = { USD: 1, ...rates };
@@ -474,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initNavigation();
-    
+
     // Init Modules Event Handlers
     initAuthEvents();
     initSettingsEvents();
@@ -486,6 +563,37 @@ document.addEventListener('DOMContentLoaded', () => {
     initJournalEvents();
     initDashboardEvents();
     initAiAssistant();
+    initExploreEvents();
+    initAdminEvents();
+    initPrivacyNotice();
+
+    // Global network status listeners
+    syncGlobalOfflineBanner();
+    window.addEventListener('network-status-changed', (e) => {
+        const online = !!e.detail?.online;
+        syncGlobalOfflineBanner();
+        if (online) {
+            showToast('İnternet bağlantısı yeniden kuruldu!', 'success');
+            fetchExchangeRates();
+        } else {
+            showToast('İnternet bağlantısı kesildi — Çevrimdışı mod aktif.', 'warning');
+        }
+    });
+
+    const retryGlobalNetBtn = document.getElementById('btn-global-retry-network');
+    if (retryGlobalNetBtn) {
+        retryGlobalNetBtn.addEventListener('click', async () => {
+            syncGlobalOfflineBanner();
+            if (db.hasInternet()) {
+                await db.initSupabase();
+                await db.syncOfflineQueue();
+                showToast('Bağlantı aktif ve bulutla eşitleniyor.', 'success');
+                handleRouting();
+            } else {
+                showToast('İnternet bağlantısı hâlâ algılanamadı.', 'warning');
+            }
+        });
+    }
 
     window.addEventListener('ai-data-mutated', async () => {
         const currentHash = (window.location.hash || '#dashboard').split('?')[0];
@@ -503,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Live Sync Listeners
     window.addEventListener('sync-completed', async () => {
         showToast('Bulut verileri otomatik olarak güncellendi.', 'success');
-        const currentHash = window.location.hash;
+        const currentHash = (window.location.hash || '#dashboard').split('?')[0];
         if (currentHash === '#dashboard') await loadDashboardData();
         else if (currentHash === '#trips') await loadTripsData();
         else if (currentHash === '#places') await loadPlacesData();

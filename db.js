@@ -20,14 +20,94 @@ function generateUUID() {
 let supabaseReadyPromise = null;
 let currentCachedUserId = null;
 
+const AUTH_USER_CACHE_KEY = 'travellermobi_cached_user_v1';
+const AUTH_PROFILE_CACHE_KEY = 'travellermobi_cached_profile_v1';
+const BLOG_CACHE_KEY = 'travellermobi_cached_blog_posts_v1';
+const NEWS_SOURCES_CACHE_KEY = 'travellermobi_cached_news_sources_v1';
+
+function saveCachedAuthUser(user) {
+    try {
+        if (user && user.id) {
+            localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify({
+                id: user.id,
+                email: user.email || ''
+            }));
+        } else {
+            localStorage.removeItem(AUTH_USER_CACHE_KEY);
+        }
+    } catch (_) {}
+}
+
+export function getCachedAuthUser() {
+    try {
+        const raw = localStorage.getItem(AUTH_USER_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.id) return { ...parsed, _offlineSession: true };
+    } catch (_) {}
+    return null;
+}
+
+function saveCachedProfile(profile) {
+    try {
+        if (profile && profile.id) {
+            localStorage.setItem(AUTH_PROFILE_CACHE_KEY, JSON.stringify(profile));
+        } else {
+            localStorage.removeItem(AUTH_PROFILE_CACHE_KEY);
+        }
+    } catch (_) {}
+}
+
+export function getCachedProfile(userId = null) {
+    try {
+        const raw = localStorage.getItem(AUTH_PROFILE_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.id && (!userId || parsed.id === userId)) return parsed;
+    } catch (_) {}
+    return null;
+}
+
+function clearCachedAuthState() {
+    try {
+        localStorage.removeItem(AUTH_USER_CACHE_KEY);
+        localStorage.removeItem(AUTH_PROFILE_CACHE_KEY);
+    } catch (_) {}
+}
+
+function isNetworkFailureError(err) {
+    const msg = String(err?.message || err || '').toLowerCase();
+    return (
+        !hasInternet() ||
+        msg.includes('failed to fetch') ||
+        msg.includes('networkerror') ||
+        msg.includes('load failed') ||
+        msg.includes('err_internet_disconnected') ||
+        msg.includes('err_name_not_resolved') ||
+        msg.includes('importing a module script failed')
+    );
+}
+
+/**
+ * Raw browser internet availability check
+ */
+export function hasInternet() {
+    if (typeof navigator === 'undefined') return true;
+    return navigator.onLine !== false;
+}
+
 /**
  * Initialize Supabase Client if keys are configured.
  * Returns a Promise that resolves with the Supabase client.
  */
 export function initSupabase() {
+    if (supabase) return Promise.resolve(supabase);
     if (supabaseReadyPromise) return supabaseReadyPromise;
 
     if (config.supabaseUrl && config.supabaseKey) {
+        if (!hasInternet()) {
+            return Promise.resolve(null);
+        }
         supabaseReadyPromise = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
             .then((module) => {
                 supabase = module.createClient(config.supabaseUrl, config.supabaseKey);
@@ -37,9 +117,9 @@ export function initSupabase() {
                 return supabase;
             })
             .catch((err) => {
-                console.error("Failed to load Supabase module from CDN:", err);
+                console.warn("Failed to load Supabase module from CDN:", err);
                 supabaseReadyPromise = null; // Reset to allow retry
-                throw err;
+                return null;
             });
         return supabaseReadyPromise;
     }
@@ -49,25 +129,29 @@ export function initSupabase() {
 // Helper to await client readiness in auth/database actions
 async function getSupabase() {
     if (!supabase) {
-        if (supabaseReadyPromise) {
-            await supabaseReadyPromise;
-        } else {
-            await initSupabase();
+        try {
+            if (supabaseReadyPromise) {
+                await supabaseReadyPromise;
+            } else {
+                await initSupabase();
+            }
+        } catch {
+            return null;
         }
     }
     return supabase;
 }
 
 // Ensure init runs immediately if possible
-if (config.supabaseUrl && config.supabaseKey) {
+if (config.supabaseUrl && config.supabaseKey && hasInternet()) {
     initSupabase();
 }
 
 /**
- * Helper to check connection status
+ * Helper to check connection status (both network + initialized Supabase client)
  */
 export function isOnline() {
-    return navigator.onLine && supabase !== null;
+    return hasInternet() && supabase !== null;
 }
 
 /* ==========================================================================
@@ -75,63 +159,140 @@ export function isOnline() {
    ========================================================================== */
 
 export async function getCurrentUser() {
+    if (!hasInternet()) {
+        const cached = getCachedAuthUser();
+        currentCachedUserId = cached ? cached.id : null;
+        return cached;
+    }
+
     try {
         const client = await getSupabase();
-        if (!client) return null;
-        const { data: { user } } = await client.auth.getUser();
+        if (!client) {
+            const cached = getCachedAuthUser();
+            currentCachedUserId = cached ? cached.id : null;
+            return cached;
+        }
+        const { data: { user }, error } = await client.auth.getUser();
+        if (error) {
+            if (isNetworkFailureError(error)) {
+                const cached = getCachedAuthUser();
+                currentCachedUserId = cached ? cached.id : null;
+                return cached;
+            }
+            // Auth session invalid / expired
+            currentCachedUserId = null;
+            clearCachedAuthState();
+            return null;
+        }
         if (user) {
             currentCachedUserId = user.id;
+            saveCachedAuthUser(user);
         } else {
             currentCachedUserId = null;
+            clearCachedAuthState();
         }
         return user;
     } catch (err) {
-        console.error("Error in getCurrentUser:", err);
+        console.warn("Error in getCurrentUser:", err);
+        if (isNetworkFailureError(err)) {
+            const cached = getCachedAuthUser();
+            currentCachedUserId = cached ? cached.id : null;
+            return cached;
+        }
         return null;
     }
 }
 
 export async function signIn(email, password) {
-    const client = await getSupabase();
-    if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    if (data.user) {
-        currentCachedUserId = data.user.id;
+    if (!hasInternet()) {
+        throw new Error("İnternet bağlantısı yok. Giriş yapabilmek için internet erişiminizi kontrol edin.");
     }
-    return data.user;
+    const client = await getSupabase();
+    if (!client) {
+        throw new Error("Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.");
+    }
+    try {
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        if (data.user) {
+            currentCachedUserId = data.user.id;
+            saveCachedAuthUser(data.user);
+        }
+        return data.user;
+    } catch (err) {
+        if (isNetworkFailureError(err)) {
+            throw new Error("İnternet bağlantısı kesildi veya sunucuya erişilemedi. Lütfen bağlantınızı kontrol edin.");
+        }
+        throw err;
+    }
 }
 
 export async function signUp(email, password) {
-    const client = await getSupabase();
-    if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
-    const { data, error } = await client.auth.signUp({ email, password });
-    if (error) throw error;
-    if (data.user) {
-        currentCachedUserId = data.user.id;
+    if (!hasInternet()) {
+        throw new Error("İnternet bağlantısı yok. Kayıt olabilmek için internet erişiminizi kontrol edin.");
     }
-    return data.user;
+    const client = await getSupabase();
+    if (!client) {
+        throw new Error("Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.");
+    }
+    try {
+        const { data, error } = await client.auth.signUp({ email, password });
+        if (error) throw error;
+        if (data.user) {
+            currentCachedUserId = data.user.id;
+            saveCachedAuthUser(data.user);
+        }
+        return data.user;
+    } catch (err) {
+        if (isNetworkFailureError(err)) {
+            throw new Error("İnternet bağlantısı kesildi veya sunucuya erişilemedi. Lütfen bağlantınızı kontrol edin.");
+        }
+        throw err;
+    }
 }
 
 export async function signOut() {
-    const client = await getSupabase();
-    if (!client) return;
-    await client.auth.signOut();
     currentCachedUserId = null;
+    clearCachedAuthState();
+    if (!hasInternet()) return;
+    try {
+        const client = await getSupabase();
+        if (!client) return;
+        await client.auth.signOut();
+    } catch (err) {
+        console.warn("Remote signOut skipped while offline:", err);
+    }
 }
 
 export async function resetPassword(email) {
+    if (!hasInternet()) {
+        throw new Error("İnternet bağlantısı yok. Şifre sıfırlama bağlantısı göndermek için internet gereklidir.");
+    }
     const client = await getSupabase();
-    if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
+    if (!client) {
+        throw new Error("Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.");
+    }
     const redirectTo = `${window.location.origin}${window.location.pathname}#reset-password`;
-    const { data, error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) throw error;
-    return true;
+    try {
+        const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        if (isNetworkFailureError(err)) {
+            throw new Error("İnternet bağlantısı kesildi. Lütfen bağlantınızı kontrol edin.");
+        }
+        throw err;
+    }
 }
 
 export async function updateUserPassword(newPassword) {
+    if (!hasInternet()) {
+        throw new Error("İnternet bağlantısı yok. Şifrenizi güncellemek için internet erişimi gereklidir.");
+    }
     const client = await getSupabase();
-    if (!client) throw new Error("Supabase bulut bağlantısı kurulu değil. Lütfen Ayarlar'dan yapılandırın.");
+    if (!client) {
+        throw new Error("Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.");
+    }
     const { data, error } = await client.auth.updateUser({ password: newPassword });
     if (error) throw error;
     return data.user;
@@ -1091,10 +1252,21 @@ export function getPendingQueueCount() {
     return getLocalCache(CACHE_KEYS.QUEUE).length;
 }
 
-// Register browser sync listeners
-window.addEventListener('online', () => {
-    console.log("Network online detected. Triggering queue sync.");
-    syncOfflineQueue();
+// Register browser network & sync listeners
+window.addEventListener('online', async () => {
+    console.log("Network online detected. Re-initializing Supabase and triggering queue sync.");
+    window.dispatchEvent(new CustomEvent('network-status-changed', { detail: { online: true } }));
+    try {
+        await initSupabase();
+        await syncOfflineQueue();
+    } catch (err) {
+        console.warn("Online recovery warning:", err);
+    }
+});
+
+window.addEventListener('offline', () => {
+    console.log("Network offline detected.");
+    window.dispatchEvent(new CustomEvent('network-status-changed', { detail: { online: false } }));
 });
 
 /* ==========================================================================
@@ -1102,18 +1274,28 @@ window.addEventListener('online', () => {
    ========================================================================== */
 
 export async function getUserProfile(userId) {
-    const client = await getSupabase();
-    if (!client) return null;
-    const { data, error } = await client
-        .from('profiles')
-        .select('*, role:roles(name)')
-        .eq('id', userId)
-        .maybeSingle();
-    if (error) {
-        console.error("Error fetching user profile:", error);
-        return null;
+    if (!hasInternet()) {
+        return getCachedProfile(userId);
     }
-    return data;
+    const client = await getSupabase();
+    if (!client) return getCachedProfile(userId);
+    try {
+        const { data, error } = await client
+            .from('profiles')
+            .select('*, role:roles(name)')
+            .eq('id', userId)
+            .maybeSingle();
+        if (error) {
+            console.error("Error fetching user profile:", error);
+            if (isNetworkFailureError(error)) return getCachedProfile(userId);
+            return null;
+        }
+        if (data) saveCachedProfile(data);
+        return data;
+    } catch (err) {
+        console.warn("Network error fetching user profile:", err);
+        return getCachedProfile(userId);
+    }
 }
 
 export async function createUserProfile(userId, email) {
@@ -1782,8 +1964,397 @@ export async function getSharedRoute(slug) {
     }
 }
 
+/* ==========================================================================
+   PUBLIC BLOG POSTS & CMS API
+   ========================================================================== */
+
+function getCachedBlogPosts() {
+    try {
+        const raw = localStorage.getItem(BLOG_CACHE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function setCachedBlogPosts(posts) {
+    try {
+        localStorage.setItem(BLOG_CACHE_KEY, JSON.stringify(posts || []));
+    } catch (_) {}
+}
+
+export async function getPublishedBlogPosts() {
+    if (!hasInternet()) {
+        return getCachedBlogPosts();
+    }
+    try {
+        const client = await getSupabase();
+        if (!client) return getCachedBlogPosts();
+        const { data, error } = await client
+            .from('blog_posts')
+            .select('*')
+            .eq('status', 'published')
+            .order('is_featured', { ascending: false })
+            .order('published_at', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false });
+        if (error) {
+            if (isMissingTableError(error)) {
+                return getCachedBlogPosts();
+            }
+            throw error;
+        }
+        const list = data || [];
+        setCachedBlogPosts(list);
+        return list;
+    } catch (err) {
+        console.warn("Could not fetch published blog posts, using cache:", err);
+        return getCachedBlogPosts();
+    }
+}
+
+export async function getBlogPostBySlug(slug) {
+    if (!slug) return null;
+    const cached = getCachedBlogPosts().find(p => p.slug === slug);
+    if (!hasInternet()) return cached || null;
+
+    try {
+        const client = await getSupabase();
+        if (!client) return cached || null;
+        const { data, error } = await client
+            .from('blog_posts')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
+        if (error) throw error;
+        return data || cached || null;
+    } catch (err) {
+        console.warn("Error fetching blog post by slug:", err);
+        return cached || null;
+    }
+}
+
+export async function getAllBlogPostsAdmin() {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+    const { data, error } = await client
+        .from('blog_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+}
+
+export async function uploadPublicContentImage(file) {
+    if (!file) return '';
+    if (!hasInternet()) throw new Error("Görsel yüklemek için internet bağlantısı gereklidir.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+
+    const rawExt = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : 'jpg';
+    const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(rawExt) ? rawExt : 'jpg';
+    const filePath = `blog/${Date.now()}_${generateUUID().slice(0, 8)}.${safeExt}`;
+
+    const { error: uploadError } = await client.storage
+        .from('public-content')
+        .upload(filePath, file, {
+            cacheControl: '31536000',
+            upsert: false,
+            contentType: file.type || 'image/jpeg'
+        });
+
+    if (uploadError) {
+        throw new Error(`Kapak görseli yüklenemedi ("public-content" bucket'ı kurulu mu?): ${uploadError.message}`);
+    }
+
+    const { data } = client.storage.from('public-content').getPublicUrl(filePath);
+    return data?.publicUrl || '';
+}
+
+export async function createBlogPost(postData, coverFile = null) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+
+    let coverUrl = (postData.cover_image_url || '').trim();
+    if (coverFile) {
+        coverUrl = await uploadPublicContentImage(coverFile);
+    }
+
+    const nowIso = new Date().toISOString();
+    const record = {
+        slug: postData.slug,
+        title: postData.title,
+        summary: postData.summary || '',
+        content: postData.content,
+        cover_image_url: coverUrl || null,
+        category: postData.category || 'Rehber',
+        tags: Array.isArray(postData.tags) ? postData.tags : [],
+        author_name: postData.author_name || 'TravellerMobi Editör',
+        author_id: currentCachedUserId || null,
+        status: postData.status === 'published' ? 'published' : 'draft',
+        is_featured: !!postData.is_featured,
+        read_time_minutes: Number(postData.read_time_minutes) || 3,
+        published_at: postData.status === 'published' ? (postData.published_at || nowIso) : null,
+        updated_at: nowIso
+    };
+
+    const { data, error } = await client
+        .from('blog_posts')
+        .insert([record])
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function updateBlogPost(postId, postData, coverFile = null) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+
+    let coverUrl = (postData.cover_image_url || '').trim();
+    if (coverFile) {
+        coverUrl = await uploadPublicContentImage(coverFile);
+    }
+
+    const nowIso = new Date().toISOString();
+    const record = {
+        slug: postData.slug,
+        title: postData.title,
+        summary: postData.summary || '',
+        content: postData.content,
+        cover_image_url: coverUrl || null,
+        category: postData.category || 'Rehber',
+        tags: Array.isArray(postData.tags) ? postData.tags : [],
+        author_name: postData.author_name || 'TravellerMobi Editör',
+        status: postData.status === 'published' ? 'published' : 'draft',
+        is_featured: !!postData.is_featured,
+        read_time_minutes: Number(postData.read_time_minutes) || 3,
+        updated_at: nowIso
+    };
+    if (record.status === 'published') {
+        record.published_at = postData.published_at || nowIso;
+    }
+
+    const { data, error } = await client
+        .from('blog_posts')
+        .update(record)
+        .eq('id', postId)
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteBlogPost(postId) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+    const { error } = await client.from('blog_posts').delete().eq('id', postId);
+    if (error) throw error;
+    return true;
+}
+
+export async function incrementBlogPostView(slug) {
+    if (!slug || !hasInternet()) return;
+    try {
+        const client = await getSupabase();
+        if (!client) return;
+        await client.rpc('increment_blog_view', { p_slug: slug });
+    } catch (_) {}
+}
+
+/* ==========================================================================
+   AUTOMATIC TRAVEL NEWS SOURCES API
+   ========================================================================== */
+
+export async function getNewsSources(onlyEnabled = false) {
+    const readCache = () => {
+        try {
+            const raw = localStorage.getItem(NEWS_SOURCES_CACHE_KEY);
+            const list = raw ? JSON.parse(raw) : [];
+            return onlyEnabled ? list.filter(s => s.is_enabled !== false) : list;
+        } catch {
+            return [];
+        }
+    };
+
+    if (!hasInternet()) return readCache();
+    try {
+        const client = await getSupabase();
+        if (!client) return readCache();
+        let query = client.from('news_sources').select('*').order('created_at', { ascending: true });
+        if (onlyEnabled) query = query.eq('is_enabled', true);
+        const { data, error } = await query;
+        if (error) {
+            if (isMissingTableError(error)) return [];
+            throw error;
+        }
+        if (!onlyEnabled) {
+            try { localStorage.setItem(NEWS_SOURCES_CACHE_KEY, JSON.stringify(data || [])); } catch (_) {}
+        }
+        return data || [];
+    } catch (err) {
+        console.warn("Could not load news sources:", err);
+        return readCache();
+    }
+}
+
+export async function createNewsSource(sourceData) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+    const { data, error } = await client
+        .from('news_sources')
+        .insert([{
+            name: sourceData.name,
+            rss_url: sourceData.rss_url,
+            category: sourceData.category || 'Seyahat',
+            is_enabled: sourceData.is_enabled !== false
+        }])
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function updateNewsSource(id, patch) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+    const { data, error } = await client
+        .from('news_sources')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteNewsSource(id) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+    const { error } = await client.from('news_sources').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+}
+
+/* ==========================================================================
+   VISITOR ANALYTICS & IDENTITY STITCHING API
+   ========================================================================== */
+
+export async function recordSiteVisit(payload) {
+    if (!hasInternet() || !payload?.visitor_id) return false;
+    try {
+        const client = await getSupabase();
+        if (!client) return false;
+        const { error } = await client.rpc('record_site_visit', {
+            p_visitor_id: payload.visitor_id,
+            p_session_id: payload.session_id || null,
+            p_event_type: payload.event_type || 'page_view',
+            p_page_path: payload.page_path || '#explore',
+            p_post_slug: payload.post_slug || null,
+            p_post_title: payload.post_title || null,
+            p_referrer: payload.referrer || null,
+            p_referrer_domain: payload.referrer_domain || null,
+            p_utm_source: payload.utm_source || null,
+            p_utm_medium: payload.utm_medium || null,
+            p_utm_campaign: payload.utm_campaign || null,
+            p_device_type: payload.device_type || null,
+            p_os: payload.os || null,
+            p_browser: payload.browser || null,
+            p_language: payload.language || null,
+            p_screen_resolution: payload.screen_resolution || null,
+            p_timezone: payload.timezone || null,
+            p_country: payload.country || null,
+            p_city: payload.city || null,
+            p_region: payload.region || null,
+            p_is_pwa: !!payload.is_pwa,
+            p_user_id: payload.user_id || null,
+            p_user_email: payload.user_email || null,
+            p_scroll_depth: typeof payload.scroll_depth === 'number' ? Math.round(payload.scroll_depth) : null,
+            p_duration_seconds: typeof payload.duration_seconds === 'number' ? Math.round(payload.duration_seconds) : null,
+            p_search_query: payload.search_query ? String(payload.search_query).slice(0, 120) : null,
+            p_search_results_count: typeof payload.search_results_count === 'number' ? Math.round(payload.search_results_count) : null
+        });
+        if (error) {
+            if (!isMissingTableError(error)) {
+                console.warn("record_site_visit RPC error:", error.message);
+            }
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export async function linkVisitorToUser(visitorId, userId, email) {
+    if (!hasInternet() || !visitorId || !userId) return false;
+    try {
+        const client = await getSupabase();
+        if (!client) return false;
+        const { error } = await client.rpc('link_visitor_to_user', {
+            p_visitor_id: visitorId,
+            p_user_id: userId,
+            p_user_email: email || null
+        });
+        return !error;
+    } catch {
+        return false;
+    }
+}
+
+export async function getAnalyticsOverview(limitVisitors = 150, limitEvents = 500) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+
+    const [visitorsRes, eventsRes] = await Promise.all([
+        client
+            .from('site_visitors')
+            .select('*')
+            .order('last_seen_at', { ascending: false })
+            .limit(limitVisitors),
+        client
+            .from('site_events')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limitEvents)
+    ]);
+
+    if (visitorsRes.error) throw visitorsRes.error;
+    if (eventsRes.error) throw eventsRes.error;
+
+    return {
+        visitors: visitorsRes.data || [],
+        events: eventsRes.data || []
+    };
+}
+
+export async function getVisitorTimelineAdmin(visitorId, limit = 80) {
+    if (!hasInternet()) throw new Error("İnternet bağlantısı yok.");
+    if (!visitorId) return [];
+    const client = await getSupabase();
+    if (!client) throw new Error("Sunucuya ulaşılamadı.");
+
+    const { data, error } = await client
+        .from('site_events')
+        .select('*')
+        .eq('visitor_id', visitorId)
+        .order('created_at', { ascending: true })
+        .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+}
+
 // Initialize active user on load if config is present
-if (config.supabaseUrl && config.supabaseKey) {
+if (config.supabaseUrl && config.supabaseKey && hasInternet()) {
     getCurrentUser().catch(() => {});
 }
 

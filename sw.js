@@ -1,6 +1,6 @@
 // sw.js - Service Worker for TravellerMobi PWA
 
-const CACHE_NAME = 'travellermobi-v1.0.15';
+const CACHE_NAME = 'travellermobi-v1.1.1';
 
 const STATIC_ASSETS = [
     './',
@@ -29,7 +29,9 @@ const STATIC_ASSETS = [
     './js/modules/story_export.js',
     './js/modules/ai_assistant.js',
     './js/modules/weather.js',
-    './js/modules/reservations.js'
+    './js/modules/reservations.js',
+    './js/modules/explore.js',
+    './js/modules/analytics.js'
 ];
 
 // Install: Pre-cache static shell assets
@@ -63,9 +65,10 @@ self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
 
-    // Bypass caching for non-GET requests, Supabase backend calls, auth endpoints, or live exchange rate APIs
-    if (request.method !== 'GET' || 
-        url.hostname.includes('supabase.co') || 
+    // Bypass caching for non-GET requests, serverless APIs, Supabase backend calls, auth endpoints, or live exchange rate APIs
+    if (request.method !== 'GET' ||
+        url.pathname.startsWith('/api/') ||
+        url.hostname.includes('supabase.co') ||
         url.hostname.includes('googleapis.com') ||
         url.hostname.includes('openexchangerates.org') ||
         url.hostname.includes('open.er-api.com') ||
