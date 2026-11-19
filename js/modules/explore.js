@@ -281,7 +281,7 @@ function renderBlogSection() {
         if (featuredPost) {
             featuredWrap.classList.remove('hidden');
             const bgCover = featuredPost.cover_image_url
-                ? `<img src="${escapeHtml(featuredPost.cover_image_url)}" alt="${escapeHtml(featuredPost.title)}" class="explore-featured-img" loading="lazy">`
+                ? `<img src="${escapeHtml(featuredPost.cover_image_url)}" alt="${escapeHtml(featuredPost.title)}" class="explore-featured-img" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"><div class="explore-featured-placeholder hidden"><i data-lucide="compass"></i></div>`
                 : `<div class="explore-featured-placeholder"><i data-lucide="compass"></i></div>`;
             featuredWrap.innerHTML = `
                 <article class="explore-featured-card card glass" data-post-slug="${escapeHtml(featuredPost.slug)}">
@@ -337,7 +337,7 @@ function renderBlogSection() {
 
     gridEl.innerHTML = listToRender.map(post => {
         const coverHtml = post.cover_image_url
-            ? `<img src="${escapeHtml(post.cover_image_url)}" alt="${escapeHtml(post.title)}" loading="lazy">`
+            ? `<img src="${escapeHtml(post.cover_image_url)}" alt="${escapeHtml(post.title)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"><div class="blog-card-cover-placeholder hidden"><i data-lucide="compass"></i></div>`
             : `<div class="blog-card-cover-placeholder"><i data-lucide="compass"></i></div>`;
 
         const tagsHtml = Array.isArray(post.tags) && post.tags.length > 0
@@ -565,7 +565,7 @@ export async function loadBlogPostDetailView(hash) {
     startReadingSession(post.slug, post.title);
 
     const coverHtml = post.cover_image_url
-        ? `<div class="post-detail-cover"><img src="${escapeHtml(post.cover_image_url)}" alt="${escapeHtml(post.title)}"></div>`
+        ? `<div class="post-detail-cover"><img src="${escapeHtml(post.cover_image_url)}" alt="${escapeHtml(post.title)}" onerror="this.parentElement.style.display='none'"></div>`
         : '';
 
     const tagsHtml = Array.isArray(post.tags) && post.tags.length > 0
