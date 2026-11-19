@@ -2586,13 +2586,23 @@ Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir 
                             <div class="section-title-row" style="margin-bottom:12px;">
                                 <div>
                                     <h3>Otomatik Seyahat Haber Akışı</h3>
-                                    <p class="text-sm text-muted">Turizm, Havacılık, Vize & Pasaport ve Destinasyon kategorileri <code>/api/travel-news</code> üzerinden otomatik güncellenir. Aşağıdan ekstra özel RSS kaynakları da ekleyebilirsiniz.</p>
+                                    <p class="text-sm text-muted">Sadece seçili güvenilir kaynaklardan (NTV, Euronews, Hürriyet, BBC Türkçe, Turizm Güncel, AirportHaber vb.) vize, havacılık ve rota haberleri çekilir. İstenmeyen yerel fuar/gündem gürültüsü otomatik elenir.</p>
                                 </div>
                                 <button type="button" id="btn-admin-test-news-feed" class="btn btn-primary btn-sm">
                                     <i data-lucide="refresh-cw"></i> Akışı Şimdi Test Et
                                 </button>
                             </div>
                             <div id="admin-news-live-preview" class="admin-news-live-preview"></div>
+                        </div>
+
+                        <div class="card glass margin-top-20">
+                            <h3 style="margin-bottom:8px;">Engellenen Haber Kaynakları</h3>
+                            <p class="text-xs text-muted" style="margin-bottom:12px;">Görmek istemediğiniz bir haber sitesinin adını ekleyin (veya yukarıdaki önizlemede "Kaynağı Engelle"ye tıklayın). <code>Rudaw</code> vb. kaynaklar varsayılan olarak zaten engellidir.</p>
+                            <form id="admin-block-source-form" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+                                <input type="text" id="block-source-name" class="text-input" style="flex:1; min-width:200px; margin:0;" required placeholder="Örn: Rudaw veya kaynak adı...">
+                                <button type="submit" class="btn btn-secondary">Kaynağı Engelle</button>
+                            </form>
+                            <div id="admin-blocked-sources-list" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
                         </div>
 
                         <div class="card glass margin-top-20">

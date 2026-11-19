@@ -1,27 +1,106 @@
-// api/travel-news.js - Vercel Serverless Automatic Travel News Aggregator (RSS/Atom)
+// api/travel-news.js - Curated & Filtered Automatic Travel News Aggregator (RSS/Atom)
 
 const DEFAULT_FEEDS = [
     {
-        name: 'Seyahat & Turizm',
-        category: 'Turizm',
-        url: 'https://news.google.com/rss/search?q=seyahat+OR+turizm+OR+%22gezi+rehberi%22+when:7d&hl=tr&gl=TR&ceid=TR:tr'
+        name: 'Vize & Pasaport',
+        category: 'Vize & Pasaport',
+        curated: true,
+        url: 'https://news.google.com/rss/search?q=(Schengen+OR+%22vize+s%C3%BCre%C3%A7leri%22+OR+%22vizesiz+%C3%BClkeler%22+OR+%22kap%C4%B1da+vize%22+OR+%22pasaport+%C3%BCcreti%22)+when:14d&hl=tr&gl=TR&ceid=TR:tr'
     },
     {
         name: 'Havacılık & Uçuş',
         category: 'Havacılık',
-        url: 'https://news.google.com/rss/search?q=THY+OR+Pegasus+OR+havaliman%C4%B1+OR+%22u%C3%A7ak+bileti%22+when:7d&hl=tr&gl=TR&ceid=TR:tr'
+        curated: true,
+        url: 'https://news.google.com/rss/search?q=(%22u%C3%A7ak+bileti%22+OR+%22direkt+u%C3%A7u%C5%9F%22+OR+%22yeni+sefer%22+OR+%22THY+sefer%22+OR+%22Pegasus+kampanya%22+OR+%22AJet+sefer%22)+when:10d&hl=tr&gl=TR&ceid=TR:tr'
     },
     {
-        name: 'Vize & Pasaport',
-        category: 'Vize & Pasaport',
-        url: 'https://news.google.com/rss/search?q=Schengen+OR+vize+OR+pasaport+OR+%22vizesiz+%C3%BClkeler%22+when:14d&hl=tr&gl=TR&ceid=TR:tr'
-    },
-    {
-        name: 'Dünya Destinasyonları',
+        name: 'Destinasyon & Gezi',
         category: 'Destinasyon',
-        url: 'https://news.google.com/rss/search?q=%22yurt+d%C4%B1%C5%9F%C4%B1+tatil%22+OR+%22tatil+rotalar%C4%B1%22+OR+otel+turizm+when:14d&hl=tr&gl=TR&ceid=TR:tr'
+        curated: true,
+        url: 'https://news.google.com/rss/search?q=(%22yurt+d%C4%B1%C5%9F%C4%B1+tatil%22+OR+%22gezilecek+yerler%22+OR+%22seyahat+rotalar%C4%B1%22+OR+%22tren+rotas%C4%B1%22+OR+%22Avrupa+seyahat%22)+when:14d&hl=tr&gl=TR&ceid=TR:tr'
+    },
+    {
+        name: 'Turizm & Seyahat',
+        category: 'Turizm',
+        curated: true,
+        url: 'https://news.google.com/rss/search?q=(%22M%C3%BCzeKart%22+OR+%22turizm+sezonu%22+OR+%22yurt+d%C4%B1%C5%9F%C4%B1+%C3%A7%C4%B1k%C4%B1%C5%9F+harc%C4%B1%22+OR+%22havayolu+yolcu%22+OR+%22otel+rezervasyon%22)+when:10d&hl=tr&gl=TR&ceid=TR:tr'
     }
 ];
+
+// Trusted mainstream & dedicated travel/aviation outlets for Google News items
+const TRUSTED_SOURCE_PATTERNS = [
+    'ntv',
+    'euronews',
+    'bbc',
+    'dw',
+    'hürriyet',
+    'hurriyet',
+    'milliyet',
+    'sözcü',
+    'sozcu',
+    'habertürk',
+    'haberturk',
+    'cnn türk',
+    'cnnturk',
+    'trt haber',
+    'anadolu ajansı',
+    'bloomberg',
+    'ekonomim',
+    'dünya',
+    'dunya',
+    'oksijen',
+    't24',
+    'airporthaber',
+    'airlinehaber',
+    'havayolu101',
+    'tolga özbek',
+    'turizm güncel',
+    'turizmguncel',
+    'turizm ajansı',
+    'turizm günlüğü',
+    'turizmgunlugu',
+    'turizmdays',
+    'turizmnews',
+    'enuygun',
+    'obilet',
+    'turna',
+    'webtekno',
+    'shiftdelete',
+    'cumhuriyet',
+    'sabah',
+    'akşam',
+    'karar',
+    'nefes',
+    'aposto',
+    'indyturk',
+    'independent türkçe'
+];
+
+// Always-blocked sources (normalized lowercase)
+const DEFAULT_BLOCKED_SOURCES = [
+    'rudaw',
+    'sputnik',
+    'yeni akit',
+    'ensonhaber'
+];
+
+// Off-topic / noisy headline patterns that don't belong in a travel magazine feed
+const NOISE_HEADLINE_PATTERNS = [
+    /fuar[ıi]\s+kap[ıi]lar[ıi]n[ıi]\s+a[çc]t[ıi]/i,
+    /fuar[ıi]\s+ba[şs]lad[ıi]/i,
+    /\bfuar\b.*\bfirma\s+kat[ıi]l[ıi]yor/i,
+    /\bcinayet\b|\b[öo]ld[üu]r[üu]ld[üu]\b|\btutukland[ıi]\b|\bg[öo]zalt[ıi]\b/i,
+    /\bs[üu]per\s+loto\b|\b[şs]ans\s+topu\b|\bpiyango\b|\bbur[çc]\s+yorumu\b/i,
+    /\btransfer\b.*\bfutbol\b|\bs[üu]per\s+lig\b|\bderbi\b/i,
+    /\bmeclis\s+g[üu]ndemi\b|\bparti\s+kongresi\b|\bmilletvekili\b/i
+];
+
+function normalizeText(str) {
+    return String(str || '')
+        .toLocaleLowerCase('tr-TR')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
 function isSafePublicHttpsUrl(rawUrl) {
     try {
@@ -29,7 +108,6 @@ function isSafePublicHttpsUrl(rawUrl) {
         if (parsed.protocol !== 'https:') return false;
         const host = parsed.hostname.toLowerCase();
         if (!host || host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return false;
-        // Reject raw IPv4 private / loopback / link-local / metadata ranges
         if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) {
             const parts = host.split('.').map(Number);
             if (parts[0] === 10 || parts[0] === 127 || parts[0] === 0) return false;
@@ -37,7 +115,7 @@ function isSafePublicHttpsUrl(rawUrl) {
             if (parts[0] === 192 && parts[1] === 168) return false;
             if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
         }
-        if (host.includes(':')) return false; // Skip IPv6 literals
+        if (host.includes(':')) return false;
         return true;
     } catch {
         return false;
@@ -46,15 +124,20 @@ function isSafePublicHttpsUrl(rawUrl) {
 
 function decodeHtmlEntities(str) {
     if (!str) return '';
-    return String(str)
-        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;|&apos;/g, "'")
-        .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-        .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+    let out = String(str).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+    // Decode up to 2 passes to catch double-escaped entities like &amp;nbsp;
+    for (let i = 0; i < 2; i++) {
+        out = out
+            .replace(/&nbsp;|&#160;|&#xA0;|\u00A0/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;|&apos;/gi, "'")
+            .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+    }
+    return out;
 }
 
 function stripHtml(html) {
@@ -63,6 +146,7 @@ function stripHtml(html) {
         .replace(/<script[\s\S]*?<\/script>/gi, ' ')
         .replace(/<style[\s\S]*?<\/style>/gi, ' ')
         .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 }
@@ -86,11 +170,67 @@ function extractImageFromBlock(block, rawDescription) {
     return '';
 }
 
-function parseFeedXml(xml, feedMeta) {
+function isSourceAllowed(sourceName, link, isCuratedFeed, customBlockedList) {
+    const normSource = normalizeText(sourceName);
+    const normLink = normalizeText(link);
+
+    const allBlocked = [...DEFAULT_BLOCKED_SOURCES, ...customBlockedList];
+    for (const blk of allBlocked) {
+        if (!blk) continue;
+        if (normSource.includes(blk) || normLink.includes(blk)) {
+            return false;
+        }
+    }
+
+    // Admin's custom RSS feeds always pass (unless explicitly blocked above)
+    if (!isCuratedFeed) return true;
+
+    // For Google News curated feeds, require a reputable known Turkish/travel source
+    return TRUSTED_SOURCE_PATTERNS.some(pat => normSource.includes(pat));
+}
+
+function isHeadlineRelevant(title) {
+    if (!title || title.length < 18) return false;
+    for (const pattern of NOISE_HEADLINE_PATTERNS) {
+        if (pattern.test(title)) return false;
+    }
+    return true;
+}
+
+function cleanSummary(rawDesc, title, sourceName) {
+    let summary = stripHtml(rawDesc);
+    if (!summary) return '';
+
+    // Remove duplicate title prefix from Google News descriptions
+    const normSum = normalizeText(summary);
+    const normTitle = normalizeText(title);
+    if (normTitle && normSum.startsWith(normTitle)) {
+        summary = summary.slice(title.length).replace(/^[\s\-–|:•·]+/, '').trim();
+    }
+
+    // Remove trailing or standalone source name (e.g. "Euronews.com", "Hürriyet")
+    if (sourceName) {
+        const escapedSrc = sourceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        summary = summary
+            .replace(new RegExp(`^${escapedSrc}$`, 'i'), '')
+            .replace(new RegExp(`[\\s\\-–|:•·]*${escapedSrc}$`, 'i'), '')
+            .trim();
+    }
+
+    // If remaining text is too short or just punctuation/source remnant, leave empty (clean headline-only card)
+    if (summary.length < 32) return '';
+
+    if (summary.length > 190) {
+        summary = summary.slice(0, 187).trim() + '...';
+    }
+    return summary;
+}
+
+function parseFeedXml(xml, feedMeta, customBlockedList) {
     const items = [];
     const itemMatches = xml.match(/<item\b[\s\S]*?<\/item>/gi) || xml.match(/<entry\b[\s\S]*?<\/entry>/gi) || [];
 
-    for (const block of itemMatches.slice(0, 15)) {
+    for (const block of itemMatches.slice(0, 25)) {
         const rawTitle = extractTag(block, 'title');
         let title = stripHtml(rawTitle);
         if (!title) continue;
@@ -106,9 +246,9 @@ function parseFeedXml(xml, feedMeta) {
         const pubDateRaw = extractTag(block, 'pubDate') || extractTag(block, 'published') || extractTag(block, 'updated');
         let sourceName = stripHtml(extractTag(block, 'source')) || feedMeta.name;
 
-        // Google News titles often end with " - Source Name"
+        // Google News titles end with " - Source Name"
         const dashIdx = title.lastIndexOf(' - ');
-        if (dashIdx > 25 && title.length - dashIdx < 45) {
+        if (dashIdx > 20 && title.length - dashIdx < 50) {
             const possibleSource = title.slice(dashIdx + 3).trim();
             if (possibleSource) {
                 sourceName = possibleSource;
@@ -116,15 +256,10 @@ function parseFeedXml(xml, feedMeta) {
             }
         }
 
-        let summary = stripHtml(rawDesc);
-        // Remove duplicate title prefix from Google News descriptions
-        if (summary.toLowerCase().startsWith(title.toLowerCase())) {
-            summary = summary.slice(title.length).replace(/^[\s\-–|:]+/, '').trim();
-        }
-        if (summary.length > 220) {
-            summary = summary.slice(0, 217).trim() + '...';
-        }
+        if (!isSourceAllowed(sourceName, link, !!feedMeta.curated, customBlockedList)) continue;
+        if (!isHeadlineRelevant(title)) continue;
 
+        const summary = cleanSummary(rawDesc, title, sourceName);
         const parsedDate = pubDateRaw ? new Date(pubDateRaw) : new Date();
         const publishedAt = Number.isNaN(parsedDate.getTime()) ? new Date().toISOString() : parsedDate.toISOString();
         const imageUrl = extractImageFromBlock(block, rawDesc);
@@ -132,7 +267,7 @@ function parseFeedXml(xml, feedMeta) {
         items.push({
             id: Buffer.from(link).toString('base64url').slice(0, 24),
             title,
-            summary: summary || `${sourceName} kaynağından güncel seyahat haberi.`,
+            summary,
             link,
             source: sourceName,
             category: feedMeta.category || 'Seyahat',
@@ -144,20 +279,20 @@ function parseFeedXml(xml, feedMeta) {
     return items;
 }
 
-async function fetchSingleFeed(feedMeta) {
+async function fetchSingleFeed(feedMeta, customBlockedList) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
         const response = await fetch(feedMeta.url, {
             signal: controller.signal,
             headers: {
-                'User-Agent': 'TravellerMobi-NewsBot/1.0 (+https://travellermobi.vercel.app)',
+                'User-Agent': 'TravellerMobi-NewsBot/1.1 (+https://travellermobi.vercel.app)',
                 'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml'
             }
         });
         if (!response.ok) return [];
         const xml = await response.text();
-        return parseFeedXml(xml, feedMeta);
+        return parseFeedXml(xml, feedMeta, customBlockedList);
     } catch {
         return [];
     } finally {
@@ -167,7 +302,7 @@ async function fetchSingleFeed(feedMeta) {
 
 export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=1800');
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200');
 
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
@@ -176,7 +311,12 @@ export default async function handler(req, res) {
     try {
         const feeds = [...DEFAULT_FEEDS];
 
-        // Allow optional custom RSS sources passed as JSON-encoded query param (max 6)
+        // Optional admin-blocked sources (comma-separated)
+        const customBlockedList = typeof req.query?.blocked === 'string'
+            ? req.query.blocked.split(',').map(s => normalizeText(s)).filter(s => s.length >= 2).slice(0, 30)
+            : [];
+
+        // Optional custom RSS sources passed as JSON-encoded query param (max 6)
         const customParam = req.query?.custom;
         if (typeof customParam === 'string' && customParam.trim()) {
             try {
@@ -187,6 +327,7 @@ export default async function handler(req, res) {
                             feeds.push({
                                 name: String(src.name || 'Özel Kaynak').slice(0, 60),
                                 category: String(src.category || 'Seyahat').slice(0, 30),
+                                curated: false,
                                 url: src.url
                             });
                         }
@@ -197,14 +338,14 @@ export default async function handler(req, res) {
             }
         }
 
-        const results = await Promise.allSettled(feeds.map(fetchSingleFeed));
+        const results = await Promise.allSettled(feeds.map(f => fetchSingleFeed(f, customBlockedList)));
         const allItems = [];
         const seenTitles = new Set();
 
         for (const r of results) {
             if (r.status !== 'fulfilled') continue;
             for (const item of r.value) {
-                const normKey = item.title.toLowerCase().replace(/[^a-z0-9ğüşıöç]/gi, '').slice(0, 60);
+                const normKey = normalizeText(item.title).replace(/[^a-z0-9ğüşıöç]/gi, '').slice(0, 52);
                 if (!normKey || seenTitles.has(normKey)) continue;
                 seenTitles.add(normKey);
                 allItems.push(item);
@@ -213,7 +354,7 @@ export default async function handler(req, res) {
 
         allItems.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
 
-        const limit = Math.min(Math.max(parseInt(req.query?.limit, 10) || 36, 6), 60);
+        const limit = Math.min(Math.max(parseInt(req.query?.limit, 10) || 24, 6), 50);
 
         return res.status(200).json({
             ok: true,

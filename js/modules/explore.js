@@ -5,7 +5,7 @@ import { state } from '../state.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { trackEvent, startReadingSession, trackSearchQuery, trackAuthCtaClick } from './analytics.js';
 
-const NEWS_CACHE_KEY = 'travellermobi_travel_news_cache_v1';
+const NEWS_CACHE_KEY = 'travellermobi_travel_news_cache_v2';
 const NEWS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min client cache
 
 let cachedBlogPosts = [];
@@ -107,21 +107,31 @@ export async function fetchAutomaticTravelNews(forceRefresh = false) {
     renderNewsSection();
 
     try {
-        // Attach admin-defined custom RSS sources if available
+        // Attach admin-defined custom RSS sources and blocked source names if available
         let customQuery = '';
+        let blockedQuery = '';
         try {
-            const customSources = await db.getNewsSources(true);
-            if (Array.isArray(customSources) && customSources.length > 0) {
-                const lean = customSources.slice(0, 6).map(s => ({
-                    name: s.name,
-                    category: s.category || 'Seyahat',
-                    url: s.rss_url
-                }));
-                customQuery = `&custom=${encodeURIComponent(JSON.stringify(lean))}`;
+            const allSources = await db.getNewsSources(true);
+            if (Array.isArray(allSources) && allSources.length > 0) {
+                const customRss = allSources.filter(s => s.category !== '__block__' && String(s.rss_url || '').startsWith('https://'));
+                const blockedSources = allSources.filter(s => s.category === '__block__').map(s => s.name).filter(Boolean);
+
+                if (customRss.length > 0) {
+                    const lean = customRss.slice(0, 6).map(s => ({
+                        name: s.name,
+                        category: s.category || 'Seyahat',
+                        url: s.rss_url
+                    }));
+                    customQuery = `&custom=${encodeURIComponent(JSON.stringify(lean))}`;
+                }
+                if (blockedSources.length > 0) {
+                    blockedQuery = `&blocked=${encodeURIComponent(blockedSources.join(','))}`;
+                }
             }
         } catch (_) {}
 
-        const res = await fetch(`/api/travel-news?limit=36${customQuery}`, {
+        const cacheBust = forceRefresh ? `&t=${Date.now()}` : '';
+        const res = await fetch(`/api/travel-news?limit=24${customQuery}${blockedQuery}${cacheBust}`, {
             cache: forceRefresh ? 'no-store' : 'default'
         });
 
@@ -449,6 +459,10 @@ function renderNewsSection() {
             ? `<div class="news-card-thumb"><img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
             : '';
 
+        const summaryHtml = item.summary && item.summary.trim()
+            ? `<p class="news-card-summary">${escapeHtml(item.summary)}</p>`
+            : '';
+
         return `
             <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer" class="news-card" data-news-title="${escapeHtml(item.title)}" data-news-source="${escapeHtml(item.source || '')}">
                 ${thumbHtml}
@@ -458,7 +472,7 @@ function renderNewsSection() {
                         <span class="news-time">${formatRelativeTimeTR(item.published_at)}</span>
                     </div>
                     <h4 class="news-card-title">${escapeHtml(item.title)}</h4>
-                    <p class="news-card-summary">${escapeHtml(item.summary || '')}</p>
+                    ${summaryHtml}
                     <div class="news-card-footer">
                         <span class="news-source">${escapeHtml(item.source || 'Haber Kaynağı')}</span>
                         <span class="news-external">Habere git <i data-lucide="arrow-up-right"></i></span>

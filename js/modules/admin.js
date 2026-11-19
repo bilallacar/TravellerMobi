@@ -317,6 +317,34 @@ export function initAdminEvents() {
         });
     }
 
+    const blockSourceForm = document.getElementById('admin-block-source-form');
+    if (blockSourceForm) {
+        blockSourceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputEl = document.getElementById('block-source-name');
+            const name = (inputEl?.value || '').trim();
+            if (name.length < 2) {
+                showToast('En az 2 karakterlik bir kaynak adı girin.', 'warning');
+                return;
+            }
+            try {
+                await db.createNewsSource({
+                    name,
+                    rss_url: `block://${name.toLowerCase()}`,
+                    category: '__block__',
+                    is_enabled: true
+                });
+                blockSourceForm.reset();
+                showToast(`"${name}" engellenen kaynaklara eklendi!`, 'success');
+                await loadAdminNewsSources();
+                const items = await fetchAutomaticTravelNews(true);
+                renderAdminNewsPreview(items);
+            } catch (err) {
+                showToast('Engellenemedi: ' + err.message, 'danger');
+            }
+        });
+    }
+
     const testNewsBtn = document.getElementById('btn-admin-test-news-feed');
     if (testNewsBtn) {
         testNewsBtn.addEventListener('click', async () => {
@@ -559,14 +587,43 @@ async function loadAdminNewsSources() {
 
 function renderAdminNewsSources() {
     const listEl = document.getElementById('admin-news-sources-list');
+    const blockedWrap = document.getElementById('admin-blocked-sources-list');
+
+    const rssOnly = adminNewsSources.filter(s => s.category !== '__block__');
+    const blockedOnly = adminNewsSources.filter(s => s.category === '__block__');
+
+    if (blockedWrap) {
+        if (blockedOnly.length === 0) {
+            blockedWrap.innerHTML = `<span class="text-xs text-muted">Ekstra engellenen kaynak yok (Rudaw, Sputnik vb. sistem tarafından otomatik engellenir).</span>`;
+        } else {
+            blockedWrap.innerHTML = blockedOnly.map(b => `
+                <span class="filter-pill" style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px;">
+                    <span>${escapeHtml(b.name)}</span>
+                    <button type="button" class="btn-remove-blocked-src" data-id="${b.id}" style="background:none; border:none; color:var(--color-danger); cursor:pointer; font-weight:700; padding:0 2px;" title="Engeli Kaldır">&times;</button>
+                </span>
+            `).join('');
+            blockedWrap.querySelectorAll('.btn-remove-blocked-src').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    try {
+                        await db.deleteNewsSource(btn.getAttribute('data-id'));
+                        await loadAdminNewsSources();
+                        showToast('Kaynak engeli kaldırıldı.', 'info');
+                    } catch (err) {
+                        showToast('Hata: ' + err.message, 'danger');
+                    }
+                });
+            });
+        }
+    }
+
     if (!listEl) return;
 
-    if (adminNewsSources.length === 0) {
-        listEl.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Ek özel RSS kaynağı yok. Varsayılan 4 kategori (Turizm, Havacılık, Vize & Pasaport, Destinasyon) otomatik çalışır.</td></tr>`;
+    if (rssOnly.length === 0) {
+        listEl.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Ek özel RSS kaynağı yok. Güvenilir varsayılan seyahat kaynakları otomatik çalışır.</td></tr>`;
         return;
     }
 
-    listEl.innerHTML = adminNewsSources.map(src => `
+    listEl.innerHTML = rssOnly.map(src => `
         <tr>
             <td><strong>${escapeHtml(src.name)}</strong><div class="text-xs text-muted" style="word-break:break-all;">${escapeHtml(src.rss_url)}</div></td>
             <td><span class="badge-pill">${escapeHtml(src.category || 'Seyahat')}</span></td>
@@ -582,7 +639,7 @@ function renderAdminNewsSources() {
 
     listEl.querySelectorAll('.btn-toggle-news-src').forEach(btn => {
         btn.addEventListener('click', async () => {
-            const src = adminNewsSources.find(s => s.id === btn.getAttribute('data-id'));
+            const src = rssOnly.find(s => s.id === btn.getAttribute('data-id'));
             if (!src) return;
             try {
                 await db.updateNewsSource(src.id, { is_enabled: !src.is_enabled });
@@ -616,13 +673,39 @@ function renderAdminNewsPreview(items) {
         box.innerHTML = `<p class="text-sm text-muted">Canlı haber çekilemedi (yerel sunucuda /api/travel-news çalışmaz; Vercel üzerinde otomatik çalışır).</p>`;
         return;
     }
-    box.innerHTML = items.slice(0, 6).map(n => `
-        <div class="admin-news-preview-row">
-            <span class="badge-pill">${escapeHtml(n.category)}</span>
-            <a href="${escapeHtml(n.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a>
-            <span class="text-xs text-muted">${escapeHtml(n.source)}</span>
+    box.innerHTML = items.slice(0, 10).map(n => `
+        <div class="admin-news-preview-row" style="justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1;">
+                <span class="editorial-kicker">${escapeHtml(n.category)}</span>
+                <a href="${escapeHtml(n.link)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-primary); font-weight:500;">${escapeHtml(n.title)}</a>
+                <span class="text-xs text-muted">(${escapeHtml(n.source)})</span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm btn-quick-block-src" data-source="${escapeHtml(n.source)}" style="color:var(--color-danger); padding:4px 8px; font-size:11px;">
+                Kaynağı Engelle
+            </button>
         </div>
     `).join('');
+
+    box.querySelectorAll('.btn-quick-block-src').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const srcName = btn.getAttribute('data-source') || '';
+            if (!srcName) return;
+            try {
+                await db.createNewsSource({
+                    name: srcName,
+                    rss_url: `block://${srcName.toLowerCase()}`,
+                    category: '__block__',
+                    is_enabled: true
+                });
+                showToast(`"${srcName}" engellendi ve akış yenileniyor.`, 'success');
+                await loadAdminNewsSources();
+                const refreshed = await fetchAutomaticTravelNews(true);
+                renderAdminNewsPreview(refreshed);
+            } catch (err) {
+                showToast('Engellenemedi: ' + err.message, 'danger');
+            }
+        });
+    });
 }
 
 async function loadAdminAnalytics() {
