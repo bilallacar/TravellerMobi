@@ -67,6 +67,14 @@ export function switchAdminTab(tabName) {
     document.querySelectorAll('.admin-tab-panel').forEach(panel => {
         panel.classList.toggle('hidden', panel.id !== `admin-panel-${activeAdminTab}`);
     });
+    if (activeAdminTab === 'news') {
+        const previewBox = document.getElementById('admin-news-live-preview');
+        if (previewBox && !previewBox.dataset.loaded) {
+            previewBox.dataset.loaded = '1';
+            previewBox.innerHTML = `<p class="text-xs text-muted">Canlı haber akışı yükleniyor...</p>`;
+            fetchAutomaticTravelNews(false).then(items => renderAdminNewsPreview(items)).catch(() => {});
+        }
+    }
     if (window.lucide) window.lucide.createIcons();
 }
 
@@ -666,6 +674,70 @@ function renderAdminNewsSources() {
     });
 }
 
+function mapNewsCategoryToBlog(newsCat) {
+    if (newsCat === 'Vize & Pasaport' || newsCat === 'Havacılık') return 'Vize & Ulaşım';
+    if (newsCat === 'Destinasyon') return 'Şehir Rehberi';
+    return 'Seyahat Gündemi';
+}
+
+function transferNewsToBlogDraft(newsItem) {
+    if (!newsItem) return;
+    resetBlogForm();
+
+    const titleEl = document.getElementById('blog-form-title');
+    const slugEl = document.getElementById('blog-form-slug');
+    const catEl = document.getElementById('blog-form-category');
+    const summaryEl = document.getElementById('blog-form-summary');
+    const contentEl = document.getElementById('blog-form-content');
+    const tagsEl = document.getElementById('blog-form-tags');
+    const coverUrlEl = document.getElementById('blog-form-cover-url');
+    const statusEl = document.getElementById('blog-form-status');
+    const readTimeEl = document.getElementById('blog-form-read-time');
+    const headingEl = document.getElementById('blog-form-heading');
+
+    const safeTitle = newsItem.title || '';
+    const safeSource = newsItem.source || 'Haber Kaynağı';
+    const safeSummary = (newsItem.summary || '').trim();
+    const starterContent = [
+        safeSummary || `${safeTitle} konusundaki güncel gelişmelerin gezginler açısından özeti:`,
+        '',
+        '## Gezginler İçin Ne Anlama Geliyor?',
+        '',
+        'Buraya kendi notlarınızı, pratik tavsiyelerinizi ve dikkat edilmesi gereken noktaları ekleyebilirsiniz.',
+        '',
+        `> Kaynak: [${safeSource}](${newsItem.link})`
+    ].join('\n');
+
+    if (titleEl) titleEl.value = safeTitle;
+    if (slugEl) {
+        slugEl.value = slugifyTR(safeTitle);
+        slugEl.dataset.manual = '';
+    }
+    if (catEl) catEl.value = mapNewsCategoryToBlog(newsItem.category);
+    if (summaryEl) summaryEl.value = safeSummary || `${safeSource} kaynaklı güncel seyahat gelişmesi ve değerlendirmesi.`;
+    if (contentEl) contentEl.value = starterContent;
+    if (tagsEl) {
+        const baseTag = slugifyTR(newsItem.category || 'seyahat').replace(/-/g, ' ');
+        tagsEl.value = [baseTag, 'seyahat-gundemi', 'haber'].filter(Boolean).join(', ');
+    }
+    if (coverUrlEl && newsItem.image_url) {
+        coverUrlEl.value = newsItem.image_url;
+        const previewWrap = document.getElementById('blog-cover-preview-wrap');
+        const previewImg = document.getElementById('blog-cover-preview-img');
+        if (previewWrap && previewImg) {
+            previewImg.src = newsItem.image_url;
+            previewWrap.classList.remove('hidden');
+        }
+    }
+    if (statusEl) statusEl.value = 'draft';
+    if (readTimeEl) readTimeEl.value = estimateReadMinutes(starterContent);
+    if (headingEl) headingEl.textContent = 'Haberden Oluşturulan Blog Taslağı';
+
+    switchAdminTab('blog');
+    document.getElementById('admin-blog-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showToast('Haber blog taslağına aktarıldı! Notlarınızı ekleyip kaydedebilirsiniz.', 'success');
+}
+
 function renderAdminNewsPreview(items) {
     const box = document.getElementById('admin-news-live-preview');
     if (!box) return;
@@ -673,18 +745,32 @@ function renderAdminNewsPreview(items) {
         box.innerHTML = `<p class="text-sm text-muted">Canlı haber çekilemedi (yerel sunucuda /api/travel-news çalışmaz; Vercel üzerinde otomatik çalışır).</p>`;
         return;
     }
-    box.innerHTML = items.slice(0, 10).map(n => `
+    const visible = items.slice(0, 14);
+    box.innerHTML = visible.map((n, idx) => `
         <div class="admin-news-preview-row" style="justify-content:space-between;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1;">
                 <span class="editorial-kicker">${escapeHtml(n.category)}</span>
                 <a href="${escapeHtml(n.link)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-primary); font-weight:500;">${escapeHtml(n.title)}</a>
                 <span class="text-xs text-muted">(${escapeHtml(n.source)})</span>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm btn-quick-block-src" data-source="${escapeHtml(n.source)}" style="color:var(--color-danger); padding:4px 8px; font-size:11px;">
-                Kaynağı Engelle
-            </button>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary btn-sm btn-news-to-blog" data-news-idx="${idx}" style="padding:4px 9px; font-size:11px;">
+                    Blog Taslağına Aktar
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-quick-block-src" data-source="${escapeHtml(n.source)}" style="color:var(--color-danger); padding:4px 8px; font-size:11px;">
+                    Kaynağı Engelle
+                </button>
+            </div>
         </div>
     `).join('');
+
+    box.querySelectorAll('.btn-news-to-blog').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = Number(btn.getAttribute('data-news-idx'));
+            const item = visible[idx];
+            if (item) transferNewsToBlogDraft(item);
+        });
+    });
 
     box.querySelectorAll('.btn-quick-block-src').forEach(btn => {
         btn.addEventListener('click', async () => {
