@@ -5,6 +5,7 @@ import * as db from '../../db.js';
 import { showToast } from '../utils.js';
 import { identifyVisitor, trackEvent } from './analytics.js';
 import { clearAdminViewState } from './admin.js';
+import { setAiLauncherVisible } from './ai_assistant.js';
 
 let authMode = 'login'; // 'login' or 'register'
 
@@ -227,6 +228,7 @@ export function initAuthEvents() {
             state.activeUser = null;
             state.userProfile = null;
             state.isAdmin = false;
+            setAiLauncherVisible(false);
             clearAdminViewState();
             showToast('Çıkış yapıldı', 'info');
             window.location.hash = '#auth';

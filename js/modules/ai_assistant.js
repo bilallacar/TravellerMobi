@@ -828,7 +828,14 @@ function describeAction(action) {
 /**
  * Calls Gemini REST API generateContent
  */
+function isApprovedMember() {
+    return !!(state.activeUser && state.userProfile && state.userProfile.status === 'approved');
+}
+
 async function callGeminiAPI(contents) {
+    if (!isApprovedMember()) {
+        throw new Error('Mobi AI yalnızca onaylı üyelere özeldir. Lütfen giriş yapın.');
+    }
     if (!db.hasInternet()) {
         throw new Error('İnternet bağlantısı yok. Mobi AI yanıt verebilmek için internet erişimine ihtiyaç duyar.');
     }
@@ -873,6 +880,12 @@ async function callGeminiAPI(contents) {
  * Sends a user prompt through Mobi AI multi-turn tool loop
  */
 async function sendPromptToGemini(userText, imageAttachment = null) {
+    if (!isApprovedMember()) {
+        closeAiChatbox();
+        setAiLauncherVisible(false);
+        showToast('Mobi AI yalnızca üye kullanıcılar için aktiftir.', 'warning');
+        return;
+    }
     if (isSending) return;
     const rawText = (userText || '').trim();
     const hasImage = !!(imageAttachment && imageAttachment.base64);
@@ -1171,6 +1184,10 @@ function renderChatMessages() {
 }
 
 export function openAiChatbox() {
+    if (!isApprovedMember()) {
+        setAiLauncherVisible(false);
+        return;
+    }
     const panel = document.getElementById('ai-chatbox-panel');
     const backdrop = document.getElementById('ai-chatbox-backdrop');
     const fab = document.getElementById('btn-ai-fab');
@@ -1198,9 +1215,10 @@ export function closeAiChatbox() {
 }
 
 export function setAiLauncherVisible(visible) {
+    const canShow = !!(visible && isApprovedMember());
     const fab = document.getElementById('btn-ai-fab');
-    if (fab) fab.classList.toggle('hidden', !visible);
-    if (visible) {
+    if (fab) fab.classList.toggle('hidden', !canShow);
+    if (canShow) {
         loadChatSession();
         updateContextSubtitle();
     } else {

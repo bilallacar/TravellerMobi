@@ -317,14 +317,14 @@ async function handleRouting() {
         return;
     }
 
-    if (cleanHash === '#auth' || cleanHash === '#setup') {
+    if (!isApprovedLoggedIn || cleanHash === '#auth' || cleanHash === '#setup' || cleanHash === '#reset-password' || hash.includes('type=recovery')) {
         setAiLauncherVisible(false);
         setDesktopThemeToggleVisible(false);
         layout.classList.add('no-sidebar');
         if (mobileNav) mobileNav.classList.add('hidden');
     } else {
         layout.classList.remove('no-sidebar');
-        setAiLauncherVisible(true);
+        setAiLauncherVisible(cleanHash !== '#admin');
         setDesktopThemeToggleVisible(true);
         if (mobileNav) mobileNav.classList.remove('hidden');
 
@@ -379,7 +379,13 @@ async function handleRouting() {
             }
             break;
         default:
-            showView('dashboard');
+            if (isApprovedLoggedIn) {
+                showView('dashboard');
+                await loadDashboardData();
+            } else {
+                showView('auth');
+                syncAuthNetworkUI();
+            }
     }
 
     trackPageView(hash);
