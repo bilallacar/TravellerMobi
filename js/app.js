@@ -37,7 +37,7 @@ function syncThemeUI(theme) {
 
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
-        metaTheme.setAttribute('content', isLight ? '#f6f8fc' : '#0f172a');
+        metaTheme.setAttribute('content', isLight ? '#ffffff' : '#121212');
     }
 
     const mobileBtn = document.getElementById('btn-mobile-theme-toggle');

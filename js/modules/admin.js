@@ -168,6 +168,43 @@ export function initAdminEvents() {
         });
     }
 
+    // Inline image insertion inside blog body
+    const inlineImgBtn = document.getElementById('btn-blog-insert-image');
+    const inlineImgInput = document.getElementById('blog-inline-image-file');
+    if (inlineImgBtn && inlineImgInput && contentInput) {
+        inlineImgBtn.addEventListener('click', () => inlineImgInput.click());
+        inlineImgInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const prevHtml = inlineImgBtn.innerHTML;
+            inlineImgBtn.disabled = true;
+            inlineImgBtn.textContent = 'Fotoğraf yükleniyor...';
+            try {
+                const compressed = await compressImage(file, 1400, 0.82);
+                const publicUrl = await db.uploadPublicContentImage(compressed);
+                if (!publicUrl) throw new Error('Görsel adresi alınamadı.');
+                const caption = (file.name || 'Fotoğraf').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+                const snippet = `\n\n![${caption}](${publicUrl})\n\n`;
+                const start = contentInput.selectionStart ?? contentInput.value.length;
+                const end = contentInput.selectionEnd ?? start;
+                contentInput.value = contentInput.value.slice(0, start) + snippet + contentInput.value.slice(end);
+                contentInput.focus();
+                showToast('Fotoğraf yazının içine eklendi!', 'success');
+                const previewBox = document.getElementById('blog-markdown-preview');
+                if (previewBox && !previewBox.classList.contains('hidden')) {
+                    previewBox.innerHTML = renderMarkdownContent(contentInput.value);
+                }
+            } catch (err) {
+                showToast('Fotoğraf yüklenemedi: ' + (err.message || err), 'danger');
+            } finally {
+                inlineImgInput.value = '';
+                inlineImgBtn.disabled = false;
+                inlineImgBtn.innerHTML = prevHtml;
+                if (window.lucide) window.lucide.createIcons();
+            }
+        });
+    }
+
     if (previewToggleBtn) {
         previewToggleBtn.addEventListener('click', () => {
             const previewBox = document.getElementById('blog-markdown-preview');

@@ -284,22 +284,23 @@ function renderBlogSection() {
                 ? `<img src="${escapeHtml(featuredPost.cover_image_url)}" alt="${escapeHtml(featuredPost.title)}" class="explore-featured-img" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"><div class="explore-featured-placeholder hidden"><i data-lucide="compass"></i></div>`
                 : `<div class="explore-featured-placeholder"><i data-lucide="compass"></i></div>`;
             featuredWrap.innerHTML = `
-                <article class="explore-featured-card card glass" data-post-slug="${escapeHtml(featuredPost.slug)}">
+                <article class="explore-featured-card" data-post-slug="${escapeHtml(featuredPost.slug)}">
                     <div class="explore-featured-media">
                         ${bgCover}
-                        <span class="explore-cat-pill" style="background:${getCategoryColor(featuredPost.category)};">${escapeHtml(featuredPost.category || 'Rehber')}</span>
                     </div>
                     <div class="explore-featured-body">
                         <div class="explore-meta-row">
-                            <span class="badge-featured"><i data-lucide="star"></i> Öne Çıkan Yazı</span>
+                            <span class="editorial-kicker">${escapeHtml(featuredPost.category || 'Rehber')}</span>
+                            <span class="meta-sep">·</span>
                             <span>${formatDateTR(featuredPost.published_at || featuredPost.created_at)}</span>
-                            <span>• ${featuredPost.read_time_minutes || 3} dk okuma</span>
+                            <span class="meta-sep">·</span>
+                            <span>${featuredPost.read_time_minutes || 3} dk okuma</span>
                         </div>
                         <h2>${escapeHtml(featuredPost.title)}</h2>
                         <p>${escapeHtml(featuredPost.summary || '')}</p>
                         <div class="explore-featured-footer">
-                            <span class="explore-author"><i data-lucide="pen-tool"></i> ${escapeHtml(featuredPost.author_name || 'TravellerMobi Editör')}</span>
-                            <span class="explore-read-more">Yazıyı Oku <i data-lucide="arrow-right"></i></span>
+                            <span class="explore-author">${escapeHtml(featuredPost.author_name || 'TravellerMobi Editör')}</span>
+                            <span class="explore-read-more">Yazıyı oku <i data-lucide="arrow-right"></i></span>
                         </div>
                     </div>
                 </article>
@@ -345,22 +346,24 @@ function renderBlogSection() {
             : '';
 
         return `
-            <article class="blog-card card glass" data-post-slug="${escapeHtml(post.slug)}">
+            <article class="blog-card" data-post-slug="${escapeHtml(post.slug)}">
                 <div class="blog-card-media">
                     ${coverHtml}
-                    <span class="explore-cat-pill" style="background:${getCategoryColor(post.category)};">${escapeHtml(post.category || 'Rehber')}</span>
                 </div>
                 <div class="blog-card-body">
                     <div class="blog-card-meta">
-                        <span><i data-lucide="calendar"></i> ${formatDateTR(post.published_at || post.created_at)}</span>
-                        <span><i data-lucide="clock"></i> ${post.read_time_minutes || 3} dk</span>
+                        <span class="editorial-kicker">${escapeHtml(post.category || 'Rehber')}</span>
+                        <span class="meta-sep">·</span>
+                        <span>${formatDateTR(post.published_at || post.created_at)}</span>
+                        <span class="meta-sep">·</span>
+                        <span>${post.read_time_minutes || 3} dk</span>
                     </div>
                     <h3 class="blog-card-title">${escapeHtml(post.title)}</h3>
                     <p class="blog-card-summary">${escapeHtml(post.summary || '')}</p>
                     ${tagsHtml}
                     <div class="blog-card-footer">
                         <span class="text-xs text-muted">${escapeHtml(post.author_name || 'TravellerMobi')}</span>
-                        <span class="explore-read-more">Devamını Oku <i data-lucide="arrow-right"></i></span>
+                        <span class="explore-read-more">Oku <i data-lucide="arrow-right"></i></span>
                     </div>
                 </div>
             </article>
@@ -447,18 +450,18 @@ function renderNewsSection() {
             : '';
 
         return `
-            <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer" class="news-card card glass" data-news-title="${escapeHtml(item.title)}" data-news-source="${escapeHtml(item.source || '')}">
+            <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer" class="news-card" data-news-title="${escapeHtml(item.title)}" data-news-source="${escapeHtml(item.source || '')}">
                 ${thumbHtml}
                 <div class="news-card-body">
                     <div class="news-card-top">
-                        <span class="news-cat-dot" style="background:${getCategoryColor(item.category)};">${escapeHtml(item.category || 'Seyahat')}</span>
+                        <span class="editorial-kicker">${escapeHtml(item.category || 'Seyahat')}</span>
                         <span class="news-time">${formatRelativeTimeTR(item.published_at)}</span>
                     </div>
                     <h4 class="news-card-title">${escapeHtml(item.title)}</h4>
                     <p class="news-card-summary">${escapeHtml(item.summary || '')}</p>
                     <div class="news-card-footer">
-                        <span class="news-source"><i data-lucide="globe"></i> ${escapeHtml(item.source || 'Haber Kaynağı')}</span>
-                        <span class="news-external">Kaynağa Git <i data-lucide="external-link"></i></span>
+                        <span class="news-source">${escapeHtml(item.source || 'Haber Kaynağı')}</span>
+                        <span class="news-external">Habere git <i data-lucide="arrow-up-right"></i></span>
                     </div>
                 </div>
             </a>
@@ -573,24 +576,28 @@ export async function loadBlogPostDetailView(hash) {
         : '';
 
     container.innerHTML = `
-        <article class="post-detail-article card glass">
-            ${coverHtml}
+        <article class="post-detail-article">
             <div class="post-detail-header">
                 <div class="post-detail-meta">
-                    <span class="explore-cat-pill" style="position:static; background:${getCategoryColor(post.category)};">${escapeHtml(post.category || 'Rehber')}</span>
-                    <span><i data-lucide="calendar"></i> ${formatDateTR(post.published_at || post.created_at)}</span>
-                    <span><i data-lucide="clock"></i> ${post.read_time_minutes || 3} dk okuma</span>
-                    <span><i data-lucide="eye"></i> ${(post.view_count || 0) + 1} görüntülenme</span>
+                    <span class="editorial-kicker">${escapeHtml(post.category || 'Rehber')}</span>
+                    <span class="meta-sep">·</span>
+                    <span>${formatDateTR(post.published_at || post.created_at)}</span>
+                    <span class="meta-sep">·</span>
+                    <span>${post.read_time_minutes || 3} dk okuma</span>
+                    <span class="meta-sep">·</span>
+                    <span>${(post.view_count || 0) + 1} okunma</span>
                 </div>
                 <h1>${escapeHtml(post.title)}</h1>
                 ${post.summary ? `<p class="post-detail-lead">${escapeHtml(post.summary)}</p>` : ''}
                 <div class="post-detail-author-bar">
-                    <span><i data-lucide="pen-tool"></i> ${escapeHtml(post.author_name || 'TravellerMobi Editör')}</span>
+                    <span>${escapeHtml(post.author_name || 'TravellerMobi Editör')}</span>
                     <button type="button" id="btn-share-blog-post" class="btn btn-secondary btn-sm">
                         <i data-lucide="share-2"></i> Paylaş
                     </button>
                 </div>
             </div>
+
+            ${coverHtml}
 
             <div class="post-detail-body">
                 ${renderMarkdownContent(post.content)}
@@ -600,11 +607,11 @@ export async function loadBlogPostDetailView(hash) {
 
             <div class="post-detail-cta">
                 <div>
-                    <h3>Kendi seyahat rotanı ve masraflarını yönet</h3>
-                    <p class="text-muted">TravellerMobi ile haritanda mekan işaretle, bütçeni takip et ve Mobi AI ile anında gezi planı oluştur.</p>
+                    <h3>Seyahat rotanı ve bütçeni tek yerden yönet</h3>
+                    <p class="text-muted">Haritada mekanlarını işaretle, harcamalarını takip et ve seyahat planını çevrimdışı da yanında taşı.</p>
                 </div>
                 <a href="${state.activeUser ? '#dashboard' : '#auth'}" id="btn-post-auth-cta" class="btn btn-primary">
-                    ${state.activeUser ? 'Seyahat Panelime Git' : 'Ücretsiz Başla / Giriş Yap'}
+                    ${state.activeUser ? 'Seyahat Panelime Git' : 'Ücretsiz Başla'}
                 </a>
             </div>
         </article>

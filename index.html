@@ -7,17 +7,17 @@
     <meta name="description" content="Günlük hayatınızda ve seyahatlerinizde mekanlarınızı kaydedin, rotanızı çizin, bütçenizi ve anılarınızı yönetin. Çevrimdışı desteğiyle her an yanınızda.">
     <!-- PWA Web App Manifest & App Icons -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="TravellerMobi">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Inter (Scandinavian Minimalist UI & Editorial) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Leaflet Interactive Maps -->
@@ -30,7 +30,7 @@
     <!-- Custom Style Sheet -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="dark-theme">
+<body class="light-theme">
     <!-- Toast Notification Container -->
     <div id="toast-container" class="toast-container"></div>
 
@@ -224,42 +224,42 @@
                 <!-- 1B. PUBLIC EXPLORE VIEW (Blog & Automatic Travel News - No Login Required) -->
                 <section id="view-explore" class="app-view hidden">
                     <!-- Guest Public Top Header (Hidden automatically when logged in) -->
-                    <header id="explore-public-header" class="explore-public-header glass">
+                    <header id="explore-public-header" class="explore-public-header">
                         <a href="#explore" class="explore-brand">
                             <span class="logo-mark"><i data-lucide="compass"></i></span>
                             <span class="logo-text">TravellerMobi</span>
                         </a>
                         <div class="explore-public-actions">
                             <button type="button" id="btn-explore-theme-toggle" class="btn-header-icon" title="Temayı Değiştir" aria-label="Temayı Değiştir">
-                                <i data-lucide="sun"></i>
+                                <i data-lucide="moon"></i>
                             </button>
                             <a href="#auth" id="btn-explore-auth-cta" class="btn btn-primary btn-sm">
-                                <i data-lucide="log-in"></i>
                                 <span>Giriş Yap</span>
                             </a>
                         </div>
                     </header>
 
-                    <!-- Editorial Hero & Search -->
-                    <div class="explore-hero card glass">
-                        <div class="explore-hero-content">
-                            <span class="explore-eyebrow"><i data-lucide="globe"></i> TravellerMobi Keşfet</span>
-                            <h1>Seyahat Rehberleri & Güncel Turizm Haberleri</h1>
-                            <p class="text-muted">Dünyadan son havacılık, vize ve seyahat gelişmelerini canlı takip edin; özenle hazırlanan gezi bloglarıyla bir sonraki rotanıza ilham bulun.</p>
-                        </div>
-                        <div class="explore-toolbar">
-                            <div class="explore-tabs-group">
-                                <button type="button" class="explore-main-tab active" data-tab="all"><i data-lucide="sparkles"></i> Tümü</button>
-                                <button type="button" class="explore-main-tab" data-tab="blog"><i data-lucide="book-open"></i> Blog Yazıları</button>
-                                <button type="button" class="explore-main-tab" data-tab="news"><i data-lucide="radio"></i> Seyahat Haberleri</button>
-                            </div>
-                            <div class="explore-search-wrap">
-                                <i data-lucide="search"></i>
-                                <input type="search" id="explore-search-input" class="text-input" placeholder="Blog veya haberlerde ara (Örn: Roma, vize, THY)...">
+                    <!-- Clean Scandinavian Masthead & Filter Bar (No Gradient Hero Box) -->
+                    <div class="explore-masthead">
+                        <div class="explore-masthead-top">
+                            <div>
+                                <h1>Seyahat rehberleri ve güncel haberler</h1>
+                                <p class="text-muted">Gerçek gezi notları, şehir rotaları ve havacılık, vize ile turizm gündemi.</p>
                             </div>
                             <a href="#admin" id="btn-explore-admin-shortcut" class="btn btn-secondary btn-sm hidden">
                                 <i data-lucide="shield-check"></i> İçerik Paneli
                             </a>
+                        </div>
+                        <div class="explore-toolbar">
+                            <div class="explore-tabs-group">
+                                <button type="button" class="explore-main-tab active" data-tab="all">Tümü</button>
+                                <button type="button" class="explore-main-tab" data-tab="blog">Blog Yazıları</button>
+                                <button type="button" class="explore-main-tab" data-tab="news">Seyahat Haberleri</button>
+                            </div>
+                            <div class="explore-search-wrap">
+                                <i data-lucide="search"></i>
+                                <input type="search" id="explore-search-input" class="text-input" placeholder="Şehir, vize veya konu ara...">
+                            </div>
                         </div>
                     </div>
 
@@ -269,8 +269,8 @@
                     <!-- Manual Blog Posts Section -->
                     <div id="explore-blog-section" class="explore-section">
                         <div class="explore-section-head">
-                            <div>
-                                <h2><i data-lucide="book-open"></i> Seyahat Blogu</h2>
+                            <div class="explore-section-title-group">
+                                <h2>Seyahat Blogu</h2>
                                 <span id="explore-blog-count" class="text-xs text-muted">0 yazı</span>
                             </div>
                             <div id="explore-blog-categories" class="explore-category-pills hidden"></div>
@@ -283,9 +283,9 @@
                     <!-- Automatic Travel News Feed Section -->
                     <div id="explore-news-section" class="explore-section">
                         <div class="explore-section-head">
-                            <div>
-                                <h2><i data-lucide="radio"></i> Canlı Seyahat Haberleri</h2>
-                                <span id="explore-news-updated" class="text-xs text-muted">Otomatik canlı akış</span>
+                            <div class="explore-section-title-group">
+                                <h2>Seyahat Haberleri</h2>
+                                <span id="explore-news-updated" class="text-xs text-muted">Otomatik akış</span>
                             </div>
                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                 <div id="explore-news-categories" class="explore-category-pills"></div>
@@ -2518,9 +2518,15 @@ Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir 
                                 </div>
 
                                 <div class="form-group">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
                                         <label for="blog-form-content" style="margin:0;">Yazı İçeriği * (Markdown destekler: ## Başlık, **kalın**, - liste)</label>
-                                        <button type="button" id="btn-blog-toggle-preview" class="btn btn-secondary btn-sm">İçeriği Önizle</button>
+                                        <div style="display:flex; gap:6px; align-items:center;">
+                                            <input type="file" id="blog-inline-image-file" accept="image/*" class="hidden">
+                                            <button type="button" id="btn-blog-insert-image" class="btn btn-secondary btn-sm">
+                                                <i data-lucide="image-plus"></i> Yazı İçine Fotoğraf Ekle
+                                            </button>
+                                            <button type="button" id="btn-blog-toggle-preview" class="btn btn-secondary btn-sm">İçeriği Önizle</button>
+                                        </div>
                                     </div>
                                     <textarea id="blog-form-content" rows="10" class="textarea-input" required placeholder="## İlk Durak: Kolezyum&#10;&#10;Sabah erken saatlerde gitmek kuyruklardan kurtarır..."></textarea>
                                     <div id="blog-markdown-preview" class="post-detail-body blog-markdown-preview hidden"></div>

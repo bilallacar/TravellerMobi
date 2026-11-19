@@ -4,7 +4,7 @@ export const config = {
     supabaseUrl: localStorage.getItem('supabase_url') || 'https://pbfriozhmtyspfzgnkkq.supabase.co',
     supabaseKey: localStorage.getItem('supabase_key') || 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM',
     defaultCurrency: localStorage.getItem('default_currency') || 'TRY',
-    theme: localStorage.getItem('theme') || 'dark',
+    theme: localStorage.getItem('theme') || 'light',
     geminiApiKey: localStorage.getItem('gemini_api_key') || '',
     geminiModel: localStorage.getItem('gemini_model') || 'gemini-2.5-flash',
     geminiAutoApply: localStorage.getItem('gemini_auto_apply') === 'true'
