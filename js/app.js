@@ -58,6 +58,12 @@ function syncThemeUI(theme) {
         exploreThemeBtn.title = isLight ? 'Koyu Temaya Geç' : 'Açık Temaya Geç';
     }
 
+    const postThemeBtn = document.getElementById('btn-post-theme-toggle');
+    if (postThemeBtn) {
+        postThemeBtn.innerHTML = `<i data-lucide="${isLight ? 'moon' : 'sun'}"></i>`;
+        postThemeBtn.title = isLight ? 'Koyu Temaya Geç' : 'Açık Temaya Geç';
+    }
+
     if (window.lucide) window.lucide.createIcons();
 }
 

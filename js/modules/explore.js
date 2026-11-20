@@ -217,18 +217,26 @@ export function renderMarkdownContent(raw) {
 
 function syncExploreGuestHeader() {
     const guestTopBar = document.getElementById('explore-public-header');
+    const postTopBar = document.getElementById('post-public-header');
     const authCtaBtn = document.getElementById('btn-explore-auth-cta');
     const registerCtaBtn = document.getElementById('btn-explore-register-cta');
     const postAuthCtaBtn = document.getElementById('btn-post-auth-cta');
     const postTopAuthBtn = document.getElementById('btn-post-top-auth');
+    const postRegisterCtaBtn = document.getElementById('btn-post-register-cta');
     const adminShortcut = document.getElementById('btn-explore-admin-shortcut');
     const isLoggedIn = !!(state.activeUser && state.userProfile?.status === 'approved');
 
     if (guestTopBar) {
         guestTopBar.classList.toggle('hidden', isLoggedIn);
     }
+    if (postTopBar) {
+        postTopBar.classList.toggle('hidden', isLoggedIn);
+    }
     if (postTopAuthBtn) {
         postTopAuthBtn.classList.toggle('hidden', isLoggedIn);
+    }
+    if (postRegisterCtaBtn) {
+        postRegisterCtaBtn.classList.toggle('hidden', isLoggedIn);
     }
     if (authCtaBtn) {
         authCtaBtn.innerHTML = isLoggedIn
@@ -628,8 +636,8 @@ export async function loadBlogPostDetailView(hash) {
                     <h3>Seyahat rotanı ve bütçeni tek yerden yönet</h3>
                     <p class="text-muted">Haritada mekanlarını işaretle, harcamalarını takip et ve seyahat planını çevrimdışı da yanında taşı.</p>
                 </div>
-                <a href="${state.activeUser ? '#dashboard' : '#auth'}" id="btn-post-auth-cta" class="btn btn-primary">
-                    ${state.activeUser ? 'Seyahat Panelime Git' : 'Ücretsiz Başla'}
+                <a href="${state.activeUser ? '#dashboard' : '#auth?tab=register'}" id="btn-post-auth-cta" class="btn btn-primary">
+                    ${state.activeUser ? 'Seyahat Panelime Git' : 'Ücretsiz Kayıt Ol / Giriş Yap'}
                 </a>
             </div>
         </article>
@@ -731,6 +739,28 @@ export function initExploreEvents() {
         guestThemeBtn.addEventListener('click', () => {
             const mobileBtn = document.getElementById('btn-mobile-theme-toggle');
             if (mobileBtn) mobileBtn.click();
+        });
+    }
+
+    const postThemeBtn = document.getElementById('btn-post-theme-toggle');
+    if (postThemeBtn) {
+        postThemeBtn.addEventListener('click', () => {
+            const mobileBtn = document.getElementById('btn-mobile-theme-toggle');
+            if (mobileBtn) mobileBtn.click();
+        });
+    }
+
+    const exploreRegisterCta = document.getElementById('btn-explore-register-cta');
+    if (exploreRegisterCta) {
+        exploreRegisterCta.addEventListener('click', () => {
+            if (!state.activeUser) trackAuthCtaClick('#explore-register');
+        });
+    }
+
+    const postRegisterCta = document.getElementById('btn-post-register-cta');
+    if (postRegisterCta) {
+        postRegisterCta.addEventListener('click', () => {
+            if (!state.activeUser) trackAuthCtaClick(window.location.hash || '#post-register');
         });
     }
 }

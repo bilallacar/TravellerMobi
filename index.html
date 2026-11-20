@@ -307,12 +307,28 @@
 
                 <!-- 1C. PUBLIC BLOG POST DETAIL VIEW -->
                 <section id="view-post" class="app-view hidden">
-                    <div class="post-detail-topbar" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <header id="post-public-header" class="explore-public-header">
+                        <a href="#explore" class="explore-brand">
+                            <span class="logo-mark"><i data-lucide="compass"></i></span>
+                            <span class="logo-text">TravellerMobi</span>
+                        </a>
+                        <div class="explore-public-actions">
+                            <button type="button" id="btn-post-theme-toggle" class="btn-header-icon" title="Temayı Değiştir" aria-label="Temayı Değiştir">
+                                <i data-lucide="moon"></i>
+                            </button>
+                            <a href="#auth" id="btn-post-top-auth" class="btn btn-secondary btn-sm explore-auth-login-btn">
+                                <i data-lucide="log-in"></i>
+                                <span>Giriş Yap</span>
+                            </a>
+                            <a href="#auth?tab=register" id="btn-post-register-cta" class="btn btn-primary btn-sm explore-auth-register-btn">
+                                <i data-lucide="user-plus"></i>
+                                <span>Kayıt Ol</span>
+                            </a>
+                        </div>
+                    </header>
+                    <div class="post-detail-topbar">
                         <a href="#explore" class="btn btn-secondary btn-sm">
                             <i data-lucide="arrow-left"></i> Keşfet'e Dön
-                        </a>
-                        <a href="#auth" id="btn-post-top-auth" class="btn btn-primary btn-sm">
-                            <i data-lucide="log-in"></i> Giriş Yap
                         </a>
                     </div>
                     <div id="post-detail-container" class="post-detail-container">

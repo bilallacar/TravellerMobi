@@ -268,8 +268,8 @@ a:hover {
 /* Main Content Area */
 .app-content {
     flex: 1;
-    padding: 40px;
-    max-width: 1200px;
+    padding: 36px 40px;
+    max-width: 1360px;
     margin: 0 auto;
     width: 100%;
     animation: fadeIn var(--transition-speed) ease-in-out;
@@ -6934,7 +6934,8 @@ body.dark-theme .nav-item:hover {
     padding: 20px 32px 48px;
 }
 
-#view-explore {
+#view-explore,
+#view-post {
     max-width: 1420px;
     width: 100%;
     margin: 0 auto;
@@ -7265,16 +7266,21 @@ body.dark-theme .nav-item:hover {
     padding-top: 10px;
 }
 
-/* Distraction-Free Blog Reader (#view-post) */
+/* Blog Reader (#view-post) - Consistent Width & Header with Explore */
 .post-detail-topbar,
 .post-detail-container {
-    max-width: 740px;
+    max-width: 1060px;
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
 }
 
 .post-detail-topbar {
-    padding-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding-bottom: 14px;
     margin-bottom: 24px;
     border-bottom: 1px solid var(--border-color);
 }
