@@ -102,23 +102,24 @@ function extractTrailingSeoBlock(markdownText) {
         const tail = text.slice(match.index);
         text = text.slice(0, match.index).replace(/\n---\s*$/, '').trim();
 
-        const metaMatch = tail.match(/Meta Açıklama[^:]*:\s*(?:\n|\s)*[*_]?([^\n*]+)[*_]?/i);
+        const metaMatch = tail.match(/Meta Açıklama[^:\n]*:\s*(?:[*_\s])*([^\n]+)/i);
         if (metaMatch) {
-            extractedSummary = metaMatch[1].replace(/^\*+|\*+$/g, '').trim();
+            extractedSummary = metaMatch[1].replace(/^[*_\s]+|[*_\s]+$/g, '').trim();
         }
 
-        const tagsMatch = tail.match(/Önerilen Etiketler[^:]*:\s*(?:\n|\s)*([^\n]+)/i);
+        const tagsMatch = tail.match(/Önerilen Etiketler[^:\n]*:\s*(?:[*_\s])*([^\n]+)/i);
         if (tagsMatch) {
             extractedTags = tagsMatch[1]
                 .replace(/`/g, '')
+                .replace(/^[*_\s]+|[*_\s]+$/g, '')
                 .split(',')
                 .map(t => t.replace(/^#/, '').trim())
                 .filter(Boolean);
         }
 
-        const altTitleMatch = tail.match(/1\.\s*\*?([^\n*]+)\*?/);
+        const altTitleMatch = tail.match(/1\.\s*(?:[*_])*([^\n*]+)/);
         if (altTitleMatch) {
-            extractedTitle = altTitleMatch[1].trim();
+            extractedTitle = altTitleMatch[1].replace(/^[*_\s]+|[*_\s]+$/g, '').trim();
         }
     }
 
@@ -155,21 +156,7 @@ export function auditAndCleanBlogDraft({
     // 2. Sanitize HTML / non-breaking spaces / scripts
     body = stripDangerousArtifacts(body);
 
-    // 3. Remove trailing SEO package if AI glued one inside the article body
-    const seoExtract = extractTrailingSeoBlock(body);
-    if (seoExtract.cleanBody.length !== body.length) {
-        body = seoExtract.cleanBody;
-        issues.push({
-            severity: 'info',
-            label: 'Yazı sonu SEO paketi ayrıştırıldı',
-            detail: 'Makale sonuna yapışmış SEO/Meta açıklaması içerikten temizlenip form alanlarına aktarıldı.'
-        });
-    }
-    if (!cleanSummary && seoExtract.extractedSummary) cleanSummary = seoExtract.extractedSummary;
-    if (cleanTags.length === 0 && seoExtract.extractedTags.length > 0) cleanTags = seoExtract.extractedTags;
-    if (!cleanTitle && seoExtract.extractedTitle) cleanTitle = seoExtract.extractedTitle;
-
-    // 4. Deduplicate leading "# Heading" so the page H1 doesn't appear twice
+    // 3. Deduplicate leading "# Heading" BEFORE falling back to SEO alt-title
     const lines = body.split('\n');
     if (lines[0] && /^#\s+/.test(lines[0])) {
         const leadingH1 = lines[0].replace(/^#\s+/, '').trim();
@@ -183,6 +170,20 @@ export function auditAndCleanBlogDraft({
             detail: 'Yazı gövdesi başındaki # H1 başlığı üst başlık alanına alınıp çift başlık görünümü önlendi.'
         });
     }
+
+    // 4. Remove trailing SEO package if AI glued one inside the article body
+    const seoExtract = extractTrailingSeoBlock(body);
+    if (seoExtract.cleanBody.length !== body.length) {
+        body = seoExtract.cleanBody;
+        issues.push({
+            severity: 'info',
+            label: 'Yazı sonu SEO paketi ayrıştırıldı',
+            detail: 'Makale sonuna yapışmış SEO/Meta açıklaması içerikten temizlenip form alanlarına aktarıldı.'
+        });
+    }
+    if (!cleanSummary && seoExtract.extractedSummary) cleanSummary = seoExtract.extractedSummary;
+    if (cleanTags.length === 0 && seoExtract.extractedTags.length > 0) cleanTags = seoExtract.extractedTags;
+    if (!cleanTitle && seoExtract.extractedTitle) cleanTitle = seoExtract.extractedTitle;
 
     // 5. Fallback summary extraction if still empty
     if (!cleanSummary) {
