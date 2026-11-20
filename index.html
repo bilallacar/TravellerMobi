@@ -543,12 +543,12 @@
                                 <div class="exchange-grid compact-exchange">
                                     <div class="rate-box">
                                         <label for="conv-amount">Tutar</label>
-                                        <input type="number" id="conv-amount" value="100" min="0" step="any" class="text-input" style="padding:8px 10px;">
+                                        <input type="number" id="conv-amount" value="100" min="0" step="any" class="text-input">
                                     </div>
-                                    <div class="form-row" style="gap:8px; margin-top:8px; align-items:flex-end;">
-                                        <div class="rate-box" style="flex:1;">
+                                    <div class="compact-exchange-pair">
+                                        <div class="rate-box">
                                             <label for="conv-from">Kaynak</label>
-                                            <select id="conv-from" class="select-input" style="padding:8px 10px;">
+                                            <select id="conv-from" class="select-input">
                                                 <option value="EUR">EUR (€)</option>
                                                 <option value="USD">USD ($)</option>
                                                 <option value="TRY" selected>TRY (₺)</option>
@@ -556,12 +556,12 @@
                                                 <option value="JPY">JPY (¥)</option>
                                             </select>
                                         </div>
-                                        <button type="button" id="btn-conv-swap" class="btn btn-secondary btn-icon" title="Para birimlerini değiştir" style="height:38px; width:38px; padding:0; flex-shrink:0;">
+                                        <button type="button" id="btn-conv-swap" class="btn btn-secondary btn-icon compact-swap-btn" title="Para birimlerini değiştir">
                                             <i data-lucide="arrow-left-right" style="width:15px;height:15px;"></i>
                                         </button>
-                                        <div class="rate-box" style="flex:1;">
+                                        <div class="rate-box">
                                             <label for="conv-to">Hedef</label>
-                                            <select id="conv-to" class="select-input" style="padding:8px 10px;">
+                                            <select id="conv-to" class="select-input">
                                                 <option value="EUR" selected>EUR (€)</option>
                                                 <option value="USD">USD ($)</option>
                                                 <option value="TRY">TRY (₺)</option>
