@@ -166,7 +166,7 @@ export function renderMarkdownContent(raw) {
     const escaped = escapeHtml(raw);
     const lines = escaped.split(/\r?\n/);
     const htmlBlocks = [];
-    let inList = false;
+    let listMode = null; // 'ul' | 'ol' | null
 
     const formatInline = (text) => {
         return text
@@ -177,41 +177,86 @@ export function renderMarkdownContent(raw) {
             .replace(/`([^`]+)`/g, '<code>$1</code>');
     };
 
-    for (const rawLine of lines) {
-        const line = rawLine.trim();
+    const closeList = () => {
+        if (listMode) {
+            htmlBlocks.push(`</${listMode}>`);
+            listMode = null;
+        }
+    };
+
+    const parseTableCells = (rowLine) => {
+        const trimmed = rowLine.trim().replace(/^\|/, '').replace(/\|$/, '');
+        return trimmed.split('|').map(c => c.trim());
+    };
+
+    const isTableSeparator = (rowLine) => {
+        const cleaned = rowLine.trim();
+        return /^\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?$/.test(cleaned) || /^\|?\s*:?-{3,}:?\s*\|$/.test(cleaned);
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
         if (!line) {
-            if (inList) {
-                htmlBlocks.push('</ul>');
-                inList = false;
-            }
+            closeList();
             continue;
         }
 
-        if (line.startsWith('### ')) {
-            if (inList) { htmlBlocks.push('</ul>'); inList = false; }
+        // Markdown table (header row + separator row + 0..N body rows)
+        if (line.includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+            closeList();
+            const headers = parseTableCells(line);
+            i += 2; // skip separator row
+            const bodyRows = [];
+            while (i < lines.length && lines[i].trim().includes('|') && lines[i].trim().startsWith('|')) {
+                bodyRows.push(parseTableCells(lines[i]));
+                i++;
+            }
+            i--; // step back for outer loop increment
+
+            const thead = `<thead><tr>${headers.map(h => `<th>${formatInline(h)}</th>`).join('')}</tr></thead>`;
+            const tbody = bodyRows.length > 0
+                ? `<tbody>${bodyRows.map(cells => `<tr>${headers.map((_, colIdx) => `<td>${formatInline(cells[colIdx] || '')}</td>`).join('')}</tr>`).join('')}</tbody>`
+                : '';
+            htmlBlocks.push(`<div class="post-table-wrap"><table class="post-detail-table">${thead}${tbody}</table></div>`);
+            continue;
+        }
+
+        if (/^(-{3,}|\*{3,})$/.test(line)) {
+            closeList();
+            htmlBlocks.push('<hr>');
+        } else if (line.startsWith('### ')) {
+            closeList();
             htmlBlocks.push(`<h3>${formatInline(line.slice(4))}</h3>`);
         } else if (line.startsWith('## ')) {
-            if (inList) { htmlBlocks.push('</ul>'); inList = false; }
+            closeList();
             htmlBlocks.push(`<h2>${formatInline(line.slice(3))}</h2>`);
         } else if (line.startsWith('# ')) {
-            if (inList) { htmlBlocks.push('</ul>'); inList = false; }
+            closeList();
             htmlBlocks.push(`<h2>${formatInline(line.slice(2))}</h2>`);
         } else if (line.startsWith('&gt; ')) {
-            if (inList) { htmlBlocks.push('</ul>'); inList = false; }
+            closeList();
             htmlBlocks.push(`<blockquote>${formatInline(line.slice(5))}</blockquote>`);
         } else if (line.startsWith('- ') || line.startsWith('* ')) {
-            if (!inList) {
+            if (listMode !== 'ul') {
+                closeList();
                 htmlBlocks.push('<ul>');
-                inList = true;
+                listMode = 'ul';
             }
             htmlBlocks.push(`<li>${formatInline(line.slice(2))}</li>`);
+        } else if (/^\d+\.\s+/.test(line)) {
+            if (listMode !== 'ol') {
+                closeList();
+                htmlBlocks.push('<ol>');
+                listMode = 'ol';
+            }
+            htmlBlocks.push(`<li>${formatInline(line.replace(/^\d+\.\s+/, ''))}</li>`);
         } else {
-            if (inList) { htmlBlocks.push('</ul>'); inList = false; }
+            closeList();
             htmlBlocks.push(`<p>${formatInline(line)}</p>`);
         }
     }
 
-    if (inList) htmlBlocks.push('</ul>');
+    closeList();
     return htmlBlocks.join('\n');
 }
 

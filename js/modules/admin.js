@@ -400,6 +400,12 @@ export function clearAdminViewState() {
     }
     const timelineModal = document.getElementById('modal-visitor-timeline');
     if (timelineModal) timelineModal.classList.add('hidden');
+    const agentSlot = document.getElementById('admin-blog-agent-slot');
+    if (agentSlot) {
+        agentSlot.innerHTML = '';
+        agentSlot.dataset.mounted = '';
+        agentSlot.classList.add('hidden');
+    }
 }
 
 function resetBlogForm() {
@@ -465,6 +471,11 @@ export async function loadAdminData() {
 
     initAdminEvents();
     switchAdminTab(activeAdminTab);
+
+    // Dynamically load admin-only AI Blog Agent strictly for approved admins
+    import('./admin_blog_agent.js')
+        .then(mod => mod.mountAdminBlogAgent())
+        .catch(err => console.warn('Admin blog agent load skipped:', err));
 
     await Promise.allSettled([
         loadAdminUsers(),
@@ -758,6 +769,9 @@ function renderAdminNewsPreview(items) {
                 <button type="button" class="btn btn-primary btn-sm btn-news-to-blog" data-news-idx="${idx}" style="padding:4px 9px; font-size:11px;">
                     Blog Taslağına Aktar
                 </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-news-to-ai-agent" data-news-idx="${idx}" style="padding:4px 9px; font-size:11px;" title="Haberi AI Blog Ajanı ile özgün makaleye dönüştür">
+                    AI ile Yaz
+                </button>
                 <button type="button" class="btn btn-secondary btn-sm btn-quick-block-src" data-source="${escapeHtml(n.source)}" style="color:var(--color-danger); padding:4px 8px; font-size:11px;">
                     Kaynağı Engelle
                 </button>
@@ -770,6 +784,29 @@ function renderAdminNewsPreview(items) {
             const idx = Number(btn.getAttribute('data-news-idx'));
             const item = visible[idx];
             if (item) transferNewsToBlogDraft(item);
+        });
+    });
+
+    box.querySelectorAll('.btn-news-to-ai-agent').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const idx = Number(btn.getAttribute('data-news-idx'));
+            const item = visible[idx];
+            if (!item) return;
+            switchAdminTab('blog');
+            try {
+                const mod = await import('./admin_blog_agent.js');
+                mod.mountAdminBlogAgent();
+                const brief = [
+                    `Konu: ${item.title || ''}`,
+                    item.summary ? `Haber Özeti: ${item.summary}` : '',
+                    item.source ? `Kaynak Adı: ${item.source}` : '',
+                    item.link ? `Referans Link: ${item.link}` : ''
+                ].filter(Boolean).join('\n');
+                mod.prefillBlogAgentInput(brief);
+                showToast('Haber özeti AI Blog Ajanına aktarıldı. "AI ile Özgün Yaz"a basabilirsiniz.', 'info');
+            } catch (err) {
+                showToast('AI Ajanı açılamadı: ' + err.message, 'danger');
+            }
         });
     });
 

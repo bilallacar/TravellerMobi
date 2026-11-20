@@ -1,6 +1,6 @@
 // sw.js - Service Worker for TravellerMobi PWA
 
-const CACHE_NAME = 'travellermobi-v1.2.8';
+const CACHE_NAME = 'travellermobi-v1.2.9';
 
 const STATIC_ASSETS = [
     './',
