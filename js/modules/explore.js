@@ -218,6 +218,7 @@ export function renderMarkdownContent(raw) {
 function syncExploreGuestHeader() {
     const guestTopBar = document.getElementById('explore-public-header');
     const postTopBar = document.getElementById('post-public-header');
+    const postLoggedTopBar = document.getElementById('post-detail-topbar');
     const authCtaBtn = document.getElementById('btn-explore-auth-cta');
     const registerCtaBtn = document.getElementById('btn-explore-register-cta');
     const postAuthCtaBtn = document.getElementById('btn-post-auth-cta');
@@ -231,6 +232,9 @@ function syncExploreGuestHeader() {
     }
     if (postTopBar) {
         postTopBar.classList.toggle('hidden', isLoggedIn);
+    }
+    if (postLoggedTopBar) {
+        postLoggedTopBar.classList.toggle('hidden', !isLoggedIn);
     }
     if (postTopAuthBtn) {
         postTopAuthBtn.classList.toggle('hidden', isLoggedIn);
@@ -638,6 +642,11 @@ export async function loadBlogPostDetailView(hash) {
                 </div>
                 <a href="${state.activeUser ? '#dashboard' : '#auth?tab=register'}" id="btn-post-auth-cta" class="btn btn-primary">
                     ${state.activeUser ? 'Seyahat Panelime Git' : 'Ücretsiz Kayıt Ol / Giriş Yap'}
+                </a>
+            </div>
+            <div class="post-detail-bottom-nav">
+                <a href="#explore" class="btn btn-secondary">
+                    <i data-lucide="arrow-left"></i> Tüm Blog Yazıları ve Haberlere Dön
                 </a>
             </div>
         </article>

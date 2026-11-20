@@ -699,6 +699,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Floating Back-to-Top button on long scrollable views
+    const scrollTopBtn = document.getElementById('btn-scroll-top');
+    if (scrollTopBtn) {
+        const syncScrollTopVisibility = () => {
+            scrollTopBtn.classList.toggle('hidden', window.scrollY < 340);
+        };
+        window.addEventListener('scroll', syncScrollTopVisibility, { passive: true });
+        syncScrollTopVisibility();
+        scrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').then((reg) => {
             console.log('[PWA] Service Worker registered with scope:', reg.scope);

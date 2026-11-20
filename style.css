@@ -7266,6 +7266,58 @@ body.dark-theme .nav-item:hover {
     padding-top: 10px;
 }
 
+.explore-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.post-header-back-btn {
+    border-radius: 999px;
+    padding: 6px 13px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.post-detail-bottom-nav {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-start;
+}
+
+.btn-scroll-top {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 45;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 15px;
+    border-radius: 999px;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: 1px solid var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.btn-scroll-top:hover {
+    transform: translateY(-2px);
+    opacity: 0.92;
+}
+
+.btn-scroll-top svg {
+    width: 15px;
+    height: 15px;
+}
+
 /* Blog Reader (#view-post) - Consistent Width & Header with Explore */
 .post-detail-topbar,
 .post-detail-container {
@@ -7280,9 +7332,13 @@ body.dark-theme .nav-item:hover {
     align-items: center;
     justify-content: flex-start;
     gap: 10px;
-    padding-bottom: 14px;
+    padding: 12px 0 14px;
     margin-bottom: 24px;
     border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 35;
 }
 
 .post-detail-article {
@@ -7497,6 +7553,17 @@ body.dark-theme .ai-fab {
     .explore-brand .logo-text {
         font-size: 15px;
     }
+    #post-public-header .explore-brand .logo-text {
+        display: none;
+    }
+    .explore-header-left {
+        gap: 8px;
+    }
+    .post-header-back-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        gap: 4px;
+    }
     .explore-public-actions {
         gap: 6px;
     }
@@ -7510,6 +7577,12 @@ body.dark-theme .ai-fab {
     .explore-public-header .explore-auth-register-btn svg {
         width: 13px;
         height: 13px;
+    }
+    .btn-scroll-top {
+        bottom: 78px;
+        left: 14px;
+        padding: 8px 12px;
+        font-size: 12px;
     }
     .explore-tabs-group {
         width: 100%;

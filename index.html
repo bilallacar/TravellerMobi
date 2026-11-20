@@ -308,10 +308,16 @@
                 <!-- 1C. PUBLIC BLOG POST DETAIL VIEW -->
                 <section id="view-post" class="app-view hidden">
                     <header id="post-public-header" class="explore-public-header">
-                        <a href="#explore" class="explore-brand">
-                            <span class="logo-mark"><i data-lucide="compass"></i></span>
-                            <span class="logo-text">TravellerMobi</span>
-                        </a>
+                        <div class="explore-header-left">
+                            <a href="#explore" class="explore-brand">
+                                <span class="logo-mark"><i data-lucide="compass"></i></span>
+                                <span class="logo-text">TravellerMobi</span>
+                            </a>
+                            <a href="#explore" class="btn btn-secondary btn-sm post-header-back-btn" title="Keşfet sayfasına dön">
+                                <i data-lucide="arrow-left"></i>
+                                <span>Keşfet'e Dön</span>
+                            </a>
+                        </div>
                         <div class="explore-public-actions">
                             <button type="button" id="btn-post-theme-toggle" class="btn-header-icon" title="Temayı Değiştir" aria-label="Temayı Değiştir">
                                 <i data-lucide="moon"></i>
@@ -326,7 +332,7 @@
                             </a>
                         </div>
                     </header>
-                    <div class="post-detail-topbar">
+                    <div id="post-detail-topbar" class="post-detail-topbar hidden">
                         <a href="#explore" class="btn btn-secondary btn-sm">
                             <i data-lucide="arrow-left"></i> Keşfet'e Dön
                         </a>
@@ -2955,6 +2961,12 @@ Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir 
         </div>
         <button type="button" id="btn-accept-privacy-notice" class="btn btn-primary btn-sm">Anladım</button>
     </div>
+
+    <!-- Floating Back-to-Top Button for Long Pages -->
+    <button type="button" id="btn-scroll-top" class="btn-scroll-top hidden" title="Yukarı Çık" aria-label="Yukarı Çık">
+        <i data-lucide="arrow-up"></i>
+        <span>Yukarı</span>
+    </button>
 
     <!-- Application Script Engine Modules -->
     <script type="module" src="config.js"></script>
