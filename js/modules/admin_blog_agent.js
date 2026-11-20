@@ -677,10 +677,10 @@ function renderAuditReport(report, viaServerKey = null) {
             <div class="agent-claims-box">
                 <div class="text-xs" style="font-weight:700; margin-bottom:6px;">Metindeki Somut İddia & İstatistik Listesi:</div>
                 ${report.claims.map(c => {
-                    const cls = c.supported_by_source === 'true' ? 'badge-success' : 'badge-warning';
-                    const lbl = c.supported_by_source === 'true' ? 'Kaynakta Geçiyor' : 'Teyit Et';
-                    return `<div class="agent-claim-row"><span class="badge ${cls}">${lbl}</span><span>${escapeHtml(c.claim)}</span></div>`;
-                }).join('')}
+            const cls = c.supported_by_source === 'true' ? 'badge-success' : 'badge-warning';
+            const lbl = c.supported_by_source === 'true' ? 'Kaynakta Geçiyor' : 'Teyit Et';
+            return `<div class="agent-claim-row"><span class="badge ${cls}">${lbl}</span><span>${escapeHtml(c.claim)}</span></div>`;
+        }).join('')}
             </div>
         `
         : '';
@@ -782,13 +782,12 @@ export async function searchCopyrightFreeImages(query, limit = 12) {
         const rawTitle = String(p.title || '').replace(/^File:/i, '').replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
         const artist = stripHtmlSimple(meta.Artist?.value || '').slice(0, 60) || 'Wikimedia Commons';
         const thumbUrl = ii.thumburl || ii.url || '';
-        const previewUrl = thumbUrl.replace(/\/\d+px-/, '/480px-');
         if (!thumbUrl.startsWith('https://')) continue;
 
         cleanItems.push({
             title: rawTitle.slice(0, 90),
             thumbUrl,
-            previewUrl,
+            previewUrl: thumbUrl,
             license,
             artist,
             requiresAttribution: !license.toLowerCase().includes('cc0') && !license.toLowerCase().includes('public domain'),
@@ -831,7 +830,7 @@ function renderStockImageResults(items) {
     grid.classList.remove('hidden');
     grid.innerHTML = items.map((item, idx) => `
         <div class="agent-stock-card">
-            <img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.title)}" loading="lazy">
+            <img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.title)}" loading="lazy" referrerpolicy="no-referrer">
             <div class="agent-stock-meta">
                 <div class="agent-stock-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
                 <div class="agent-stock-lic">

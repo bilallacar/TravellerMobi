@@ -1,6 +1,6 @@
 // sw.js - Service Worker for TravellerMobi PWA
 
-const CACHE_NAME = 'travellermobi-v1.3.1';
+const CACHE_NAME = 'travellermobi-v1.3.2';
 
 const STATIC_ASSETS = [
     './',
@@ -65,16 +65,10 @@ self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
 
-    // Bypass caching for non-GET requests, serverless APIs, Supabase backend calls, auth endpoints, or live exchange rate APIs
+    // Bypass caching for cross-origin assets, non-GET requests, serverless APIs, or backend/rate endpoints
     if (request.method !== 'GET' ||
-        url.pathname.startsWith('/api/') ||
-        url.hostname.includes('supabase.co') ||
-        url.hostname.includes('googleapis.com') ||
-        url.hostname.includes('openexchangerates.org') ||
-        url.hostname.includes('open.er-api.com') ||
-        url.hostname.includes('frankfurter.app') ||
-        url.pathname.includes('/rest/v1/') ||
-        url.pathname.includes('/auth/v1/')) {
+        url.origin !== self.location.origin ||
+        url.pathname.startsWith('/api/')) {
         return;
     }
 
