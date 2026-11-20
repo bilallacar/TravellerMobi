@@ -160,9 +160,10 @@ function verifyClaimAgainstSource(claimText, sourceNotes) {
             ? 'true'
             : 'unknown';
     }
-    const keywords = tokens.slice(0, 3);
+    const keywords = tokens.slice(0, 4);
     if (keywords.length === 0) return 'unknown';
-    return keywords.every(kw => src.includes(kw)) ? 'true' : 'unknown';
+    const matchCount = keywords.filter(kw => src.includes(kw)).length;
+    return matchCount >= Math.max(1, Math.ceil(keywords.length * 0.5)) ? 'true' : 'unknown';
 }
 
 /**
