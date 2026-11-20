@@ -60,10 +60,13 @@ function slugifyTRLocal(text) {
     const map = {
         'ğ': 'g', 'Ğ': 'g', 'ü': 'u', 'Ü': 'u',
         'ş': 's', 'Ş': 's', 'ı': 'i', 'İ': 'i',
-        'ö': 'o', 'Ö': 'o', 'ç': 'c', 'Ç': 'c'
+        'ö': 'o', 'Ö': 'o', 'ç': 'c', 'Ç': 'c',
+        'đ': 'd', 'Đ': 'd', 'ø': 'o', 'Ø': 'o', 'ł': 'l', 'Ł': 'l'
     };
     return String(text || '')
-        .replace(/[ğĞüÜşŞıİöÖçÇ]/g, ch => map[ch] || ch)
+        .replace(/[ğĞüÜşŞıİöÖçÇđĐøØłŁ]/g, ch => map[ch] || ch)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
@@ -214,7 +217,7 @@ export function auditAndCleanBlogDraft({
         diffChanges.push('Güvensiz HTML etiketleri, script veya &nbsp; artıkları temizlendi.');
     }
 
-    // 3. Deduplicate leading "# Heading" BEFORE falling back to SEO alt-title
+    // 3. Deduplicate leading "# Heading" OR plain-text identical first line BEFORE falling back to SEO alt-title
     const lines = body.split('\n');
     if (lines[0] && /^#\s+/.test(lines[0])) {
         const leadingH1 = lines[0].replace(/^#\s+/, '').trim();
@@ -229,6 +232,18 @@ export function auditAndCleanBlogDraft({
             location: 'Satır 1',
             autoFixed: true,
             detail: 'Yazı gövdesi başındaki # H1 başlığı üst başlık alanına alınıp çift başlık görünümü önlendi.'
+        });
+    } else if (lines[0] && cleanTitle && lines[0].trim().toLowerCase() === cleanTitle.toLowerCase()) {
+        const dupPlain = lines.shift().trim();
+        while (lines.length > 0 && !lines[0].trim()) lines.shift();
+        body = lines.join('\n').trim();
+        diffChanges.push(`Satır 1'deki tekrarlanan düz metin başlık temizlendi ("${dupPlain.slice(0, 48)}").`);
+        issues.push({
+            severity: 'info',
+            label: 'Gövde başındaki mükerrer başlık temizlendi',
+            location: 'Satır 1',
+            autoFixed: true,
+            detail: 'Üst başlıkla birebir aynı olan ilk satır kaldırıldı.'
         });
     }
 
@@ -329,6 +344,45 @@ export function auditAndCleanBlogDraft({
             location: findPatternLocation(body, /\b(?:1\d{3}|20\d{2})\b/),
             autoFixed: false,
             detail: `Tespit edilen tarih/yıl ifadeleri (${uniqueYearClaims.slice(0, 4).join(', ')}) tarihsel kaynakla uyumlu mu manuel kontrol edilmelidir.`
+        });
+    }
+
+    // 8B. Absolute claims, single-source signals, and generic AI clichés
+    const superlativeRegex = /(?:Avrupa(?:'nın|’nın)?\s+en\s+büyük|dünya\s+çapındaki?\s+(?:bir|1)\s*numara|en\s+büyük\s+deniz\s+koruma|\bilk\s+sualtı\s+müze)/gi;
+    const superlativeMatches = Array.from(new Set((body.match(superlativeRegex) || []).map(s => s.trim())));
+    if (superlativeMatches.length > 0) {
+        issues.push({
+            severity: 'warning',
+            label: `Mutlak ifade tespiti (${superlativeMatches.length} adet)`,
+            location: findPatternLocation(body, superlativeRegex),
+            autoFixed: false,
+            detail: `Mutlak ifadeler (${superlativeMatches.slice(0, 3).join(', ')}) riskli olabilir; "en büyüklerinden / öne çıkanlarından" şeklinde yumuşatın veya kaynak ekleyin.`
+        });
+    }
+
+    const attributionRegex = /(?:derlediği|ilham\s+alarak|verilerine\s+göre|raporuna\s+göre|seçkisinde\s+yer\s+alan)/gi;
+    if (attributionRegex.test(body)) {
+        const hasExternalLinks = /\[[^\]]+\]\(https?:\/\//.test(body);
+        issues.push({
+            severity: hasExternalLinks ? 'info' : 'warning',
+            label: hasExternalLinks ? 'Kurum/yayın atfı içeriyor' : 'Kaynaksız dış yayın / rapor atfı',
+            location: findPatternLocation(body, attributionRegex),
+            autoFixed: false,
+            detail: hasExternalLinks
+                ? 'Yararlandığınız dış kaynağa link verilmiş; ek olarak Türk gezginler için özgün pratik katkınızın güçlü olduğundan emin olun.'
+                : 'Tek kaynağa yaslanma veya AdSense "değer katmayan derleme" riskine karşı orijinal habere açık kaynak linki + özgün pratik bilgi ekleyin.'
+        });
+    }
+
+    const clicheRegex = /(?:büyüleyici|eşsiz\s+(?:bir|deneyim|çekim|güzellik)|unutulmaz\s+anılar|adeta\s+zamanda\s+yolculuk|keşfedilmeyi\s+bekl(?:iyor|eyen)|adeta\s+patlad[ıi]|biçilmiş\s+kaftan)/gi;
+    const clicheMatches = Array.from(new Set((body.match(clicheRegex) || []).map(s => s.trim().toLowerCase())));
+    if (clicheMatches.length >= 2) {
+        issues.push({
+            severity: 'warning',
+            label: `Jenerik AI üslup kalıpları (${clicheMatches.length} ifade)`,
+            location: findPatternLocation(body, clicheRegex),
+            autoFixed: false,
+            detail: `"${clicheMatches.slice(0, 4).join('", "')}" kalıpları yerine somut bilgi (en iyi ziyaret ayı, ulaşım süresi, vize/bütçe detayı) ekleyin.`
         });
     }
 
@@ -459,10 +513,13 @@ GÖREV:
 ${modeInstruction}
 
 ZORUNLU YAZIM VE GÜVENLİK KURALLARI:
-1. DİL VE ÜSLUP: Doğal, akıcı Türkçe kullan. ${toneGuides[tone] || toneGuides.editorial}. Uzunluk hedefi: ${lengthTargets[lengthKey] || lengthTargets.medium}.
-2. TELİF VE ÖZGÜNLÜK: Başka sitelerden birebir cümle kopyalama. Tamamen özgün anlatım kur.
-3. HALÜSİNASYON YASAĞI & İDDİA RAPORU:
+1. DİL, SOMUTLUK VE KLİŞE YASAĞI: Doğal, akıcı Türkçe kullan. ${toneGuides[tone] || toneGuides.editorial}. Uzunluk hedefi: ${lengthTargets[lengthKey] || lengthTargets.medium}.
+   - "büyüleyici", "eşsiz bir deneyim", "unutulmaz anılar", "adeta zamanda yolculuk", "keşfedilmeyi bekliyor", "adeta patladı", "biçilmiş kaftan" gibi jenerik AI klişelerini ASLA kullanma. Yerine somut ulaşım süresi, en uygun mevsim ve pratik gezi bilgisi yaz.
+2. TELİF VE ÖZGÜN KATMA DEĞER (ADSENSE UYUMU):
+   - Başka sitelerden birebir cümle kopyalama. Tek bir dış haberi sadece özetleyip bırakma; mutlaka **"Türkiye'den Gidecekler İçin Pratik Notlar"** (İstanbul çıkışlı uçuş/aktarma pratiği, vizesiz vs Schengen ayrımı — güncel vize kurallarının resmi konsolosluktan kontrol edilmesi notuyla!) gibi okuyucuya gerçek değer katan özgün bir bölüm ekle.
+3. HALÜSİNASYON YASAĞI, MUTLAK İFADELER & İDDİA RAPORU:
    - <source_text> içinde geçmeyen kesin anket yüzdeleri, kesin bilet/vize ücretleri veya çalışma saatleri UYDURMA.
+   - "en büyük", "bir numaralı", "ilk", "45 dakikanın altında" gibi kesin/mutlak ifadeler yerine "en büyüklerinden", "yaklaşık 45 dakika", "öne çıkanlarından" gibi güvenli ifadeler kullan.
    - Makalede yer verdiğin her somut yüzde, yıl/tarih dönümü ve kurum/istatistik atfını JSON'daki "claims" dizisine yaz ve yalnızca <source_text> içinde açıkça destekleniyorsa "supported_by_source": true, aksi halde "unknown" işaretle.
 4. POLİTİKA VE HUKUK: "%100 vize garantisi", tıbbi/hukuki kesin tavsiye, marka karalama, argo, küfür, kumar/bahis, clickbait TAMAMI BÜYÜK HARF başlık ASLA kullanma.
 5. TEKNİK MARKDOWN KURALLARI:

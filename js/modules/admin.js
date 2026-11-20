@@ -17,10 +17,13 @@ function slugifyTR(text) {
     const map = {
         'ğ': 'g', 'Ğ': 'g', 'ü': 'u', 'Ü': 'u',
         'ş': 's', 'Ş': 's', 'ı': 'i', 'İ': 'i',
-        'ö': 'o', 'Ö': 'o', 'ç': 'c', 'Ç': 'c'
+        'ö': 'o', 'Ö': 'o', 'ç': 'c', 'Ç': 'c',
+        'đ': 'd', 'Đ': 'd', 'ø': 'o', 'Ø': 'o', 'ł': 'l', 'Ł': 'l'
     };
     return String(text || '')
-        .replace(/[ğĞüÜşŞıİöÖçÇ]/g, ch => map[ch] || ch)
+        .replace(/[ğĞüÜşŞıİöÖçÇđĐøØłŁ]/g, ch => map[ch] || ch)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
