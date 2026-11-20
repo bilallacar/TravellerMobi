@@ -254,6 +254,13 @@ export function initAdminEvents() {
                 showToast('Başlık ve içerik alanları zorunludur.', 'warning');
                 return;
             }
+            if (status === 'published' && blogForm.dataset.criticalAuditBlocked === '1') {
+                const overrideConfirm = document.getElementById('btn-agent-confirm-critical-override');
+                if (!overrideConfirm || !overrideConfirm.checked) {
+                    showToast('Kritik güvenlik/politika uyarısı var! Yayınlamadan önce uyarı kutusunu onaylayın veya Taslak olarak kaydedin.', 'danger');
+                    return;
+                }
+            }
             if (!slug) slug = `yazi-${Date.now()}`;
 
             if (submitBtn) {
@@ -410,7 +417,10 @@ export function clearAdminViewState() {
 
 function resetBlogForm() {
     const form = document.getElementById('admin-blog-form');
-    if (form) form.reset();
+    if (form) {
+        form.reset();
+        form.dataset.criticalAuditBlocked = '';
+    }
     const idEl = document.getElementById('blog-form-id');
     if (idEl) idEl.value = '';
     const slugInput = document.getElementById('blog-form-slug');
@@ -500,6 +510,10 @@ async function loadAdminBlogPosts() {
         adminBlogPosts = await db.getAllBlogPostsAdmin();
         renderAdminBlogPosts();
         updateAnalyticsBlogCount();
+        const publishedPosts = (adminBlogPosts || []).filter(p => p && p.status === 'published');
+        import('./admin_blog_agent.js')
+            .then(mod => mod.mountAdminBlogAgent(publishedPosts))
+            .catch(() => {});
     } catch (err) {
         if (listEl) {
             listEl.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Blog tablosu bulunamadı. Lütfen Ayarlar → SQL Şeması kodunu Supabase'de çalıştırın. (${escapeHtml(err.message)})</td></tr>`;

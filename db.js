@@ -203,6 +203,18 @@ export async function getCurrentUser() {
     }
 }
 
+export async function getAccessToken() {
+    if (!hasInternet()) return '';
+    try {
+        const client = await getSupabase();
+        if (!client) return '';
+        const { data: { session } } = await client.auth.getSession();
+        return session?.access_token || '';
+    } catch {
+        return '';
+    }
+}
+
 export async function signIn(email, password) {
     if (!hasInternet()) {
         throw new Error("İnternet bağlantısı yok. Giriş yapabilmek için internet erişiminizi kontrol edin.");

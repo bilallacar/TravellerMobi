@@ -172,6 +172,7 @@ export function renderMarkdownContent(raw) {
         return text
             .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<figure class="post-inline-figure"><img src="$2" alt="$1" loading="lazy"><figcaption>$1</figcaption></figure>')
             .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+            .replace(/\[([^\]]+)\]\((#(?:post\?slug=[a-zA-Z0-9_-]+|[a-zA-Z][a-zA-Z0-9_-]*)|\/(?![/])[^\s)"'<>]*)\)/g, '<a href="$2" class="post-internal-link">$1</a>')
             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
             .replace(/\*([^*]+)\*/g, '<em>$1</em>')
             .replace(/`([^`]+)`/g, '<code>$1</code>');
