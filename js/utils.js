@@ -64,10 +64,10 @@ export function convertCurrency(amount, from, to) {
     return amountInUSD * rates[to];
 }
 
-// Client-side image compression using HTML Canvas
-export function compressImage(file, maxWidth = 1000, quality = 0.7) {
+// Client-side image compression using HTML Canvas (converts non-GIF images to compact WebP when supported)
+export function compressImage(file, maxWidth = 1000, quality = 0.7, preferWebp = true) {
     return new Promise((resolve) => {
-        if (!file || !file.type.startsWith('image/')) {
+        if (!file || !file.type.startsWith('image/') || file.type === 'image/gif') {
             resolve(file);
             return;
         }
@@ -90,18 +90,31 @@ export function compressImage(file, maxWidth = 1000, quality = 0.7) {
                 
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                
+
+                const targetMime = preferWebp ? 'image/webp' : (file.type === 'image/png' ? 'image/jpeg' : file.type);
+                const buildOutFile = (blob, actualMime) => {
+                    const ext = actualMime === 'image/webp' ? 'webp' : actualMime === 'image/png' ? 'png' : 'jpg';
+                    const base = (file.name || 'photo').replace(/\.[^.]+$/, '');
+                    return new File([blob], `${base}.${ext}`, {
+                        type: actualMime,
+                        lastModified: Date.now()
+                    });
+                };
+
                 canvas.toBlob((blob) => {
-                    if (blob) {
-                        const compressedFile = new File([blob], file.name, {
-                            type: file.type,
-                            lastModified: Date.now()
-                        });
-                        resolve(compressedFile);
-                    } else {
-                        resolve(file);
+                    if (blob && (!preferWebp || blob.type === 'image/webp')) {
+                        resolve(buildOutFile(blob, blob.type));
+                        return;
                     }
-                }, file.type, quality);
+                    // Fallback to JPEG if WebP encoding isn't supported by browser
+                    canvas.toBlob((fallbackBlob) => {
+                        if (fallbackBlob) {
+                            resolve(buildOutFile(fallbackBlob, fallbackBlob.type || 'image/jpeg'));
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', quality);
+                }, targetMime, quality);
             };
             img.onerror = () => resolve(file);
             img.src = event.target.result;

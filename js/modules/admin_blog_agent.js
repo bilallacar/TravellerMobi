@@ -7,7 +7,7 @@
 import { config, saveGeminiConfig } from '../../config.js';
 import * as db from '../../db.js';
 import { state } from '../state.js';
-import { showToast, escapeHtml } from '../utils.js';
+import { showToast, escapeHtml, compressImage } from '../utils.js';
 import { renderMarkdownContent } from './explore.js';
 
 const ALLOWED_BLOG_CATEGORIES = [
@@ -730,6 +730,194 @@ export function prefillBlogAgentInput(text) {
     }
 }
 
+/* ==========================================================================
+   COPYRIGHT-FREE STOCK IMAGE SEARCH (Wikimedia Commons, Zero API Key)
+   Filters strictly to reusable open licenses (CC0, Public domain, CC BY / SA)
+   ========================================================================== */
+
+function stripHtmlSimple(str) {
+    return String(str || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function isReusableOpenLicense(licenseShortName) {
+    const lic = String(licenseShortName || '').trim().toLowerCase();
+    if (!lic) return false;
+    if (lic.includes('nc') || lic.includes('nd') || lic.includes('copyright') || lic.includes('fair use') || lic.includes('non-free')) {
+        return false;
+    }
+    return (
+        lic.includes('cc0') ||
+        lic.includes('public domain') ||
+        lic.includes('pd-') ||
+        lic === 'pd' ||
+        lic.startsWith('cc-by') ||
+        lic.startsWith('cc by')
+    );
+}
+
+export async function searchCopyrightFreeImages(query, limit = 12) {
+    const q = String(query || '').trim();
+    if (!q) return [];
+
+    const searchExpr = `${q} filetype:bitmap`;
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchExpr)}&gsrnamespace=6&gsrlimit=${Math.min(Math.max(limit * 2, 12), 24)}&prop=imageinfo&iiprop=url|extmetadata|mime|size&iiurlwidth=1280&format=json&origin=*`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Görsel arama hatası (${res.status})`);
+    const data = await res.json();
+    const pages = Object.values(data?.query?.pages || {});
+
+    const cleanItems = [];
+    for (const p of pages) {
+        const ii = (p.imageinfo && p.imageinfo[0]) || null;
+        if (!ii) continue;
+        const mime = (ii.mime || '').toLowerCase();
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) continue;
+        if ((ii.width || 0) < 600 || (ii.height || 0) < 350) continue;
+
+        const meta = ii.extmetadata || {};
+        const license = stripHtmlSimple(meta.LicenseShortName?.value || '');
+        if (!isReusableOpenLicense(license)) continue;
+
+        const rawTitle = String(p.title || '').replace(/^File:/i, '').replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
+        const artist = stripHtmlSimple(meta.Artist?.value || '').slice(0, 60) || 'Wikimedia Commons';
+        const thumbUrl = ii.thumburl || ii.url || '';
+        const previewUrl = thumbUrl.replace(/\/\d+px-/, '/480px-');
+        if (!thumbUrl.startsWith('https://')) continue;
+
+        cleanItems.push({
+            title: rawTitle.slice(0, 90),
+            thumbUrl,
+            previewUrl,
+            license,
+            artist,
+            requiresAttribution: !license.toLowerCase().includes('cc0') && !license.toLowerCase().includes('public domain'),
+            pageUrl: ii.descriptionurl || ''
+        });
+    }
+
+    // Prefer CC0 / Public Domain first so admin gets zero-friction images on top
+    cleanItems.sort((a, b) => Number(a.requiresAttribution) - Number(b.requiresAttribution));
+    return cleanItems.slice(0, limit);
+}
+
+async function importStockImageToOwnStorage(item) {
+    try {
+        const imgRes = await fetch(item.thumbUrl, { mode: 'cors' });
+        if (!imgRes.ok) throw new Error('Görsel indirilemedi');
+        const blob = await imgRes.blob();
+        const rawFile = new File([blob], `${slugifyTRLocal(item.title) || 'gorsel'}.jpg`, {
+            type: blob.type || 'image/jpeg'
+        });
+        const webpFile = await compressImage(rawFile, 1400, 0.82, true);
+        const publicUrl = await db.uploadPublicContentImage(webpFile);
+        if (publicUrl) return { url: publicUrl, storedInOwnBucket: true };
+    } catch (err) {
+        console.warn('[StockPicker] WebP bucket upload fallback to HTTPS CDN URL:', err?.message);
+    }
+    return { url: item.thumbUrl, storedInOwnBucket: false };
+}
+
+function renderStockImageResults(items) {
+    const grid = document.getElementById('agent-stock-results');
+    if (!grid) return;
+
+    if (!items || items.length === 0) {
+        grid.innerHTML = `<p class="text-xs text-muted" style="grid-column:1/-1; padding:8px 0;">Uygun açık lisanslı görsel bulunamadı. İngilizce şehir/ülke adı deneyebilirsiniz (ör. <em>Perugia Italy</em>, <em>Lake Bled Slovenia</em>).</p>`;
+        grid.classList.remove('hidden');
+        return;
+    }
+
+    grid.classList.remove('hidden');
+    grid.innerHTML = items.map((item, idx) => `
+        <div class="agent-stock-card">
+            <img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.title)}" loading="lazy">
+            <div class="agent-stock-meta">
+                <div class="agent-stock-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+                <div class="agent-stock-lic">
+                    <span class="badge ${item.requiresAttribution ? 'badge-warning' : 'badge-success'}">${escapeHtml(item.license)}</span>
+                    <span class="text-xs text-muted" title="${escapeHtml(item.artist)}">${escapeHtml(item.artist.slice(0, 24))}</span>
+                </div>
+                <div class="agent-stock-actions">
+                    <button type="button" class="btn btn-primary btn-sm btn-stock-use-cover" data-stock-idx="${idx}">Kapak Yap</button>
+                    <button type="button" class="btn btn-secondary btn-sm btn-stock-insert-body" data-stock-idx="${idx}">Yazıya Ekle</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    grid.querySelectorAll('.btn-stock-use-cover').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const item = items[Number(btn.getAttribute('data-stock-idx'))];
+            if (!item) return;
+            const prev = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'WebP Yükleniyor...';
+            try {
+                const { url, storedInOwnBucket } = await importStockImageToOwnStorage(item);
+                const coverUrlEl = document.getElementById('blog-form-cover-url');
+                const coverFileEl = document.getElementById('blog-form-cover-file');
+                const previewWrap = document.getElementById('blog-cover-preview-wrap');
+                const previewImg = document.getElementById('blog-cover-preview-img');
+                if (coverFileEl) coverFileEl.value = '';
+                if (coverUrlEl) coverUrlEl.value = url;
+                if (previewWrap && previewImg) {
+                    previewImg.src = url;
+                    previewWrap.classList.remove('hidden');
+                }
+                showToast(
+                    storedInOwnBucket
+                        ? `Görsel WebP'ye sıkıştırılıp kendi deponuza kapak olarak eklendi! (${item.license})`
+                        : `Kapak görseli eklendi (${item.license}).`,
+                    'success'
+                );
+            } catch (err) {
+                showToast('Kapak eklenemedi: ' + (err.message || err), 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = prev;
+            }
+        });
+    });
+
+    grid.querySelectorAll('.btn-stock-insert-body').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const item = items[Number(btn.getAttribute('data-stock-idx'))];
+            const contentInput = document.getElementById('blog-form-content');
+            if (!item || !contentInput) return;
+            const prev = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'WebP Yükleniyor...';
+            try {
+                const { url, storedInOwnBucket } = await importStockImageToOwnStorage(item);
+                const caption = item.requiresAttribution
+                    ? `${item.title} (${item.artist} / ${item.license})`
+                    : item.title;
+                const snippet = `\n\n![${caption}](${url})\n\n`;
+                const start = contentInput.selectionStart ?? contentInput.value.length;
+                const end = contentInput.selectionEnd ?? start;
+                contentInput.value = contentInput.value.slice(0, start) + snippet + contentInput.value.slice(end);
+                contentInput.dispatchEvent(new Event('input'));
+                const previewBox = document.getElementById('blog-markdown-preview');
+                if (previewBox && !previewBox.classList.contains('hidden')) {
+                    previewBox.innerHTML = renderMarkdownContent(contentInput.value);
+                }
+                showToast(
+                    storedInOwnBucket
+                        ? 'Fotoğraf WebP olarak kendi deponuza yüklenip yazıya eklendi!'
+                        : 'Fotoğraf yazıya eklendi!',
+                    'success'
+                );
+            } catch (err) {
+                showToast('Fotoğraf eklenemedi: ' + (err.message || err), 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = prev;
+            }
+        });
+    });
+}
+
 export function unmountAdminBlogAgent() {
     const slot = document.getElementById('admin-blog-agent-slot');
     if (slot) {
@@ -819,6 +1007,25 @@ export function mountAdminBlogAgent(publishedPosts = []) {
                 </div>
 
                 <div id="admin-blog-agent-report" class="admin-blog-agent-report hidden"></div>
+
+                <div class="agent-stock-section">
+                    <div class="agent-stock-head">
+                        <div>
+                            <strong class="text-sm" style="display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="image" style="width:15px; height:15px; color:var(--color-primary);"></i>
+                                Telifsiz Görsel Bul (Wikimedia Commons · WebP Dönüştürmeli)
+                            </strong>
+                            <span class="text-xs text-muted">Yalnızca CC0 / Public Domain / CC BY lisanslı fotoğrafları arar, WebP olarak kendi deponuza aktarır.</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                        <input type="text" id="agent-stock-query" class="text-input" placeholder="İngilizce yer/şehir arayın: Perugia Italy, Lake Bled, Liepaja..." style="flex:1; min-width:200px; height:38px;">
+                        <button type="button" id="btn-agent-stock-search" class="btn btn-secondary btn-sm" style="height:38px;">
+                            <i data-lucide="search"></i> Telifsiz Görsel Ara
+                        </button>
+                    </div>
+                    <div id="agent-stock-results" class="agent-stock-grid hidden"></div>
+                </div>
             </div>
         </div>
     `;
@@ -862,7 +1069,44 @@ export function mountAdminBlogAgent(publishedPosts = []) {
             });
             applyCleanedDraftToForm(report, 'Denetlenmiş Taslak');
             renderAuditReport(report, null);
+            const stockInput = document.getElementById('agent-stock-query');
+            if (stockInput && !stockInput.value.trim() && report.cleaned.title) {
+                stockInput.value = report.cleaned.title.split(':')[0].trim().slice(0, 50);
+            }
             showToast('Yazı denetlendi, temizlendi ve taslak formuna aktarıldı.', 'success');
+        });
+    }
+
+    const stockInput = document.getElementById('agent-stock-query');
+    const stockBtn = document.getElementById('btn-agent-stock-search');
+    const runStockSearch = async () => {
+        if (!isStrictAdmin() || !stockBtn || !stockInput) return;
+        const q = stockInput.value.trim();
+        if (!q) {
+            showToast('Aramak için bir şehir, mekan veya konu adı girin.', 'warning');
+            return;
+        }
+        const prev = stockBtn.innerHTML;
+        stockBtn.disabled = true;
+        stockBtn.textContent = 'Aranıyor...';
+        try {
+            const items = await searchCopyrightFreeImages(q, 12);
+            renderStockImageResults(items);
+        } catch (err) {
+            showToast('Görsel aranamadı: ' + (err.message || err), 'danger');
+        } finally {
+            stockBtn.disabled = false;
+            stockBtn.innerHTML = prev;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    };
+    if (stockBtn) stockBtn.addEventListener('click', runStockSearch);
+    if (stockInput) {
+        stockInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                runStockSearch();
+            }
         });
     }
 
