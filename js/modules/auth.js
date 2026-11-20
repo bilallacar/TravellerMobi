@@ -9,6 +9,34 @@ import { setAiLauncherVisible } from './ai_assistant.js';
 
 let authMode = 'login'; // 'login' or 'register'
 
+export function setAuthMode(mode = 'login') {
+    const normalized = mode === 'register' ? 'register' : 'login';
+    authMode = normalized;
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const submitBtn = document.getElementById('btn-auth-submit');
+    const mainBox = document.getElementById('auth-main-box');
+    const forgotBox = document.getElementById('auth-forgot-box');
+
+    if (mainBox) mainBox.classList.remove('hidden');
+    if (forgotBox) forgotBox.classList.add('hidden');
+    if (tabLogin) tabLogin.classList.toggle('active', normalized === 'login');
+    if (tabRegister) tabRegister.classList.toggle('active', normalized === 'register');
+    if (submitBtn) {
+        submitBtn.textContent = normalized === 'register' ? 'Kayıt Ol' : 'Giriş Yap';
+    }
+}
+
+export function syncAuthTabFromHash(hashStr = window.location.hash) {
+    const queryIdx = (hashStr || '').indexOf('?');
+    if (queryIdx === -1) {
+        setAuthMode('login');
+        return;
+    }
+    const params = new URLSearchParams(hashStr.slice(queryIdx + 1));
+    setAuthMode(params.get('tab') === 'register' ? 'register' : 'login');
+}
+
 export function syncAuthNetworkUI() {
     const offlineBanner = document.getElementById('auth-offline-banner');
     const submitBtn = document.getElementById('btn-auth-submit');
@@ -52,18 +80,8 @@ export function initAuthEvents() {
     }
 
     if (tabLogin && tabRegister && submitBtn) {
-        tabLogin.addEventListener('click', () => {
-            authMode = 'login';
-            tabLogin.classList.add('active');
-            tabRegister.classList.remove('active');
-            submitBtn.textContent = 'Giriş Yap';
-        });
-        tabRegister.addEventListener('click', () => {
-            authMode = 'register';
-            tabRegister.classList.add('active');
-            tabLogin.classList.remove('active');
-            submitBtn.textContent = 'Kayıt Ol';
-        });
+        tabLogin.addEventListener('click', () => setAuthMode('login'));
+        tabRegister.addEventListener('click', () => setAuthMode('register'));
     }
 
     if (authForm && submitBtn) {
@@ -231,7 +249,7 @@ export function initAuthEvents() {
             setAiLauncherVisible(false);
             clearAdminViewState();
             showToast('Çıkış yapıldı', 'info');
-            window.location.hash = '#auth';
+            window.location.hash = '#explore';
         } catch (err) {
             console.error("Logout failed:", err);
             showToast('Çıkış yapılamadı: ' + err.message, 'danger');

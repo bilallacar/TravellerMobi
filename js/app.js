@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { showToast } from './utils.js';
 
 // Import View Modules
-import { initAuthEvents, renderApprovalPending, checkResetPasswordMode, syncAuthNetworkUI } from './modules/auth.js';
+import { initAuthEvents, renderApprovalPending, checkResetPasswordMode, syncAuthNetworkUI, syncAuthTabFromHash } from './modules/auth.js';
 import { initSettingsEvents, loadSettingsForm } from './modules/settings.js';
 import { initTripsEvents, loadTripsData, renderParticipantTags } from './modules/trips.js';
 import { initReservationEvents } from './modules/reservations.js';
@@ -374,6 +374,7 @@ async function handleRouting() {
             if (state.activeUser) {
                 window.location.hash = '#dashboard';
             } else {
+                syncAuthTabFromHash(hash);
                 showView('auth');
                 syncAuthNetworkUI();
             }
@@ -383,8 +384,8 @@ async function handleRouting() {
                 showView('dashboard');
                 await loadDashboardData();
             } else {
-                showView('auth');
-                syncAuthNetworkUI();
+                showView('explore');
+                await loadExploreView('all');
             }
     }
 

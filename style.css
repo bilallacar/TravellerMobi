@@ -5536,20 +5536,25 @@ body.light-theme .filter-pill[data-filter="radar"]:hover {
 }
 
 .auth-explore-link {
-    display: inline-flex;
+    display: flex;
+    width: 100%;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    padding: 8px 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-strong);
+    padding: 11px 16px;
     border-radius: var(--border-radius-sm);
-    transition: background-color 0.2s, color 0.2s;
+    text-decoration: none;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
 }
 
 .auth-explore-link:hover {
     background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
     color: var(--color-primary);
 }
 
@@ -6924,8 +6929,14 @@ body.dark-theme .nav-item:hover {
    PUBLIC EXPLORE REDESIGN (AIRBNB / POLARSTEPS PHOTO-FIRST EDITORIAL)
    ========================================================================== */
 
+.layout-container.no-sidebar .app-content {
+    max-width: 1480px;
+    padding: 20px 32px 48px;
+}
+
 #view-explore {
-    max-width: 1140px;
+    max-width: 1420px;
+    width: 100%;
     margin: 0 auto;
 }
 
@@ -6933,6 +6944,7 @@ body.dark-theme .nav-item:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     padding: 14px 0;
     margin-bottom: 28px;
     border: none;
@@ -6945,15 +6957,29 @@ body.dark-theme .nav-item:hover {
     z-index: 40;
 }
 
-.explore-public-header #btn-explore-auth-cta {
+.explore-public-header .explore-auth-login-btn {
+    border-radius: 999px;
+    padding: 8px 16px;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-strong) !important;
+    color: var(--text-primary) !important;
+}
+
+.explore-public-header .explore-auth-login-btn:hover {
+    background: var(--bg-secondary) !important;
+}
+
+.explore-public-header #btn-explore-register-cta,
+.explore-public-header .explore-auth-register-btn {
     border-radius: 999px;
     padding: 8px 18px;
     background: var(--text-primary) !important;
-    border-color: var(--text-primary) !important;
+    border: 1px solid var(--text-primary) !important;
     color: var(--bg-primary) !important;
 }
 
-.explore-public-header #btn-explore-auth-cta:hover {
+.explore-public-header #btn-explore-register-cta:hover,
+.explore-public-header .explore-auth-register-btn:hover {
     opacity: 0.88;
 }
 
@@ -7438,14 +7464,55 @@ body.dark-theme .ai-fab {
 }
 
 @media (max-width: 820px) {
+    .layout-container.no-sidebar .app-content {
+        padding: 14px 16px 40px;
+    }
     .explore-featured-card {
         grid-template-columns: 1fr;
         gap: 18px;
     }
     .explore-public-header {
         padding: 12px 0;
+        margin-bottom: 20px;
+    }
+    .explore-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .explore-search-wrap {
+        width: 100%;
     }
     .post-detail-header h1 {
         font-size: 26px;
+    }
+}
+
+@media (max-width: 520px) {
+    .explore-brand .logo-text {
+        font-size: 15px;
+    }
+    .explore-public-actions {
+        gap: 6px;
+    }
+    .explore-public-header .explore-auth-login-btn,
+    .explore-public-header .explore-auth-register-btn {
+        padding: 6px 11px;
+        font-size: 12px;
+        gap: 4px;
+    }
+    .explore-public-header .explore-auth-login-btn svg,
+    .explore-public-header .explore-auth-register-btn svg {
+        width: 13px;
+        height: 13px;
+    }
+    .explore-tabs-group {
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .explore-main-tab {
+        padding: 7px 12px;
+        font-size: 12.5px;
+        white-space: nowrap;
     }
 }

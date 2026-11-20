@@ -218,6 +218,7 @@ export function renderMarkdownContent(raw) {
 function syncExploreGuestHeader() {
     const guestTopBar = document.getElementById('explore-public-header');
     const authCtaBtn = document.getElementById('btn-explore-auth-cta');
+    const registerCtaBtn = document.getElementById('btn-explore-register-cta');
     const postAuthCtaBtn = document.getElementById('btn-post-auth-cta');
     const postTopAuthBtn = document.getElementById('btn-post-top-auth');
     const adminShortcut = document.getElementById('btn-explore-admin-shortcut');
@@ -235,9 +236,12 @@ function syncExploreGuestHeader() {
             : '<i data-lucide="log-in"></i><span>Giriş Yap</span>';
         authCtaBtn.setAttribute('href', isLoggedIn ? '#dashboard' : '#auth');
     }
+    if (registerCtaBtn) {
+        registerCtaBtn.classList.toggle('hidden', isLoggedIn);
+    }
     if (postAuthCtaBtn) {
-        postAuthCtaBtn.setAttribute('href', isLoggedIn ? '#dashboard' : '#auth');
-        postAuthCtaBtn.textContent = isLoggedIn ? 'Seyahat Panelime Git' : 'Ücretsiz Başla / Giriş Yap';
+        postAuthCtaBtn.setAttribute('href', isLoggedIn ? '#dashboard' : '#auth?tab=register');
+        postAuthCtaBtn.textContent = isLoggedIn ? 'Seyahat Panelime Git' : 'Ücretsiz Kayıt Ol / Giriş Yap';
     }
     if (adminShortcut) {
         adminShortcut.classList.toggle('hidden', !state.isAdmin);
