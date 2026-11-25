@@ -18,7 +18,8 @@ import { initPlacesEvents, loadPlacesData, handleIncomingPlaceIntent } from './m
 import { initShareEvents, loadShareView } from './modules/share.js';
 import { initAiAssistant, setAiLauncherVisible } from './modules/ai_assistant.js';
 import { initExploreEvents, loadExploreView, loadBlogPostDetailView } from './modules/explore.js';
-import { trackPageView, identifyVisitor, initPrivacyNotice, flushReadingSession } from './modules/analytics.js';
+import { trackPageView, identifyVisitor, initPrivacyNotice, flushReadingSession, getAnalyticsConsent } from './modules/analytics.js';
+import { initLegalEvents, openLegalModal } from './modules/legal.js';
 
 let lastIdentifiedUserId = null;
 
@@ -129,7 +130,6 @@ function updateDiagnosticsUI() {
 
 const views = {
     auth: document.getElementById('view-auth'),
-    setup: document.getElementById('view-setup'),
     explore: document.getElementById('view-explore'),
     post: document.getElementById('view-post'),
     dashboard: document.getElementById('view-dashboard'),
@@ -199,6 +199,13 @@ async function handleRouting() {
     const rawHash = window.location.hash || '';
     syncGlobalOfflineBanner();
 
+    // Handle Legal & Info hash shortcuts (#privacy, #cookies, #terms, #about)
+    const legalMap = { '#privacy': 'privacy', '#cookies': 'cookies', '#terms': 'terms', '#about': 'about' };
+    if (legalMap[rawHash.split('?')[0]]) {
+        openLegalModal(legalMap[rawHash.split('?')[0]]);
+        window.history.replaceState({}, document.title, window.location.pathname + '#explore');
+    }
+
     // Handle Read-Only Guest Share View (#share?id=... or #s=...)
     if (rawHash.startsWith('#share') || rawHash.startsWith('#s=') || rawHash.startsWith('#s?')) {
         const layout = document.getElementById('layout-container');
@@ -215,19 +222,41 @@ async function handleRouting() {
     }
 
     if (!isConfigured()) {
-        showView('setup');
-        setAiLauncherVisible(false);
-        setDesktopThemeToggleVisible(false);
+        showToast('Bulut yapılandırması bulunamadı.', 'danger');
         return;
     }
 
-    db.initSupabase();
+    await db.initSupabase();
+
+    // Handle Supabase Auth email confirmation / recovery / error callback parameters cleanly
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashQueryParams = new URLSearchParams(rawHash.startsWith('#') ? rawHash.slice(1) : '');
+    const authErrorDesc = searchParams.get('error_description') || hashQueryParams.get('error_description');
+    const authFlow = searchParams.get('auth_flow');
+    const isAuthTokenCallback = rawHash.includes('access_token=') || rawHash.includes('type=signup') || rawHash.includes('type=magiclink') || searchParams.has('code');
+
+    if (authErrorDesc) {
+        showToast(`Doğrulama bağlantısı geçersiz veya süresi dolmuş: ${authErrorDesc}`, 'danger');
+        window.history.replaceState({}, document.title, window.location.pathname + '#auth');
+    } else if (authFlow === 'confirmed') {
+        showToast('E-posta adresiniz doğrulandı! Oturumunuz hazırlanıyor.', 'success');
+        window.history.replaceState({}, document.title, window.location.pathname + '#dashboard');
+    } else if (isAuthTokenCallback && !rawHash.includes('type=recovery') && authFlow !== 'recovery') {
+        // Let Supabase client settle session from URL token/code, then strip sensitive token fragment
+        setTimeout(() => {
+            if (window.location.hash.includes('access_token=') || window.location.search.includes('code=')) {
+                window.history.replaceState({}, document.title, window.location.pathname + '#dashboard');
+            }
+        }, 400);
+    }
+
     checkResetPasswordMode();
 
     state.activeUser = await db.getCurrentUser();
 
     // Guests land on #explore (Blog & Travel News); signed-in users land on #dashboard
-    const hash = rawHash || (state.activeUser ? '#dashboard' : '#explore');
+    const effectiveRawHash = (rawHash.includes('access_token=') || rawHash.includes('error=')) ? '' : rawHash;
+    const hash = effectiveRawHash || (state.activeUser ? '#dashboard' : '#explore');
     const cleanHash = hash.split('?')[0];
     const isPublicExploreRoute = cleanHash === '#explore' || cleanHash === '#blog' || cleanHash === '#news' || cleanHash === '#post';
 
@@ -241,8 +270,6 @@ async function handleRouting() {
             identifyVisitor(state.activeUser.id, state.activeUser.email);
         }
 
-        state.isAdmin = state.activeUser.email === 'bllacrr@gmail.com';
-
         try {
             state.userProfile = await db.getUserProfile(state.activeUser.id);
             if (!state.userProfile && db.hasInternet()) {
@@ -253,17 +280,19 @@ async function handleRouting() {
                     id: state.activeUser.id,
                     email: state.activeUser.email,
                     status: 'approved',
-                    role: { name: state.isAdmin ? 'admin' : 'member' }
+                    role: { name: 'member' }
                 };
             }
             state.isAdmin = !!(
-                (state.userProfile && state.userProfile.role && state.userProfile.role.name === 'admin') ||
-                (state.activeUser && state.activeUser.email === 'bllacrr@gmail.com')
+                state.userProfile &&
+                state.userProfile.status === 'approved' &&
+                state.userProfile.role &&
+                state.userProfile.role.name === 'admin'
             );
         } catch (profileErr) {
             console.error("Profile resolution failed:", profileErr);
             if (db.hasInternet()) {
-                showToast("Profil doğrulanamadı. SQL şemasını çalıştırdığınızdan emin olun.", "danger");
+                showToast("Profil doğrulanamadı. Lütfen internet bağlantınızı kontrol edin.", "danger");
             }
         }
     }
@@ -403,11 +432,15 @@ function showView(viewName) {
         if (views[key]) {
             views[key].classList.add('hidden');
             views[key].classList.remove('visible');
+            views[key].setAttribute('aria-hidden', 'true');
+            views[key].inert = true;
         }
     }
     if (views[viewName]) {
         views[viewName].classList.remove('hidden');
         views[viewName].classList.add('visible');
+        views[viewName].setAttribute('aria-hidden', 'false');
+        views[viewName].inert = false;
     }
     if (window.lucide) window.lucide.createIcons();
 }
@@ -563,6 +596,16 @@ document.addEventListener('DOMContentLoaded', () => {
         syncThemeUI(e.detail?.theme || config.theme);
     });
 
+    window.addEventListener('auth-recovery-detected', () => {
+        checkResetPasswordMode(true);
+    });
+
+    window.addEventListener('auth-session-changed', (e) => {
+        if (e.detail?.event === 'SIGNED_IN' && !state.activeUser) {
+            handleRouting();
+        }
+    });
+
     initNavigation();
 
     // Init Modules Event Handlers
@@ -579,6 +622,17 @@ document.addEventListener('DOMContentLoaded', () => {
     initExploreEvents();
     initAdminEvents();
     initPrivacyNotice();
+    initLegalEvents();
+
+    // Global Escape key handler to close any open modal cleanly (Accessibility)
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const openModals = Array.from(document.querySelectorAll('.modal:not(.hidden)'));
+        const topModal = openModals[openModals.length - 1];
+        if (topModal && topModal.id !== 'modal-reset-password') {
+            topModal.classList.add('hidden');
+        }
+    });
 
     // Global network status listeners
     syncGlobalOfflineBanner();
@@ -665,13 +719,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchExchangeRates();
 
-    // PWA Install Prompt & Service Worker Registration
+    // PWA Install Prompt & Service Worker Registration (Avoid showing over unset privacy banner)
     let deferredInstallPrompt = null;
+    const maybeShowPwaInstallBanner = () => {
+        if (!deferredInstallPrompt) return;
+        if (getAnalyticsConsent() === 'unset') return;
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.classList.remove('hidden');
+    };
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredInstallPrompt = e;
-        const banner = document.getElementById('pwa-install-banner');
-        if (banner) banner.classList.remove('hidden');
+        setTimeout(maybeShowPwaInstallBanner, 4000);
+    });
+    window.addEventListener('analytics-consent-changed', () => {
+        setTimeout(maybeShowPwaInstallBanner, 2500);
     });
 
     const btnPwaInstall = document.getElementById('btn-pwa-install');

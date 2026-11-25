@@ -6,7 +6,7 @@ import { state } from '../state.js';
 const VISITOR_ID_KEY = 'travellermobi_visitor_id_v1';
 const SESSION_ID_KEY = 'travellermobi_session_id_v1';
 const GEO_CACHE_KEY = 'travellermobi_geo_cache_v2';
-const PRIVACY_ACK_KEY = 'travellermobi_privacy_ack_v1';
+const CONSENT_KEY = 'travellermobi_analytics_consent_v1'; // 'granted' | 'denied'
 
 let lastTrackedKey = '';
 let lastTrackedAt = 0;
@@ -17,6 +17,32 @@ let cachedDeviceInfoPromise = null;
 let activeReading = null;
 let readingListenersBound = false;
 let lastLoggedSearch = '';
+
+export function getAnalyticsConsent() {
+    try {
+        return localStorage.getItem(CONSENT_KEY) || 'unset';
+    } catch {
+        return 'denied';
+    }
+}
+
+export function hasAnalyticsConsent() {
+    return getAnalyticsConsent() === 'granted';
+}
+
+export function setAnalyticsConsent(choice) {
+    const normalized = choice === 'granted' ? 'granted' : 'denied';
+    try {
+        localStorage.setItem(CONSENT_KEY, normalized);
+        if (normalized === 'denied') {
+            localStorage.removeItem(VISITOR_ID_KEY);
+            sessionStorage.removeItem(SESSION_ID_KEY);
+            sessionStorage.removeItem(GEO_CACHE_KEY);
+        }
+    } catch (_) {}
+    window.dispatchEvent(new CustomEvent('analytics-consent-changed', { detail: { consent: normalized } }));
+    return normalized;
+}
 
 function isLocalDevHost() {
     const host = (window.location.hostname || '').toLowerCase();
@@ -45,7 +71,7 @@ function isLikelyBot() {
 }
 
 function shouldSkipTracking() {
-    return !db.hasInternet() || isLocalDevHost() || isLikelyBot();
+    return !hasAnalyticsConsent() || !db.hasInternet() || isLocalDevHost() || isLikelyBot();
 }
 
 function createUid() {
@@ -469,16 +495,30 @@ export async function identifyVisitor(userId, email) {
 export function initPrivacyNotice() {
     const banner = document.getElementById('privacy-notice-banner');
     const acceptBtn = document.getElementById('btn-accept-privacy-notice');
+    const rejectBtn = document.getElementById('btn-reject-privacy-notice');
     if (!banner || !acceptBtn) return;
 
-    try {
-        if (!localStorage.getItem(PRIVACY_ACK_KEY)) {
-            banner.classList.remove('hidden');
-        }
-    } catch (_) {}
+    const currentConsent = getAnalyticsConsent();
+    if (currentConsent === 'unset') {
+        banner.classList.remove('hidden');
+    } else {
+        banner.classList.add('hidden');
+    }
 
     acceptBtn.addEventListener('click', () => {
-        try { localStorage.setItem(PRIVACY_ACK_KEY, '1'); } catch (_) {}
+        setAnalyticsConsent('granted');
         banner.classList.add('hidden');
+        // Track current page once explicit consent is granted
+        trackPageView(window.location.hash || '#explore');
+        if (state.activeUser?.id) {
+            identifyVisitor(state.activeUser.id, state.activeUser.email);
+        }
     });
+
+    if (rejectBtn) {
+        rejectBtn.addEventListener('click', () => {
+            setAnalyticsConsent('denied');
+            banner.classList.add('hidden');
+        });
+    }
 }

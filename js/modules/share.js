@@ -17,11 +17,37 @@ let pendingShareData = null;
 let pendingSharePayload = null;
 let pendingSharePinHash = null;
 let pendingShareTripName = null;
+let isCloudPinProtected = false;
+let verifiedSharePin = null;
 let activeModalSlug = null;
 let currentModalPin = null;
 let isOpeningShareModal = false;
 let sharePreviewSeq = 0;
 let pinInputDebounceTimer = null;
+
+/**
+ * Cryptographically secure random 4-digit numeric PIN (1000..9999)
+ */
+function generateSecurePin() {
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const buf = new Uint32Array(1);
+        crypto.getRandomValues(buf);
+        return String(1000 + (buf[0] % 9000));
+    }
+    return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+/**
+ * Cryptographically secure unpredictable slug suffix (8 hex chars)
+ */
+function generateSecureSlugSuffix() {
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const bytes = new Uint8Array(4);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    }
+    return Math.random().toString(16).slice(2, 10);
+}
 
 /**
  * Initialize event listeners for share system
@@ -266,20 +292,23 @@ async function handleGuestSuggestSubmit() {
         if (!currentDecodedShareData) {
             currentDecodedShareData = { tripName: 'Grup Rotası', places: [] };
         }
-        currentDecodedShareData.places.push(newPlace);
-
-        // Save back to cloud table if this is a cloud route slug
+        // Save back to cloud table via PIN-verified RPC if this is a cloud route slug
+        let savedToCloud = false;
         if (currentShareSlug) {
             try {
-                await db.saveSharedRoute(currentShareSlug, currentDecodedShareData.tripName, currentDecodedShareData.places, pendingSharePinHash || null);
-                localStorage.setItem(`shared_route_${currentShareSlug}`, JSON.stringify({
-                    tripName: currentDecodedShareData.tripName,
-                    places: currentDecodedShareData.places,
-                    pinHash: pendingSharePinHash
-                }));
+                const rpcRes = await db.suggestSharedRoutePlace(currentShareSlug, verifiedSharePin, newPlace);
+                if (rpcRes && rpcRes.ok && Array.isArray(rpcRes.places)) {
+                    currentDecodedShareData.places = rpcRes.places;
+                    savedToCloud = true;
+                } else {
+                    currentDecodedShareData.places.push(newPlace);
+                }
             } catch (err) {
                 console.warn("Failed to persist guest suggestion to DB:", err);
+                currentDecodedShareData.places.push(newPlace);
             }
+        } else {
+            currentDecodedShareData.places.push(newPlace);
         }
 
         // Re-render map and places list
@@ -290,7 +319,12 @@ async function handleGuestSuggestSubmit() {
         if (countEl) countEl.textContent = `${currentDecodedShareData.places.length} Gezi Noktası`;
 
         if (modalGuestSuggest) modalGuestSuggest.classList.add('hidden');
-        showToast("Mekan öneriniz rotaya başarıyla eklendi!", "success");
+        showToast(
+            savedToCloud
+                ? "Mekan öneriniz rotaya kalıcı olarak eklendi!"
+                : "Mekan öneriniz ekrana eklendi (çevrimdışı/geçici görünüm).",
+            savedToCloud ? "success" : "info"
+        );
     } catch (err) {
         console.error("Guest suggest error:", err);
         showToast("Öneri eklenirken hata: " + err.message, "danger");
@@ -332,9 +366,9 @@ export async function openShareModal() {
             currentModalPin = savedShare.pin;
         } else {
             const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
-            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            const randomSuffix = generateSecureSlugSuffix();
             activeModalSlug = `${slugBase}-${randomSuffix}`;
-            currentModalPin = Math.floor(1000 + Math.random() * 9000).toString();
+            currentModalPin = generateSecurePin();
             try {
                 localStorage.setItem(`trip_share_${state.activeTripId}`, JSON.stringify({
                     slug: activeModalSlug,
@@ -390,7 +424,7 @@ export function closeShareModal() {
  * Generate a random 4-digit numeric PIN
  */
 function generateNewPin() {
-    const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+    const randomPin = generateSecurePin();
     currentModalPin = randomPin;
     const pinInput = document.getElementById('share-pin-code');
     if (pinInput) pinInput.value = randomPin;
@@ -428,7 +462,7 @@ async function updateShareLinkPreview() {
 
     if (!activeModalSlug) {
         const slugBase = slugify(currentTrip.name).split('-')[0] || 'rota';
-        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        const randomSuffix = generateSecureSlugSuffix();
         activeModalSlug = `${slugBase}-${randomSuffix}`;
     }
     const slug = activeModalSlug;
@@ -436,7 +470,7 @@ async function updateShareLinkPreview() {
     const isPinEnabled = pinCheckbox && pinCheckbox.checked;
     const rawPin = pinInput ? pinInput.value.replace(/\D/g, '').trim() : '';
     const pin = (isPinEnabled && rawPin.length === 4) ? rawPin : '';
-    const pinHash = (isPinEnabled && pin.length === 4) ? hashPin(pin) : '';
+    const legacyPinHash = (isPinEnabled && pin.length === 4) ? hashPin(pin) : '';
 
     if (linkResultInput) linkResultInput.value = "Kısa link oluşturuluyor...";
     if (btnWhatsapp) btnWhatsapp.disabled = true;
@@ -457,20 +491,10 @@ async function updateShareLinkPreview() {
         visit_order: p.visit_order !== undefined ? p.visit_order : idx
     }));
 
-    // 2. Cache locally as instant backup
-    try {
-        localStorage.setItem(`shared_route_${slug}`, JSON.stringify({
-            tripName: currentTrip.name,
-            pinHash: pinHash,
-            places: compactPlaces,
-            sharedAt: new Date().toISOString()
-        }));
-    } catch (e) {}
-
-    // 3. Try to save to Supabase Cloud Table
+    // 2. Save to Supabase Cloud Table via server-side bcrypt PIN RPC
     let savedToCloud = false;
     try {
-        const cloudRecord = await db.saveSharedRoute(slug, currentTrip.name, compactPlaces, pinHash);
+        const cloudRecord = await db.saveSharedRoute(slug, currentTrip.name, compactPlaces, isPinEnabled ? pin : '');
         if (cloudRecord && cloudRecord.id) {
             savedToCloud = true;
         }
@@ -481,22 +505,19 @@ async function updateShareLinkPreview() {
     // Ignore stale request if a newer update started in the meantime
     if (currentSeq !== sharePreviewSeq) return;
 
-    // 4. Form final URL:
-    // If cloud saved: ULTRA-SHORT link with fail-safe PIN hash (e.g. https://.../#s=atina-4821&h=1a4e1b)
-    // If not: Compact URL-safe Base64URL fallback
+    // 3. Form final URL:
+    // If cloud saved: clean short link WITHOUT leaking PIN hash in URL (e.g. https://.../#s=atina-4a9b1c2d)
+    // If offline/fallback: URL-safe Base64URL payload
     const baseUrl = window.location.origin + window.location.pathname;
     let fullUrl = '';
 
     if (savedToCloud) {
         fullUrl = `${baseUrl}#s=${slug}`;
-        if (isPinEnabled && pinHash) {
-            fullUrl += `&h=${pinHash}`;
-        }
     } else {
         const { payload } = encodeRoutePayload(currentTrip.name, compactPlaces, isPinEnabled ? pin : '');
         let hash = `#share?id=${slug}&d=${payload}`;
-        if (isPinEnabled && pinHash) {
-            hash += `&h=${pinHash}`;
+        if (isPinEnabled && legacyPinHash) {
+            hash += `&h=${legacyPinHash}`;
         }
         fullUrl = `${baseUrl}${hash}`;
     }
@@ -598,16 +619,17 @@ export async function loadShareView(hash) {
     pendingSharePayload = null;
     pendingSharePinHash = null;
     pendingShareTripName = null;
+    isCloudPinProtected = false;
+    verifiedSharePin = null;
     currentDecodedShareData = null;
 
-    // Parse URL params from hash (e.g. #s=atina-9511 or #share?id=...)
+    // Parse URL params from hash (e.g. #s=atina-4a9b1c2d or #share?id=...)
     let slug = null;
     let payload = null;
     let pinHashFromUrl = null;
 
     if (hash.startsWith('#s=') || hash.startsWith('#s?')) {
         const afterPrefix = hash.replace(/^#s[=?]/, '');
-        // Extract slug and any query parameters (like &h=... or ?h=...)
         const [cleanSlug, queryPart] = afterPrefix.split(/[?&](.+)/);
         slug = cleanSlug ? cleanSlug.replace(/\/+$/, '').trim() : null;
         if (queryPart) {
@@ -629,43 +651,40 @@ export async function loadShareView(hash) {
 
     currentShareSlug = slug;
 
-    // 1. Try to fetch from Supabase Cloud Table
+    // 1. Try to fetch via secure server-side PIN RPC
     if (slug) {
         try {
-            const cloudRoute = await db.getSharedRoute(slug);
-            if (cloudRoute && cloudRoute.places) {
-                let placesData = cloudRoute.places;
+            const rpcRes = await db.getSharedRoute(slug, null);
+            if (rpcRes && rpcRes.status === 'pin_required') {
+                isCloudPinProtected = true;
+                if (pinGate) pinGate.classList.remove('hidden');
+                if (shareContent) shareContent.classList.add('hidden');
+                clearPinGateInputs();
+                focusFirstPinInput();
+                return;
+            }
+            if (rpcRes && rpcRes.status === 'locked') {
+                isCloudPinProtected = true;
+                if (pinGate) pinGate.classList.remove('hidden');
+                if (shareContent) shareContent.classList.add('hidden');
+                clearPinGateInputs();
+                showToast("Çok fazla hatalı PIN denemesi yapıldı. Lütfen 15 dakika sonra tekrar deneyin.", "danger");
+                return;
+            }
+            if (rpcRes && rpcRes.status === 'ok' && rpcRes.places) {
+                let placesData = rpcRes.places;
                 if (typeof placesData === 'string') {
                     try { placesData = JSON.parse(placesData); } catch (e) {}
                 }
                 pendingShareData = placesData;
-                pendingShareTripName = cloudRoute.trip_name || 'Seyahat Rotası';
-                // Priority: Pin hash from URL parameter, fallback to database record's pin_hash
-                pendingSharePinHash = pinHashFromUrl || (cloudRoute.pin_hash ? String(cloudRoute.pin_hash).trim() : null);
+                pendingShareTripName = rpcRes.trip_name || 'Seyahat Rotası';
             }
         } catch (e) {
-            console.warn("Could not load from cloud table:", e);
+            console.warn("Could not load shared route via RPC:", e);
         }
     }
 
-    // 2. Fallback to localStorage (creator's device or offline preview)
-    if (!pendingShareData && slug) {
-        try {
-            const cached = localStorage.getItem(`shared_route_${slug}`);
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                let placesData = parsed.places;
-                if (typeof placesData === 'string') {
-                    try { placesData = JSON.parse(placesData); } catch (e) {}
-                }
-                pendingShareData = placesData;
-                pendingShareTripName = parsed.tripName;
-                pendingSharePinHash = pinHashFromUrl || (parsed.pinHash ? String(parsed.pinHash).trim() : null);
-            }
-        } catch (e) {}
-    }
-
-    // 3. Fallback to URL Payload (&d=...)
+    // 2. Fallback to URL Payload (&d=...) for offline/legacy links
     if (!pendingShareData && payload) {
         pendingSharePayload = payload;
         pendingSharePinHash = pinHashFromUrl ? String(pinHashFromUrl).trim() : null;
@@ -680,7 +699,7 @@ export async function loadShareView(hash) {
         return;
     }
 
-    // 4. Check if PIN protection is active
+    // 3. Legacy payload PIN gate
     if (pendingSharePinHash) {
         if (pinGate) pinGate.classList.remove('hidden');
         if (shareContent) shareContent.classList.add('hidden');
@@ -689,7 +708,7 @@ export async function loadShareView(hash) {
         return;
     }
 
-    // 5. No PIN required -> Unlock immediately
+    // 4. No PIN required -> Unlock immediately
     try {
         let routeData = null;
         if (pendingShareData) {
@@ -845,10 +864,11 @@ function checkAutoSubmitPin() {
 
 let isSubmittingPin = false;
 
-function handlePinGateSubmit() {
+async function handlePinGateSubmit() {
     if (isSubmittingPin) return;
 
     const unifiedInput = document.getElementById('pin-unified-input');
+    const submitBtn = document.getElementById('btn-submit-share-pin');
     let pin = '';
     if (unifiedInput) {
         pin = unifiedInput.value.replace(/\D/g, '').trim();
@@ -863,31 +883,73 @@ function handlePinGateSubmit() {
         return;
     }
 
-    // Verify PIN Hash (case-insensitive & trimmed)
-    const enteredHash = hashPin(pin).toLowerCase();
-    const expectedHash = String(pendingSharePinHash || '').trim().toLowerCase();
-
-    console.log("Verifying PIN Gate:", { pin, enteredHash, expectedHash });
-
-    if (expectedHash && enteredHash !== expectedHash) {
-        showToast("Hatalı PIN kodu! Lütfen size iletilen 4 haneli PIN kodunu kontrol ediniz.", "danger");
-        const box = document.getElementById('pin-boxes-container');
-        if (box) {
-            box.classList.add('shake-error');
-            setTimeout(() => box.classList.remove('shake-error'), 600);
-        }
-        clearPinGateInputs();
-        focusFirstPinInput();
-        return;
+    isSubmittingPin = true;
+    const prevBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Doğrulanıyor...';
     }
 
-    isSubmittingPin = true;
     try {
         let routeData = null;
-        if (pendingShareData) {
-            routeData = { tripName: pendingShareTripName, places: pendingShareData };
-        } else if (pendingSharePayload) {
-            routeData = decodeRoutePayload(pendingSharePayload, pin, pendingSharePinHash);
+
+        if (isCloudPinProtected && currentShareSlug) {
+            const rpcRes = await db.getSharedRoute(currentShareSlug, pin);
+            if (!rpcRes) {
+                throw new Error("Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.");
+            }
+            if (rpcRes.status === 'locked') {
+                showToast("Çok fazla hatalı deneme yapıldı. Lütfen 15 dakika sonra tekrar deneyin.", "danger");
+                clearPinGateInputs();
+                return;
+            }
+            if (rpcRes.status === 'invalid_pin' || rpcRes.status === 'pin_required') {
+                const leftText = typeof rpcRes.attempts_left === 'number'
+                    ? ` (Kalan deneme: ${rpcRes.attempts_left})`
+                    : '';
+                showToast(`Hatalı PIN kodu!${leftText}`, "danger");
+                const box = document.getElementById('pin-boxes-container');
+                if (box) {
+                    box.classList.add('shake-error');
+                    setTimeout(() => box.classList.remove('shake-error'), 600);
+                }
+                clearPinGateInputs();
+                focusFirstPinInput();
+                return;
+            }
+            if (rpcRes.status !== 'ok') {
+                throw new Error("Paylaşılan rota bulunamadı.");
+            }
+
+            verifiedSharePin = pin;
+            let placesData = rpcRes.places || [];
+            if (typeof placesData === 'string') {
+                try { placesData = JSON.parse(placesData); } catch (e) { placesData = []; }
+            }
+            routeData = {
+                tripName: rpcRes.trip_name || 'Seyahat Rotası',
+                places: placesData
+            };
+        } else {
+            // Legacy offline payload verification
+            const enteredHash = hashPin(pin).toLowerCase();
+            const expectedHash = String(pendingSharePinHash || '').trim().toLowerCase();
+            if (expectedHash && enteredHash !== expectedHash) {
+                showToast("Hatalı PIN kodu! Lütfen size iletilen 4 haneli PIN kodunu kontrol ediniz.", "danger");
+                const box = document.getElementById('pin-boxes-container');
+                if (box) {
+                    box.classList.add('shake-error');
+                    setTimeout(() => box.classList.remove('shake-error'), 600);
+                }
+                clearPinGateInputs();
+                focusFirstPinInput();
+                return;
+            }
+            if (pendingShareData) {
+                routeData = { tripName: pendingShareTripName, places: pendingShareData };
+            } else if (pendingSharePayload) {
+                routeData = decodeRoutePayload(pendingSharePayload, pin, pendingSharePinHash);
+            }
         }
 
         if (!routeData) {
@@ -898,7 +960,7 @@ function handlePinGateSubmit() {
         const pinGate = document.getElementById('share-pin-gate');
         const shareContent = document.getElementById('share-content-container');
 
-        showToast("🔓 PIN kodu doğrulandı! Rota açılıyor...", "success");
+        showToast("PIN kodu doğrulandı! Rota açılıyor...", "success");
         if (pinGate) pinGate.classList.add('hidden');
         if (shareContent) shareContent.classList.remove('hidden');
 
@@ -909,16 +971,11 @@ function handlePinGateSubmit() {
             showToast("Rota içeriği gösterilirken bir hata oluştu: " + renderErr.message, "warning");
         }
 
-        // Force Leaflet map resize after container becomes visible
         setTimeout(() => {
-            if (shareMapInstance) {
-                shareMapInstance.invalidateSize();
-            }
+            if (shareMapInstance) shareMapInstance.invalidateSize();
         }, 150);
         setTimeout(() => {
-            if (shareMapInstance) {
-                shareMapInstance.invalidateSize();
-            }
+            if (shareMapInstance) shareMapInstance.invalidateSize();
         }, 500);
     } catch (err) {
         console.error("PIN check failed:", err);
@@ -927,6 +984,11 @@ function handlePinGateSubmit() {
         focusFirstPinInput();
     } finally {
         isSubmittingPin = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = prevBtnHtml;
+            if (window.lucide) window.lucide.createIcons();
+        }
     }
 }
 

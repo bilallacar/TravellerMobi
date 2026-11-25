@@ -6,6 +6,15 @@ import * as db from '../../db.js';
 import { showToast, convertCurrency, escapeHtml } from '../utils.js';
 import { renderBalanceSheet } from './balance.js';
 
+function expenseAmountInBase(exp, baseCur) {
+    const amt = Number(exp?.amount) || 0;
+    if (!exp || exp.currency === baseCur) return amt;
+    if (typeof exp.fx_rate === 'number' && exp.fx_rate > 0 && exp.fx_base_currency === baseCur) {
+        return amt * exp.fx_rate;
+    }
+    return convertCurrency(amt, exp.currency, baseCur);
+}
+
 function findSplitAmountInput(root, memberName) {
     return Array.from(root.querySelectorAll('.expense-split-amount'))
         .find(el => el.dataset.member === memberName) || null;
@@ -169,7 +178,10 @@ export function renderExpenses() {
     const baseCur = config.defaultCurrency;
 
     listEl.innerHTML = filtered.map(exp => {
-        const amtInBase = convertCurrency(exp.amount, exp.currency, baseCur);
+        const amtInBase = expenseAmountInBase(exp, baseCur);
+        const fxHint = (typeof exp.fx_rate === 'number' && exp.fx_rate > 0 && exp.fx_base_currency === baseCur && exp.currency !== baseCur)
+            ? ` title="İşlem kuru sabitlendi: 1 ${escapeHtml(exp.currency)} = ${exp.fx_rate.toFixed(4)} ${escapeHtml(baseCur)}"`
+            : '';
         const cat = state.categoriesList.find(c => c.id === exp.category_id);
         const catName = cat ? cat.name : (exp.category || 'Diğer');
         const catColor = cat ? cat.color : '#6366f1';
@@ -199,7 +211,7 @@ export function renderExpenses() {
                 <td><strong>${escapeHtml(exp.title)}</strong></td>
                 <td>${catBadgeHtml}</td>
                 <td>${(Number(exp.amount) || 0).toFixed(2)} ${escapeHtml(exp.currency || baseCur)}</td>
-                <td>${amtInBase.toFixed(2)} ${baseCur}</td>
+                <td${fxHint}>${amtInBase.toFixed(2)} ${baseCur}</td>
                 <td>
                     <div class="table-actions" style="display: flex; gap: 6px; align-items: center;">
                         <button class="btn-icon-sm btn-edit-expense" data-id="${exp.id}" title="Düzenle">
@@ -280,7 +292,7 @@ export function renderExpenseChart(expenses) {
     let grandTotal = 0;
 
     expenses.forEach(e => {
-        const amountInBase = convertCurrency(e.amount, e.currency, baseCur);
+        const amountInBase = expenseAmountInBase(e, baseCur);
         const cat = state.categoriesList.find(c => c.id === e.category_id);
         const catName = cat ? cat.name : (e.category || 'Diğer');
         totals[catName] = (totals[catName] || 0) + amountInBase;
@@ -368,12 +380,26 @@ export function initExpensesEvents() {
             const cat = state.categoriesList.find(c => c.id === category_id);
             const category = cat ? cat.name : 'Diğer';
 
+            const baseCur = config.defaultCurrency || 'TRY';
+            const unitRate = currency === baseCur ? 1 : convertCurrency(1, currency, baseCur);
+            const fxMeta = {
+                fx_rate: Number.isFinite(unitRate) && unitRate > 0 ? Number(unitRate.toFixed(6)) : null,
+                fx_base_currency: baseCur,
+                fx_recorded_at: new Date().toISOString()
+            };
+
             try {
                 if (expenseId) {
-                    await db.updateExpense(expenseId, { trip_id: tripId, title, amount, currency, category, category_id, date, paid_by, split_with });
+                    const existing = state.expensesList.find(x => x.id === expenseId);
+                    const keepExistingFx = existing && existing.currency === currency && typeof existing.fx_rate === 'number' && existing.fx_rate > 0;
+                    const updateData = {
+                        trip_id: tripId, title, amount, currency, category, category_id, date, paid_by, split_with,
+                        ...(keepExistingFx ? {} : fxMeta)
+                    };
+                    await db.updateExpense(expenseId, updateData);
                     showToast('Harcama güncellendi', 'success');
                 } else {
-                    await db.createExpense({ trip_id: tripId, title, amount, currency, category, category_id, date, paid_by, split_with });
+                    await db.createExpense({ trip_id: tripId, title, amount, currency, category, category_id, date, paid_by, split_with, ...fxMeta });
                     showToast('Harcama kaydedildi', 'success');
                 }
                 

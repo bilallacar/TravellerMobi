@@ -100,6 +100,22 @@ export function hasInternet() {
  * Initialize Supabase Client if keys are configured.
  * Returns a Promise that resolves with the Supabase client.
  */
+function getAuthRedirectUrl(flow = '') {
+    const publicBase = (config.appPublicUrl || 'https://travellermobi.vercel.app').replace(/\/+$/, '');
+    let baseUrl = publicBase;
+    if (typeof window !== 'undefined' && window.location) {
+        const { protocol, hostname, origin } = window.location;
+        const isLocal = !hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname.endsWith('.local');
+        if (protocol === 'https:' && !isLocal) {
+            baseUrl = origin.replace(/\/+$/, '');
+        }
+    }
+    if (flow) {
+        return `${baseUrl}/?auth_flow=${encodeURIComponent(flow)}`;
+    }
+    return `${baseUrl}/`;
+}
+
 export function initSupabase() {
     if (supabase) return Promise.resolve(supabase);
     if (supabaseReadyPromise) return supabaseReadyPromise;
@@ -110,8 +126,33 @@ export function initSupabase() {
         }
         supabaseReadyPromise = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
             .then((module) => {
-                supabase = module.createClient(config.supabaseUrl, config.supabaseKey);
+                supabase = module.createClient(config.supabaseUrl, config.supabaseKey, {
+                    auth: {
+                        detectSessionInUrl: true,
+                        persistSession: true,
+                        autoRefreshToken: true
+                    }
+                });
                 console.log("Supabase Client initialized successfully.");
+
+                if (supabase.auth && typeof supabase.auth.onAuthStateChange === 'function') {
+                    supabase.auth.onAuthStateChange((event, session) => {
+                        if (session?.user) {
+                            currentCachedUserId = session.user.id;
+                            saveCachedAuthUser(session.user);
+                        } else if (event === 'SIGNED_OUT') {
+                            currentCachedUserId = null;
+                            clearCachedAuthState();
+                        }
+
+                        if (event === 'PASSWORD_RECOVERY') {
+                            window.dispatchEvent(new CustomEvent('auth-recovery-detected'));
+                        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+                            window.dispatchEvent(new CustomEvent('auth-session-changed', { detail: { event, user: session?.user || null } }));
+                        }
+                    });
+                }
+
                 // Start an immediate sync check when connected
                 syncOfflineQueue();
                 return supabase;
@@ -248,9 +289,15 @@ export async function signUp(email, password) {
         throw new Error("Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.");
     }
     try {
-        const { data, error } = await client.auth.signUp({ email, password });
+        const { data, error } = await client.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: getAuthRedirectUrl('confirmed')
+            }
+        });
         if (error) throw error;
-        if (data.user) {
+        if (data.user && data.session) {
             currentCachedUserId = data.user.id;
             saveCachedAuthUser(data.user);
         }
@@ -264,8 +311,10 @@ export async function signUp(email, password) {
 }
 
 export async function signOut() {
+    const previousUid = currentCachedUserId || getCachedAuthUser()?.id || null;
     currentCachedUserId = null;
     clearCachedAuthState();
+    clearUserLocalCaches(previousUid);
     if (!hasInternet()) return;
     try {
         const client = await getSupabase();
@@ -284,7 +333,7 @@ export async function resetPassword(email) {
     if (!client) {
         throw new Error("Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.");
     }
-    const redirectTo = `${window.location.origin}${window.location.pathname}#reset-password`;
+    const redirectTo = getAuthRedirectUrl('recovery');
     try {
         const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
         if (error) throw error;
@@ -310,6 +359,52 @@ export async function updateUserPassword(newPassword) {
     return data.user;
 }
 
+export async function deleteOwnAccount() {
+    if (!hasInternet()) {
+        throw new Error("Hesabınızı silmek için aktif internet bağlantısı gereklidir.");
+    }
+    const client = await getSupabase();
+    if (!client) {
+        throw new Error("Sunucuya ulaşılamadı.");
+    }
+    const user = await getCurrentUser();
+    if (!user?.id) {
+        throw new Error("Aktif kullanıcı oturumu bulunamadı.");
+    }
+
+    // Best-effort cleanup of user's private photos in storage bucket
+    try {
+        const { data: files } = await client.storage.from('traveller-photos').list(user.id, { limit: 500 });
+        if (Array.isArray(files) && files.length > 0) {
+            const paths = files.filter(f => f && f.name).map(f => `${user.id}/${f.name}`);
+            if (paths.length > 0) {
+                await client.storage.from('traveller-photos').remove(paths);
+            }
+        }
+    } catch (storageErr) {
+        console.warn("Storage cleanup warning before account deletion:", storageErr);
+    }
+
+    // Delete all user rows and auth account via server-side security definer RPC
+    const { error } = await client.rpc('delete_my_account');
+    if (error) {
+        throw new Error(error.message || "Hesap silme işlemi tamamlanamadı (SQL v3 migration kurulu mu?).");
+    }
+
+    // Wipe all local caches & sign out
+    clearUserLocalCaches(user.id);
+    clearCachedAuthState();
+    currentCachedUserId = null;
+    try {
+        localStorage.removeItem('gemini_api_key');
+        localStorage.removeItem('travellermobi_visitor_id_v1');
+    } catch (_) {}
+    try {
+        await client.auth.signOut();
+    } catch (_) {}
+    return true;
+}
+
 
 /* ==========================================================================
    OFFLINE STORAGE CACHING & SYNC QUEUE SYSTEM
@@ -324,6 +419,29 @@ const CACHE_KEYS = {
     RESERVATIONS: 'cached_reservations',
     QUEUE: 'offline_sync_queue'
 };
+
+function clearUserLocalCaches(userId = null) {
+    try {
+        const suffixes = ['guest'];
+        if (userId) suffixes.push(String(userId));
+        const baseKeys = Object.values(CACHE_KEYS);
+        for (const base of baseKeys) {
+            for (const suffix of suffixes) {
+                localStorage.removeItem(`${base}_${suffix}`);
+            }
+        }
+        localStorage.removeItem('cached_categories');
+        // Clear any leftover trip_share_* local caches on logout
+        const keysToDelete = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith('trip_share_') || k.startsWith('shared_route_'))) {
+                keysToDelete.push(k);
+            }
+        }
+        keysToDelete.forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
+}
 
 function getCacheKey(baseKey) {
     if (!currentCachedUserId) {
@@ -534,11 +652,11 @@ async function runOfflineQueueSync(onProgress) {
                 if (error) throw error;
             }
             else if (item.action === 'create_expense') {
-                const { error } = await sb.from('expenses').insert([payload]);
+                const { error } = await executeWithSchemaFallback((clean) => sb.from('expenses').insert([clean]), payload);
                 if (error) throw error;
             }
             else if (item.action === 'update_expense') {
-                const { error } = await sb.from('expenses').update(payload).eq('id', item.data.id);
+                const { error } = await executeWithSchemaFallback((clean) => sb.from('expenses').update(clean).eq('id', item.data.id), payload);
                 if (error) throw error;
             }
             else if (item.action === 'delete_expense') {
@@ -883,7 +1001,10 @@ export async function createExpense(expenseData) {
         date: expenseData.date,
         user_id: user ? user.id : 'offline-user',
         paid_by: expenseData.paid_by || null,
-        split_with: expenseData.split_with || []
+        split_with: expenseData.split_with || [],
+        fx_rate: typeof expenseData.fx_rate === 'number' ? expenseData.fx_rate : null,
+        fx_base_currency: expenseData.fx_base_currency || null,
+        fx_recorded_at: expenseData.fx_recorded_at || new Date().toISOString()
     };
 
     // Optimistic Update Cache
@@ -900,10 +1021,10 @@ export async function createExpense(expenseData) {
         const sb = await getSupabase();
         if (!sb) throw new Error("Supabase connection is unconfigured.");
         if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
-        const { data, error } = await sb
-            .from('expenses')
-            .insert([payload])
-            .select();
+        const { data, error } = await executeWithSchemaFallback(
+            (clean) => sb.from('expenses').insert([clean]).select(),
+            payload
+        );
 
         if (error) throw error;
         return data[0];
@@ -927,6 +1048,11 @@ export async function updateExpense(expenseId, expenseData) {
         paid_by: expenseData.paid_by || null,
         split_with: expenseData.split_with || []
     };
+    if (typeof expenseData.fx_rate === 'number') {
+        payload.fx_rate = expenseData.fx_rate;
+        payload.fx_base_currency = expenseData.fx_base_currency || null;
+        payload.fx_recorded_at = expenseData.fx_recorded_at || new Date().toISOString();
+    }
 
     // Optimistic Update Cache
     const expenses = getLocalCache(CACHE_KEYS.EXPENSES);
@@ -944,11 +1070,10 @@ export async function updateExpense(expenseId, expenseData) {
     try {
         const sb = await getSupabase();
         if (!sb) throw new Error("Supabase connection is unconfigured.");
-        const { data, error } = await sb
-            .from('expenses')
-            .update(payload)
-            .eq('id', expenseId)
-            .select();
+        const { data, error } = await executeWithSchemaFallback(
+            (clean) => sb.from('expenses').update(clean).eq('id', expenseId).select(),
+            payload
+        );
 
         if (error) throw error;
         return data[0];
@@ -1154,6 +1279,7 @@ export async function updateMemory(memoryId, memoryData, photoFile = null) {
 
         const sb = await getSupabase();
         if (!sb) throw new Error("Supabase connection is unconfigured.");
+        const user = await getCurrentUser();
         if (!user) throw new Error('Aktif kullanıcı oturumu bulunamadı');
         const { data, error } = await sb
             .from('memories')
@@ -1313,22 +1439,16 @@ export async function getUserProfile(userId) {
 export async function createUserProfile(userId, email) {
     const client = await getSupabase();
     if (!client) return null;
-    
-    // Auto-resolve role ID for admin vs member
-    const isAdmin = email === 'bllacrr@gmail.com';
-    const status = isAdmin ? 'approved' : 'pending';
-    
-    let roleName = isAdmin ? 'admin' : 'member';
+
     let roleId = null;
-    
     try {
-        const { data: roleData } = await client.from('roles').select('id').eq('name', roleName).maybeSingle();
+        const { data: roleData } = await client.from('roles').select('id').eq('name', 'member').maybeSingle();
         if (roleData) roleId = roleData.id;
-    } catch(e) {
+    } catch (e) {
         console.error("Failed to query role ID", e);
     }
-    
-    const payload = { id: userId, email, status: status, role_id: roleId };
+
+    const payload = { id: userId, email, status: 'pending', role_id: roleId };
     const { data, error } = await client
         .from('profiles')
         .upsert([payload])
@@ -1912,39 +2032,24 @@ export async function deleteReservation(resId) {
 }
 
 /* ==========================================================================
-   SHARED ROUTES API (Short Links & Guest Read-Only Access)
+   SHARED ROUTES API (Server-Side PIN RPC & Guest Read-Only Access)
    ========================================================================== */
 
-export async function saveSharedRoute(slug, tripName, places, pinHash = '') {
+export async function saveSharedRoute(slug, tripName, places, pin = '') {
     try {
         const client = await getSupabase();
         if (!client) return null;
 
-        // Ensure user ID is up to date if user is logged in
-        if (!currentCachedUserId && client.auth) {
-            try {
-                const { data: { user } } = await client.auth.getUser();
-                if (user) currentCachedUserId = user.id;
-            } catch (e) {}
-        }
-
-        const record = {
-            id: slug,
-            user_id: currentCachedUserId || null,
-            trip_name: tripName,
-            pin_hash: pinHash || null,
-            places: places,
-            created_at: new Date().toISOString()
-        };
-
-        const { data, error } = await client
-            .from('shared_routes')
-            .upsert(record)
-            .select()
-            .single();
+        const cleanPin = String(pin || '').replace(/\D/g, '').trim();
+        const { data, error } = await client.rpc('save_shared_route', {
+            p_id: slug,
+            p_trip_name: tripName,
+            p_places: places,
+            p_pin: cleanPin.length >= 4 ? cleanPin : null
+        });
 
         if (error) {
-            console.warn("Could not save to shared_routes table (table may not exist yet):", error.message);
+            console.warn("Could not save shared route via RPC:", error.message);
             return null;
         }
         return data;
@@ -1954,25 +2059,48 @@ export async function saveSharedRoute(slug, tripName, places, pinHash = '') {
     }
 }
 
-export async function getSharedRoute(slug) {
+export async function getSharedRoute(slug, pin = null) {
     try {
         const client = await getSupabase();
         if (!client) return null;
 
-        const { data, error } = await client
-            .from('shared_routes')
-            .select('*')
-            .eq('id', slug)
-            .single();
+        const cleanPin = pin ? String(pin).replace(/\D/g, '').trim() : null;
+        const { data, error } = await client.rpc('get_shared_route', {
+            p_id: slug,
+            p_pin: cleanPin || null
+        });
 
         if (error) {
-            console.warn("Could not fetch shared route from DB:", error.message);
+            console.warn("Could not fetch shared route via RPC:", error.message);
             return null;
         }
         return data;
     } catch (err) {
         console.warn("Error in getSharedRoute:", err);
         return null;
+    }
+}
+
+export async function suggestSharedRoutePlace(slug, pin, place) {
+    try {
+        const client = await getSupabase();
+        if (!client) return { ok: false, error: 'offline' };
+
+        const cleanPin = pin ? String(pin).replace(/\D/g, '').trim() : null;
+        const { data, error } = await client.rpc('suggest_shared_route_place', {
+            p_id: slug,
+            p_pin: cleanPin || null,
+            p_place: place
+        });
+
+        if (error) {
+            console.warn("Could not save guest place suggestion via RPC:", error.message);
+            return { ok: false, error: error.message };
+        }
+        return data || { ok: false, error: 'empty_response' };
+    } catch (err) {
+        console.warn("Error in suggestSharedRoutePlace:", err);
+        return { ok: false, error: err?.message || 'unknown' };
     }
 }
 
@@ -2172,9 +2300,13 @@ export async function deleteBlogPost(postId) {
 export async function incrementBlogPostView(slug) {
     if (!slug || !hasInternet()) return;
     try {
-        const client = await getSupabase();
-        if (!client) return;
-        await client.rpc('increment_blog_view', { p_slug: slug });
+        const res = await fetch('/api/track', {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'blog_view', slug })
+        });
+        if (res.ok) return;
     } catch (_) {}
 }
 
@@ -2292,40 +2424,24 @@ export async function recordSiteVisit(payload) {
     };
 
     try {
-        // Use keepalive fetch for outbound clicks & page-exit reading events so iOS Safari never cancels them
-        if (payload._keepalive && config.supabaseUrl && config.supabaseKey) {
-            let authToken = config.supabaseKey;
-            try {
-                if (supabase?.auth) {
-                    const { data } = await supabase.auth.getSession();
-                    if (data?.session?.access_token) authToken = data.session.access_token;
-                }
-            } catch (_) {}
-
-            const url = `${config.supabaseUrl.replace(/\/$/, '')}/rest/v1/rpc/record_site_visit`;
-            const res = await fetch(url, {
-                method: 'POST',
-                keepalive: true,
-                headers: {
-                    'apikey': config.supabaseKey,
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(rpcBody)
-            });
-            return res.ok;
-        }
-
-        const client = await getSupabase();
-        if (!client) return false;
-        const { error } = await client.rpc('record_site_visit', rpcBody);
-        if (error) {
-            if (!isMissingTableError(error)) {
-                console.warn("record_site_visit RPC error:", error.message);
+        let authToken = '';
+        try {
+            if (supabase?.auth) {
+                const { data } = await supabase.auth.getSession();
+                if (data?.session?.access_token) authToken = data.session.access_token;
             }
-            return false;
-        }
-        return true;
+        } catch (_) {}
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+        const res = await fetch('/api/track', {
+            method: 'POST',
+            keepalive: !!payload._keepalive,
+            headers,
+            body: JSON.stringify(rpcBody)
+        });
+        return res.ok;
     } catch {
         return false;
     }

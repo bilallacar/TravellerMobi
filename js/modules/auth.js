@@ -111,12 +111,9 @@ export function initAuthEvents() {
                     window.location.hash = '#dashboard';
                 } else {
                     const signUpUser = await db.signUp(email, password);
-                    
-                    if (signUpUser && signUpUser.identities && signUpUser.identities.length === 0) {
-                        throw new Error("Bu e-posta adresi zaten kayıtlıdır. Lütfen giriş yapın.");
-                    }
+                    const isExistingAccount = !!(signUpUser && signUpUser.identities && signUpUser.identities.length === 0);
 
-                    if (signUpUser) {
+                    if (signUpUser && !isExistingAccount) {
                         identifyVisitor(signUpUser.id, signUpUser.email || email);
                         trackEvent('auth_signup', { page_path: '#auth' });
                     }
@@ -125,11 +122,11 @@ export function initAuthEvents() {
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Giriş Yap';
 
-                    if (user) {
+                    if (user && !isExistingAccount) {
                         showToast('Kayıt ve giriş başarılı!', 'success');
                         window.location.hash = '#dashboard';
                     } else {
-                        showToast('Kayıt başarılı! Lütfen giriş yapabilmek için e-postanıza gönderilen onay linkine tıklayın.', 'warning');
+                        showToast('Kayıt talebiniz alındı. E-postanızı kontrol edin; hesabınız zaten mevcutsa giriş yapabilir veya şifrenizi sıfırlayabilirsiniz.', 'info');
                         if (tabLogin) tabLogin.click();
                         authForm.reset();
                     }
@@ -267,12 +264,13 @@ export function initAuthEvents() {
 /**
  * Check if current URL contains recovery token or hash
  */
-export function checkResetPasswordMode() {
-    const hash = window.location.hash;
+export function checkResetPasswordMode(forceOpen = false) {
+    const hash = window.location.hash || '';
+    const params = new URLSearchParams(window.location.search || '');
     const modalResetPassword = document.getElementById('modal-reset-password');
     if (!modalResetPassword) return;
 
-    if (hash.startsWith('#reset-password') || hash.includes('type=recovery')) {
+    if (forceOpen || hash.startsWith('#reset-password') || hash.includes('type=recovery') || params.get('auth_flow') === 'recovery') {
         modalResetPassword.classList.remove('hidden');
     }
 }

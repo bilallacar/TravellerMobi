@@ -1,31 +1,15 @@
 // config.js - Configuration state for Supabase API, Gemini AI and user settings
 
 export const config = {
-    supabaseUrl: localStorage.getItem('supabase_url') || 'https://pbfriozhmtyspfzgnkkq.supabase.co',
-    supabaseKey: localStorage.getItem('supabase_key') || 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM',
+    supabaseUrl: 'https://pbfriozhmtyspfzgnkkq.supabase.co',
+    supabaseKey: 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM',
+    appPublicUrl: 'https://travellermobi.vercel.app',
     defaultCurrency: localStorage.getItem('default_currency') || 'TRY',
     theme: localStorage.getItem('theme') || 'light',
     geminiApiKey: localStorage.getItem('gemini_api_key') || '',
     geminiModel: localStorage.getItem('gemini_model') || 'gemini-2.5-flash',
     geminiAutoApply: localStorage.getItem('gemini_auto_apply') === 'true'
 };
-
-
-/**
- * Save Supabase connection details to localStorage
- */
-export function saveConfig(url, key) {
-    if (typeof url === 'string' && url.trim()) {
-        const cleanUrl = url.trim();
-        localStorage.setItem('supabase_url', cleanUrl);
-        config.supabaseUrl = cleanUrl;
-    }
-    if (typeof key === 'string' && key.trim()) {
-        const cleanKey = key.trim();
-        localStorage.setItem('supabase_key', cleanKey);
-        config.supabaseKey = cleanKey;
-    }
-}
 
 /**
  * Save user app settings and preferences
@@ -71,7 +55,7 @@ export function saveGeminiAutoApply(enabled) {
 }
 
 /**
- * Returns true if both Supabase URL and Anon key are provided
+ * Returns true if both Supabase URL and Anon key are configured
  */
 export function isConfigured() {
     return !!(config.supabaseUrl && config.supabaseKey);

@@ -107,31 +107,8 @@ export async function fetchAutomaticTravelNews(forceRefresh = false) {
     renderNewsSection();
 
     try {
-        // Attach admin-defined custom RSS sources and blocked source names if available
-        let customQuery = '';
-        let blockedQuery = '';
-        try {
-            const allSources = await db.getNewsSources(true);
-            if (Array.isArray(allSources) && allSources.length > 0) {
-                const customRss = allSources.filter(s => s.category !== '__block__' && String(s.rss_url || '').startsWith('https://'));
-                const blockedSources = allSources.filter(s => s.category === '__block__').map(s => s.name).filter(Boolean);
-
-                if (customRss.length > 0) {
-                    const lean = customRss.slice(0, 6).map(s => ({
-                        name: s.name,
-                        category: s.category || 'Seyahat',
-                        url: s.rss_url
-                    }));
-                    customQuery = `&custom=${encodeURIComponent(JSON.stringify(lean))}`;
-                }
-                if (blockedSources.length > 0) {
-                    blockedQuery = `&blocked=${encodeURIComponent(blockedSources.join(','))}`;
-                }
-            }
-        } catch (_) {}
-
         const cacheBust = forceRefresh ? `&t=${Date.now()}` : '';
-        const res = await fetch(`/api/travel-news?limit=24${customQuery}${blockedQuery}${cacheBust}`, {
+        const res = await fetch(`/api/travel-news?limit=24${cacheBust}`, {
             cache: forceRefresh ? 'no-store' : 'default'
         });
 
@@ -271,7 +248,12 @@ function syncExploreGuestHeader() {
     const postTopAuthBtn = document.getElementById('btn-post-top-auth');
     const postRegisterCtaBtn = document.getElementById('btn-post-register-cta');
     const adminShortcut = document.getElementById('btn-explore-admin-shortcut');
+    const productStrip = document.getElementById('explore-product-strip');
     const isLoggedIn = !!(state.activeUser && state.userProfile?.status === 'approved');
+
+    if (productStrip) {
+        productStrip.classList.toggle('hidden', isLoggedIn);
+    }
 
     if (guestTopBar) {
         guestTopBar.classList.toggle('hidden', isLoggedIn);
@@ -517,8 +499,10 @@ function renderNewsSection() {
     const visibleItems = activeExploreTab === 'all' ? filtered.slice(0, 12) : filtered;
 
     listEl.innerHTML = visibleItems.map(item => {
-        const thumbHtml = item.image_url
-            ? `<div class="news-card-thumb"><img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
+        const safeLink = /^https?:\/\//i.test(String(item.link || '').trim()) ? item.link.trim() : '#explore';
+        const safeImg = /^https?:\/\//i.test(String(item.image_url || '').trim()) ? item.image_url.trim() : '';
+        const thumbHtml = safeImg
+            ? `<div class="news-card-thumb"><img src="${escapeHtml(safeImg)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
             : '';
 
         const summaryHtml = item.summary && item.summary.trim()
@@ -526,7 +510,7 @@ function renderNewsSection() {
             : '';
 
         return `
-            <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer" class="news-card" data-news-title="${escapeHtml(item.title)}" data-news-source="${escapeHtml(item.source || '')}">
+            <a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer" class="news-card" data-news-title="${escapeHtml(item.title)}" data-news-source="${escapeHtml(item.source || '')}">
                 ${thumbHtml}
                 <div class="news-card-body">
                     <div class="news-card-top">
@@ -651,13 +635,20 @@ export async function loadBlogPostDetailView(hash) {
         ? `<div class="post-detail-tags">${post.tags.map(t => `<span class="badge-pill">#${escapeHtml(t)}</span>`).join('')}</div>`
         : '';
 
+    const pubDateText = formatDateTR(post.published_at || post.created_at);
+    const updDateText = formatDateTR(post.updated_at);
+    const updatedMetaHtml = (updDateText && pubDateText && updDateText !== pubDateText)
+        ? `<span class="meta-sep">·</span><span>Güncelleme: ${updDateText}</span>`
+        : '';
+
     container.innerHTML = `
         <article class="post-detail-article">
             <div class="post-detail-header">
                 <div class="post-detail-meta">
                     <span class="editorial-kicker">${escapeHtml(post.category || 'Rehber')}</span>
                     <span class="meta-sep">·</span>
-                    <span>${formatDateTR(post.published_at || post.created_at)}</span>
+                    <span>${pubDateText}</span>
+                    ${updatedMetaHtml}
                     <span class="meta-sep">·</span>
                     <span>${post.read_time_minutes || 3} dk okuma</span>
                     <span class="meta-sep">·</span>
@@ -701,7 +692,7 @@ export async function loadBlogPostDetailView(hash) {
     const shareBtn = document.getElementById('btn-share-blog-post');
     if (shareBtn) {
         shareBtn.addEventListener('click', async () => {
-            const shareUrl = `${window.location.origin}${window.location.pathname}#post?slug=${encodeURIComponent(post.slug)}`;
+            const shareUrl = `${window.location.origin}/blog/${encodeURIComponent(post.slug)}`;
             try {
                 if (navigator.share) {
                     await navigator.share({ title: post.title, text: post.summary || post.title, url: shareUrl });

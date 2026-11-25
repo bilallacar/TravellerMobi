@@ -1,24 +1,25 @@
 // js/modules/settings.js
 
 import { state } from '../state.js';
-import { config, saveConfig, savePreferences, saveGeminiConfig } from '../../config.js';
-import { initSupabase } from '../../db.js';
+import { config, savePreferences, saveGeminiConfig } from '../../config.js';
 import * as db from '../../db.js';
 import { showToast, escapeHtml } from '../utils.js';
+import { hasAnalyticsConsent, setAnalyticsConsent } from './analytics.js';
+import { setAiLauncherVisible } from './ai_assistant.js';
+import { clearAdminViewState } from './admin.js';
 
 export async function loadSettingsForm() {
-    const urlInput = document.getElementById('settings-supabase-url');
-    const keyInput = document.getElementById('settings-supabase-key');
     const currencySelect = document.getElementById('settings-base-currency');
 
-    if (urlInput) urlInput.value = config.supabaseUrl || '';
-    if (keyInput) keyInput.value = config.supabaseKey || '';
     if (currencySelect) currencySelect.value = config.defaultCurrency || 'TRY';
 
     const geminiKeyInput = document.getElementById('settings-gemini-key');
     const geminiModelSelect = document.getElementById('settings-gemini-model');
     if (geminiKeyInput) geminiKeyInput.value = config.geminiApiKey || '';
     if (geminiModelSelect) geminiModelSelect.value = config.geminiModel || 'gemini-2.5-flash';
+
+    const consentToggle = document.getElementById('settings-analytics-consent-toggle');
+    if (consentToggle) consentToggle.checked = hasAnalyticsConsent();
 
     // Highlights active theme button style
     const isDark = config.theme === 'dark';
@@ -38,19 +39,13 @@ export async function loadSettingsForm() {
 }
 
 export function renderAdminOnlySections() {
-    const sqlCard = document.getElementById('settings-sql-card');
-    const apiCard = document.getElementById('settings-api-card');
     const adminCard = document.getElementById('settings-admin-card');
     const categoriesCard = document.getElementById('settings-categories-card');
 
     if (state.isAdmin) {
-        if (sqlCard) sqlCard.classList.remove('hidden');
-        if (apiCard) apiCard.classList.remove('hidden');
         if (adminCard) adminCard.classList.remove('hidden');
         if (categoriesCard) categoriesCard.classList.remove('hidden');
     } else {
-        if (sqlCard) sqlCard.classList.add('hidden');
-        if (apiCard) apiCard.classList.add('hidden');
         if (adminCard) adminCard.classList.add('hidden');
         if (categoriesCard) categoriesCard.classList.add('hidden');
     }
@@ -75,20 +70,25 @@ function renderSettingsCategories() {
         archive: '📦'
     };
 
-    listEl.innerHTML = state.categoriesList.map(c => `
+    listEl.innerHTML = state.categoriesList.map(c => {
+        const safeColor = /^#[0-9a-fA-F]{3,8}$|^var\(--[a-zA-Z0-9-]+\)$/.test(String(c.color || '')) ? c.color : '#6366f1';
+        const safeIcon = escapeHtml(c.icon || 'tag');
+        const safeId = escapeHtml(c.id || '');
+        return `
         <tr>
             <td>
-                <span style="display:inline-block; width:24px; height:24px; border-radius:50%; background-color:${c.color}; text-align:center; line-height:24px; margin-right:8px;">
+                <span style="display:inline-block; width:24px; height:24px; border-radius:50%; background-color:${safeColor}; text-align:center; line-height:24px; margin-right:8px;">
                     ${iconMapping[c.icon] || '🔖'}
                 </span>
             </td>
             <td><strong>${escapeHtml(c.name)}</strong></td>
             <td>
-                <button class="btn btn-primary btn-sm btn-edit-category" data-id="${c.id}" data-name="${escapeHtml(c.name)}" data-icon="${c.icon}" data-color="${c.color}">Düzenle</button>
-                <button class="btn btn-secondary btn-sm btn-delete-category" data-id="${c.id}">Sil</button>
+                <button class="btn btn-primary btn-sm btn-edit-category" data-id="${safeId}" data-name="${escapeHtml(c.name)}" data-icon="${safeIcon}" data-color="${escapeHtml(safeColor)}">Düzenle</button>
+                <button class="btn btn-secondary btn-sm btn-delete-category" data-id="${safeId}">Sil</button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 
     // Edit handlers
     listEl.querySelectorAll('.btn-edit-category').forEach(btn => {
@@ -145,19 +145,6 @@ function resetCategoryForm() {
 }
 
 export function initSettingsEvents() {
-    const settingsApiForm = document.getElementById('settings-api-form');
-    if (settingsApiForm) {
-        settingsApiForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const url = document.getElementById('settings-supabase-url').value;
-            const key = document.getElementById('settings-supabase-key').value;
-            saveConfig(url, key);
-            initSupabase();
-            showToast('Bağlantı ayarları güncellendi', 'success');
-            window.location.hash = '#dashboard';
-        });
-    }
-
     const settingsPrefForm = document.getElementById('settings-preferences-form');
     const geminiForm = document.getElementById('settings-gemini-form');
     if (geminiForm) {
@@ -219,17 +206,6 @@ export function initSettingsEvents() {
         });
     }
 
-    const copySqlBtn = document.getElementById('btn-copy-sql');
-    if (copySqlBtn) {
-        copySqlBtn.addEventListener('click', () => {
-            const codeBlock = document.getElementById('sql-code-block');
-            if (codeBlock) {
-                navigator.clipboard.writeText(codeBlock.textContent.trim());
-                showToast('SQL şeması panoya kopyalandı', 'success');
-            }
-        });
-    }
-
     const exportBackupBtn = document.getElementById('btn-export-backup');
     if (exportBackupBtn) {
         exportBackupBtn.addEventListener('click', async () => {
@@ -269,6 +245,103 @@ export function initSettingsEvents() {
                 exportBackupBtn.disabled = false;
                 exportBackupBtn.innerHTML = prevHtml;
                 if (window.lucide) window.lucide.createIcons();
+            }
+        });
+    }
+
+    // Password Change Form (Settings)
+    const passwordForm = document.getElementById('settings-password-form');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const p1 = document.getElementById('settings-new-password')?.value || '';
+            const p2 = document.getElementById('settings-new-password-confirm')?.value || '';
+            const btn = document.getElementById('btn-settings-change-password');
+
+            if (p1.length < 8) {
+                showToast('Yeni şifreniz en az 8 karakter olmalıdır.', 'warning');
+                return;
+            }
+            if (p1 !== p2) {
+                showToast('Girdiğiniz şifreler eşleşmiyor.', 'danger');
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Güncelleniyor...';
+            }
+            try {
+                await db.updateUserPassword(p1);
+                passwordForm.reset();
+                showToast('Şifreniz başarıyla güncellendi.', 'success');
+            } catch (err) {
+                showToast(err?.message || 'Şifre güncellenemedi.', 'danger');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Şifreyi Güncelle';
+                }
+            }
+        });
+    }
+
+    // Analytics Consent Toggle (KVKK)
+    const consentToggle = document.getElementById('settings-analytics-consent-toggle');
+    if (consentToggle) {
+        consentToggle.addEventListener('change', (e) => {
+            const granted = !!e.target.checked;
+            setAnalyticsConsent(granted ? 'granted' : 'denied');
+            const banner = document.getElementById('privacy-notice-banner');
+            if (banner) banner.classList.add('hidden');
+            showToast(
+                granted
+                    ? 'İsteğe bağlı kullanım analitiği etkinleştirildi.'
+                    : 'Analitik izni kapatıldı. Bundan sonra yalnızca zorunlu veriler kullanılır.',
+                'info'
+            );
+        });
+    }
+
+    // Permanent Account & Data Deletion (KVKK)
+    const deleteAccountForm = document.getElementById('settings-delete-account-form');
+    if (deleteAccountForm) {
+        deleteAccountForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const confirmInput = document.getElementById('settings-delete-confirm-input');
+            const btn = document.getElementById('btn-settings-delete-account');
+            const typed = (confirmInput?.value || '').trim().toLocaleUpperCase('tr-TR');
+
+            if (typed !== 'SİL' && typed !== 'SIL') {
+                showToast('Onaylamak için kutuya büyük harfle SİL yazmalısınız.', 'warning');
+                return;
+            }
+
+            if (!confirm('Hesabınız ve tüm seyahat, harcama, mekan, anı ve fotoğraf verileriniz kalıcı olarak silinecek. Bu işlem geri alınamaz. Devam edilsin mi?')) {
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Hesap Siliniyor...';
+            }
+            try {
+                await db.deleteOwnAccount();
+                state.activeUser = null;
+                state.userProfile = null;
+                state.isAdmin = false;
+                setAiLauncherVisible(false);
+                clearAdminViewState();
+                deleteAccountForm.reset();
+                showToast('Hesabınız ve tüm kişisel verileriniz kalıcı olarak silindi.', 'info');
+                window.location.hash = '#explore';
+            } catch (err) {
+                showToast(err?.message || 'Hesap silinemedi.', 'danger');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Hesabımı ve Verilerimi Kalıcı Sil';
+                }
             }
         });
     }

@@ -3,7 +3,6 @@
 
 const DEFAULT_SUPABASE_URL = 'https://pbfriozhmtyspfzgnkkq.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM';
-const ADMIN_FALLBACK_EMAIL = 'bllacrr@gmail.com';
 const MAX_PROMPT_CHARS = 32000;
 const RATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const RATE_MAX_REQUESTS = 12;
@@ -67,7 +66,7 @@ async function verifyApprovedAdmin(bearerToken) {
     }
 
     const isApproved = profile?.status === 'approved';
-    const isAdminRole = profile?.role?.name === 'admin' || user.email === ADMIN_FALLBACK_EMAIL;
+    const isAdminRole = profile?.role?.name === 'admin';
 
     if (!isApproved || !isAdminRole) {
         return { ok: false, status: 403, error: 'Bu uç yalnızca onaylı yöneticiye açıktır.' };

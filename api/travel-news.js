@@ -300,6 +300,59 @@ async function fetchSingleFeed(feedMeta, customBlockedList) {
     }
 }
 
+const DEFAULT_SUPABASE_URL = 'https://pbfriozhmtyspfzgnkkq.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM';
+
+async function loadServerNewsSources() {
+    const supabaseUrl = (process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || DEFAULT_SUPABASE_ANON_KEY;
+    const customFeeds = [];
+    const blockedSources = [];
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        try {
+            const res = await fetch(
+                `${supabaseUrl}/rest/v1/news_sources?is_enabled=eq.true&select=name,rss_url,category&order=created_at.asc`,
+                {
+                    signal: controller.signal,
+                    headers: {
+                        apikey: supabaseAnonKey,
+                        Authorization: `Bearer ${supabaseAnonKey}`
+                    }
+                }
+            );
+            if (!res.ok) return { customFeeds, blockedSources };
+            const rows = await res.json();
+            if (!Array.isArray(rows)) return { customFeeds, blockedSources };
+
+            for (const row of rows) {
+                if (!row) continue;
+                if (row.category === '__block__') {
+                    const norm = normalizeText(row.name);
+                    if (norm.length >= 2 && blockedSources.length < 30) {
+                        blockedSources.push(norm);
+                    }
+                } else if (customFeeds.length < 6 && typeof row.rss_url === 'string' && isSafePublicHttpsUrl(row.rss_url)) {
+                    customFeeds.push({
+                        name: String(row.name || 'Özel Kaynak').slice(0, 60),
+                        category: String(row.category || 'Seyahat').slice(0, 30),
+                        curated: false,
+                        url: row.rss_url
+                    });
+                }
+            }
+        } finally {
+            clearTimeout(timeout);
+        }
+    } catch {
+        // Fallback silently to curated default feeds
+    }
+
+    return { customFeeds, blockedSources };
+}
+
 export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200');
@@ -309,34 +362,11 @@ export default async function handler(req, res) {
     }
 
     try {
-        const feeds = [...DEFAULT_FEEDS];
-
-        // Optional admin-blocked sources (comma-separated)
-        const customBlockedList = typeof req.query?.blocked === 'string'
-            ? req.query.blocked.split(',').map(s => normalizeText(s)).filter(s => s.length >= 2).slice(0, 30)
-            : [];
-
-        // Optional custom RSS sources passed as JSON-encoded query param (max 6)
-        const customParam = req.query?.custom;
-        if (typeof customParam === 'string' && customParam.trim()) {
-            try {
-                const parsed = JSON.parse(customParam);
-                if (Array.isArray(parsed)) {
-                    for (const src of parsed.slice(0, 6)) {
-                        if (src && typeof src.url === 'string' && isSafePublicHttpsUrl(src.url)) {
-                            feeds.push({
-                                name: String(src.name || 'Özel Kaynak').slice(0, 60),
-                                category: String(src.category || 'Seyahat').slice(0, 30),
-                                curated: false,
-                                url: src.url
-                            });
-                        }
-                    }
-                }
-            } catch {
-                // Ignore malformed custom feed param
-            }
-        }
+        // Load admin-configured RSS sources & blocked outlets server-side from Supabase
+        // (Untrusted client ?custom= query URLs are intentionally ignored to prevent SSRF/open-proxy abuse)
+        const { customFeeds, blockedSources } = await loadServerNewsSources();
+        const feeds = [...DEFAULT_FEEDS, ...customFeeds];
+        const customBlockedList = blockedSources;
 
         const results = await Promise.allSettled(feeds.map(f => fetchSingleFeed(f, customBlockedList)));
         const allItems = [];

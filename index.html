@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>TravellerMobi - Şehir Rehberi & Gezi Günlüğü</title>
     <meta name="description" content="Günlük hayatınızda ve seyahatlerinizde mekanlarınızı kaydedin, rotanızı çizin, bütçenizi ve anılarınızı yönetin. Çevrimdışı desteğiyle her an yanınızda.">
     <!-- PWA Web App Manifest & App Icons -->
@@ -217,6 +217,13 @@
                                 <i data-lucide="newspaper"></i>
                                 <span>Üye olmadan Blog & Seyahat Haberlerini Keşfet</span>
                             </a>
+                            <div class="auth-legal-links">
+                                <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a>
+                                <span>·</span>
+                                <a href="#terms" data-open-legal="terms">Kullanım Şartları</a>
+                                <span>·</span>
+                                <a href="#about" data-open-legal="about">Hakkımızda</a>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -268,6 +275,31 @@
                         </div>
                     </div>
 
+                    <!-- Guest Product Value Strip (Hidden when signed in) -->
+                    <div id="explore-product-strip" class="explore-product-strip">
+                        <div class="explore-product-card">
+                            <i data-lucide="map-pin"></i>
+                            <div>
+                                <strong>Harita & Rota Planlama</strong>
+                                <span>Mekanlarını işaretle, yürüyüş sırasını optimize et ve PIN korumalı linkle paylaş.</span>
+                            </div>
+                        </div>
+                        <div class="explore-product-card">
+                            <i data-lucide="wallet"></i>
+                            <div>
+                                <strong>Çoklu Döviz & Masraf Bölüşümü</strong>
+                                <span>İşlem anı kuruyla harcamalarını kaydet, grup içi borç-alacak hesabını tek tıkla gör.</span>
+                            </div>
+                        </div>
+                        <div class="explore-product-card">
+                            <i data-lucide="wifi-off"></i>
+                            <div>
+                                <strong>Çevrimdışı Anı & Bilet Günlüğü</strong>
+                                <span>Uçuş/otel PNR kayıtların, fotoğrafların ve notların internet yokken bile yanında.</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Featured Blog Post Slot -->
                     <div id="explore-featured-post" class="explore-featured-wrap hidden"></div>
 
@@ -303,6 +335,17 @@
                             <!-- Rendered dynamically -->
                         </div>
                     </div>
+
+                    <!-- Public Legal & About Footer -->
+                    <footer class="public-legal-footer">
+                        <span>TravellerMobi</span>
+                        <div class="public-legal-links">
+                            <a href="#about" data-open-legal="about">Hakkımızda & İletişim</a>
+                            <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a>
+                            <a href="#cookies" data-open-legal="cookies">Çerez Politikası</a>
+                            <a href="#terms" data-open-legal="terms">Kullanım Şartları</a>
+                        </div>
+                    </footer>
                 </section>
 
                 <!-- 1C. PUBLIC BLOG POST DETAIL VIEW -->
@@ -370,42 +413,6 @@
                         </form>
                     </div>
                 </div>
-
-                <!-- 2. SETUP/CONFIG VIEW -->
-                <section id="view-setup" class="app-view hidden">
-                    <div class="setup-container">
-                        <div class="card glass">
-                            <h2><i data-lucide="database" style="width:20px;height:20px;vertical-align:-3px;margin-right:8px;"></i> Supabase Bulut Kurulumu</h2>
-                            <p>Uygulamanın verileri 7/24 bulutta güvenle saklaması ve bu bilgisayar kapalıyken bile çalışması için ücretsiz Supabase hesabınızın bilgilerine ihtiyacımız var.</p>
-                            
-                            <div class="info-alert">
-                                <strong>Supabase Ücretsizdir!</strong> Kredi kartı gerekmeden 500MB veritabanı ve 1GB fotoğraf depolama alanı alabilirsiniz.
-                            </div>
-
-                            <form id="setup-form" class="setup-form">
-                                <div class="form-group">
-                                    <label for="setup-url">Supabase Project URL</label>
-                                    <input type="url" id="setup-url" required placeholder="https://xxxxxx.supabase.co">
-                                </div>
-                                <div class="form-group">
-                                    <label for="setup-key">Supabase Anon Key</label>
-                                    <input type="text" id="setup-key" required placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-                                </div>
-                                <button type="submit" class="btn btn-primary">Bilgileri Kaydet & Başla</button>
-                            </form>
-
-                            <div class="setup-instructions">
-                                <h3>Nasıl Kurulur?</h3>
-                                <ol>
-                                    <li><a href="https://supabase.com/" target="_blank" rel="noopener">Supabase.com</a> adresine gidin ve ücretsiz hesap açın.</li>
-                                    <li>Yeni bir proje oluşturun (Örn: <code>TravellerMobi</code>).</li>
-                                    <li>Settings -> API sekmesinden <strong>Project URL</strong> ve <strong>Anon Public Key</strong> değerlerini buraya yapıştırın.</li>
-                                    <li>SQL Editor kısmından veritabanı tablolarını oluşturacak scripti çalıştırın (kodlar Ayarlar sayfasında veya README'dedir).</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                </section>
 
                 <!-- 3. DASHBOARD VIEW -->
                 <section id="view-dashboard" class="app-view hidden">
@@ -973,21 +980,24 @@
                                     <input type="text" id="place-address" placeholder="Örn: Caferağa Mah., Kadıköy" class="text-input">
                                 </div>
 
-                                <div class="form-row" style="align-items: flex-end;">
-                                    <div class="form-group" style="flex: 1;">
-                                        <label for="place-lat">Enlem</label>
-                                        <input type="number" step="any" id="place-lat" required class="text-input" placeholder="37.9715">
+                                <details class="coords-accordion form-group">
+                                    <summary>Koordinat & GPS (Otomatik dolar — elle düzenlemek için açın)</summary>
+                                    <div class="form-row" style="align-items: flex-end; margin-top: 10px;">
+                                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                            <label for="place-lat">Enlem</label>
+                                            <input type="number" step="any" id="place-lat" required class="text-input" placeholder="37.9715">
+                                        </div>
+                                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                            <label for="place-lng">Boylam</label>
+                                            <input type="number" step="any" id="place-lng" required class="text-input" placeholder="23.7257">
+                                        </div>
+                                        <div class="form-group" style="flex: 0 0 auto; margin-bottom: 0;">
+                                            <button type="button" id="btn-fill-gps" class="btn btn-secondary" style="height: 44px; white-space: nowrap;" title="Cihaz GPS konumunu doldur">
+                                                <i data-lucide="locate-fixed"></i> GPS Al
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="form-group" style="flex: 1;">
-                                        <label for="place-lng">Boylam</label>
-                                        <input type="number" step="any" id="place-lng" required class="text-input" placeholder="23.7257">
-                                    </div>
-                                    <div class="form-group" style="flex: 0 0 auto;">
-                                        <button type="button" id="btn-fill-gps" class="btn btn-secondary" style="height: 44px; white-space: nowrap;" title="Cihaz GPS konumunu doldur">
-                                            <i data-lucide="locate-fixed"></i> GPS Al
-                                        </button>
-                                    </div>
-                                </div>
+                                </details>
 
                                 <div class="form-row">
                                     <div class="form-group">
@@ -1050,7 +1060,7 @@
                                     <div id="share-pin-input-container" class="margin-top-12">
                                         <p class="text-xs text-muted" style="margin-bottom: 8px;">Karşı taraf linke tıkladığında rotayı açabilmek için bu 4 haneli PIN kodunu girecektir.</p>
                                         <div style="display: flex; gap: 8px; align-items: center;">
-                                            <input type="text" id="share-pin-code" class="text-input" style="font-size: 20px; font-weight: 700; letter-spacing: 4px; text-align: center; width: 130px; padding: 6px;" maxlength="4" value="1903">
+                                            <input type="text" id="share-pin-code" class="text-input" style="font-size: 20px; font-weight: 700; letter-spacing: 4px; text-align: center; width: 130px; padding: 6px;" maxlength="4" placeholder="----" inputmode="numeric" autocomplete="off">
                                             <button type="button" id="btn-regenerate-pin" class="btn btn-secondary btn-sm" title="Yeni rastgele PIN üret">
                                                 Yeni PIN
                                             </button>
@@ -1070,7 +1080,7 @@
                                             Kopyala
                                         </button>
                                     </div>
-                                    <span id="share-pin-display-badge" class="badge-pill pill-planned margin-top-8" style="display: inline-block;">PIN: 1903</span>
+                                    <span id="share-pin-display-badge" class="badge-pill pill-planned margin-top-8" style="display: none;"></span>
                                 </div>
 
                                 <!-- Quick Actions -->
@@ -1545,22 +1555,6 @@
                     <h1>Ayarlar</h1>
 
                     <div class="settings-grid">
-                        <!-- API Configurations -->
-                        <div class="card glass hidden" id="settings-api-card">
-                            <h3><i data-lucide="database" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Bulut Supabase Bağlantısı</h3>
-                            <form id="settings-api-form" class="settings-form">
-                                <div class="form-group">
-                                    <label for="settings-supabase-url">Supabase Project URL</label>
-                                    <input type="url" id="settings-supabase-url" required placeholder="https://xxxxxx.supabase.co">
-                                </div>
-                                <div class="form-group">
-                                    <label for="settings-supabase-key">Supabase Anon Key</label>
-                                    <input type="password" id="settings-supabase-key" required placeholder="•••••••••••••">
-                                </div>
-                                <button type="submit" class="btn btn-primary">Bağlantıyı Güncelle</button>
-                            </form>
-                        </div>
-
                         <!-- System Settings -->
                         <div class="card glass">
                             <h3><i data-lucide="sliders" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Uygulama Tercihleri</h3>
@@ -1589,10 +1583,56 @@
                         <!-- Data Backup & Export Card -->
                         <div class="card glass" id="settings-backup-card">
                             <h3><i data-lucide="download" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Veri Yedekleme</h3>
-                            <p class="text-sm text-muted" style="margin: 8px 0 14px;">Seyahat, mekan, masraf ve anı kayıtlarını tek dosyada yedekleyin.</p>
+                            <p class="text-sm text-muted" style="margin: 8px 0 14px;">Seyahat, mekan, masraf ve anı metin kayıtlarını JSON dosyası olarak yedekleyin (fotoğraf dosyaları ayrı depolanır).</p>
                             <button type="button" id="btn-export-backup" class="btn btn-secondary">
                                 <i data-lucide="file-json"></i> Yedeği İndir (JSON)
                             </button>
+                        </div>
+
+                        <!-- Security & Password Change Card -->
+                        <div class="card glass" id="settings-security-card">
+                            <h3><i data-lucide="key-round" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Şifre ve Hesap Güvenliği</h3>
+                            <p class="text-sm text-muted" style="margin: 8px 0 12px;">Hesap güvenliğiniz için en az 8-12 karakterli güçlü bir şifre kullanın.</p>
+                            <form id="settings-password-form" class="settings-form">
+                                <div class="form-group">
+                                    <label for="settings-new-password">Yeni Şifre</label>
+                                    <input type="password" id="settings-new-password" minlength="8" required placeholder="En az 8 karakter" class="text-input" autocomplete="new-password">
+                                </div>
+                                <div class="form-group">
+                                    <label for="settings-new-password-confirm">Yeni Şifre (Tekrar)</label>
+                                    <input type="password" id="settings-new-password-confirm" minlength="8" required placeholder="Şifrenizi tekrar girin" class="text-input" autocomplete="new-password">
+                                </div>
+                                <button type="submit" id="btn-settings-change-password" class="btn btn-primary">Şifreyi Güncelle</button>
+                            </form>
+                        </div>
+
+                        <!-- KVKK Privacy & Consent Card -->
+                        <div class="card glass" id="settings-privacy-card">
+                            <h3><i data-lucide="shield" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Gizlilik & KVKK Tercihleri</h3>
+                            <p class="text-sm text-muted" style="margin: 8px 0 12px;">İsteğe bağlı kullanım ve ziyaretçi yolculuğu analitiği yalnızca açık rızanız varsa çalışır.</p>
+                            <label class="consent-toggle-row" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--border-color); border-radius:10px; cursor:pointer; margin-bottom:14px;">
+                                <span style="font-size:13px; font-weight:500;">İsteğe bağlı analitik ve kullanım istatistiği izni</span>
+                                <input type="checkbox" id="settings-analytics-consent-toggle" style="width:18px; height:18px;">
+                            </label>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:12.5px;">
+                                <a href="#privacy" data-open-legal="privacy" style="color:var(--color-primary);">Gizlilik & KVKK Metni</a>
+                                <a href="#cookies" data-open-legal="cookies" style="color:var(--color-primary);">Çerez Politikası</a>
+                                <a href="#terms" data-open-legal="terms" style="color:var(--color-primary);">Kullanım Şartları</a>
+                                <a href="#about" data-open-legal="about" style="color:var(--color-primary);">Hakkımızda</a>
+                            </div>
+                        </div>
+
+                        <!-- Permanent Account Deletion Card (KVKK Right to Erasure) -->
+                        <div class="card glass settings-danger-card" id="settings-delete-account-card">
+                            <h3 style="color:var(--color-danger);"><i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Hesabı ve Verileri Kalıcı Sil</h3>
+                            <p class="text-sm text-muted" style="margin: 8px 0 12px;">KVKK kapsamında hesabınızı, tüm seyahat, masraf, mekan, anı, rezervasyon ve fotoğraf verilerinizi kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz.</p>
+                            <form id="settings-delete-account-form" class="settings-form">
+                                <div class="form-group">
+                                    <label for="settings-delete-confirm-input">Onaylamak için <strong>SİL</strong> yazın</label>
+                                    <input type="text" id="settings-delete-confirm-input" placeholder="SİL" class="text-input" autocomplete="off">
+                                </div>
+                                <button type="submit" id="btn-settings-delete-account" class="btn btn-danger">Hesabımı ve Verilerimi Kalıcı Sil</button>
+                            </form>
                         </div>
 
                         <!-- Mobi AI Assistant Configuration Card -->
@@ -1679,665 +1719,6 @@
                             <h3 style="margin-bottom: 8px;"><i data-lucide="shield-check" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Yönetim Paneli</h3>
                             <p class="text-sm text-muted" style="margin-bottom: 14px;">Blog yazılarını yayınlayın, otomatik haber kaynaklarını yönetin, ziyaretçi trafiğini ve üye onaylarını takip edin.</p>
                             <a href="#admin" class="btn btn-primary"><i data-lucide="shield-check"></i> Yönetim Panelini Aç</a>
-                        </div>
-
-                        <!-- Database Script / Help -->
-                        <div class="card glass double-span hidden" id="settings-sql-card">
-                            <h3>🛠️ Supabase SQL Şeması</h3>
-                            <p>Supabase projenizde <strong>SQL Editor</strong> alanına girerek sorgu ekranına aşağıdaki kodun tamamını yapıştırıp <strong>RUN</strong> tuşuna basın. Bu kod, gerekli tabloları, otomatik üye onay mekanizmasını ve güvenlik filtrelerini (RLS) kurar.</p>
-                            <pre class="sql-code-block" id="sql-code-block">
--- 1. UUID Eklentisini aktif et
-create extension if not exists "uuid-ossp";
-
--- 2. Roller Tablosu
-create table if not exists public.roles (
-  id uuid default uuid_generate_v4() primary key,
-  name text not null unique
-);
-
--- Default rolleri ekle
-insert into public.roles (name) values ('admin'), ('member') on conflict (name) do nothing;
-
--- 3. Üye Profilleri ve Onay Tablosu
-create table if not exists public.profiles (
-  id uuid references auth.users on delete cascade primary key,
-  email text not null,
-  status text default 'pending' not null,
-  role_id uuid references public.roles,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 4. Kategoriler Tablosu
-create table if not exists public.categories (
-  id uuid default uuid_generate_v4() primary key,
-  name text not null unique,
-  icon text default 'tag' not null,
-  color text default 'var(--color-primary)' not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- Varsayılan kategorileri ekle
-insert into public.categories (name, icon, color) values 
-  ('Yemek', 'utensils', '#ef4444'),
-  ('Konaklama', 'home', '#3b82f6'),
-  ('Ulaşım', 'plane', '#10b981'),
-  ('Aktivite', 'ticket', '#f59e0b'),
-  ('Alışveriş', 'shopping-bag', '#8b5cf6'),
-  ('Diğer', 'archive', '#6b7280')
-  on conflict (name) do nothing;
-
--- 5. Seyahatler Tablosu
-create table if not exists trips (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null,
-  name text not null,
-  start_date date,
-  end_date date,
-  budget numeric default 0,
-  currency text default 'TRY',
-  participants text[] default '{}',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 6. Masraflar Tablosu
-create table if not exists expenses (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null,
-  trip_id uuid references trips on delete cascade not null,
-  title text not null,
-  amount numeric not null,
-  currency text default 'TRY',
-  category text, -- Eski alan (Geriye dönük uyumluluk)
-  category_id uuid references public.categories,
-  date date default current_date not null,
-  paid_by text,
-  split_with text[] default '{}',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- Eski veritabanı kısıtlamalarını güncelleme (Gerekirse NOT NULL kısıtlamasını kaldırır)
-alter table expenses alter column category drop not null;
-
--- 7. Anılar / Günlük Tablosu
-create table if not exists memories (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null,
-  trip_id uuid references trips on delete cascade not null,
-  title text not null,
-  description text,
-  photo_url text,
-  location text,
-  date date default current_date not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 8. Gezi Noktaları, Mekanlar & Şehir Rehberi Tablosu (Places)
-create table if not exists public.places (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null,
-  trip_id uuid references trips on delete cascade, -- Null olabilir: Şehir rehberi & günlük mekanlar
-  name text not null,
-  category text not null default 'other',
-  status text not null default 'planned',
-  latitude double precision not null,
-  longitude double precision not null,
-  address text,
-  notes text,
-  opening_hours text,
-  estimated_cost numeric default 0,
-  currency text default 'EUR',
-  visit_order integer default 0,
-  rating integer default 0, -- 1-5 yıldız kişisel puan
-  visited_at timestamp with time zone,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- Eski veritabanı kısıtlamalarını güncelleme (Gerekirse NOT NULL kısıtlamasını kaldırır ve sütun ekler)
-alter table public.places alter column trip_id drop not null;
-alter table public.places add column if not exists rating integer default 0;
-
--- 9. Row Level Security (RLS) Aktifleştirme
-alter table public.profiles enable row level security;
-alter table trips enable row level security;
-alter table expenses enable row level security;
-alter table memories enable row level security;
-alter table public.places enable row level security;
-alter table public.categories enable row level security;
-
--- 10. Onay Kontrol Fonksiyonları (Sıkı Admin Güvenliği)
-alter table public.roles enable row level security;
-
-drop policy if exists "Authenticated users can read roles" on public.roles;
-create policy "Authenticated users can read roles" on public.roles
-  for select using (auth.uid() is not null);
-
-create or replace function public.is_approved_user(user_uuid uuid)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if user_uuid is null then
-    return false;
-  end if;
-  return exists (
-    select 1 from public.profiles
-    where id = user_uuid and status = 'approved'
-  );
-end;
-$$;
-
-create or replace function public.is_admin_user(user_uuid uuid)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if user_uuid is null then
-    return false;
-  end if;
-  return exists (
-    select 1 from public.profiles p
-    join public.roles r on p.role_id = r.id
-    where p.id = user_uuid
-      and p.status = 'approved'
-      and r.name = 'admin'
-  );
-end;
-$$;
-
--- 11. Güvenlik Politikaları
-drop policy if exists "Users can perform all actions on their own trips" on trips;
-create policy "Users can perform all actions on their own trips" on trips
-  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
-
-drop policy if exists "Users can perform all actions on their own expenses" on expenses;
-create policy "Users can perform all actions on their own expenses" on expenses
-  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
-
-drop policy if exists "Users can perform all actions on their own memories" on memories;
-create policy "Users can perform all actions on their own memories" on memories
-  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
-
-drop policy if exists "Users can perform all actions on their own places" on public.places;
-create policy "Users can perform all actions on their own places" on public.places
-  for all using (auth.uid() = user_id and public.is_approved_user(auth.uid()));
-
--- Kategoriler RLS
-drop policy if exists "Approved users can read categories" on public.categories;
-create policy "Approved users can read categories" on public.categories
-  for select using (public.is_approved_user(auth.uid()));
-
-drop policy if exists "Only admins can manage categories" on public.categories;
-create policy "Only admins can manage categories" on public.categories
-  for all using (public.is_admin_user(auth.uid()));
-
--- 11. Profil Güvenlik Politikaları
-drop policy if exists "Users can read their own profile" on public.profiles;
-create policy "Users can read their own profile" on public.profiles
-  for select using (auth.uid() = id);
-
-drop policy if exists "Users can insert their own profile" on public.profiles;
-create policy "Users can insert their own profile" on public.profiles
-  for insert with check (
-    auth.uid() = id
-    and status = 'pending'
-    and (role_id is null or role_id &lt;&gt; (select id from public.roles where name = 'admin' limit 1))
-  );
-
-drop policy if exists "Admins can perform all actions on all profiles" on public.profiles;
-create policy "Admins can perform all actions on all profiles" on public.profiles
-  for all using (public.is_admin_user(auth.uid()));
-
--- 12. Yeni Kayıtlarda Otomatik Profil Oluşturma Tetikleyicisi
-create or replace function public.handle_new_user()
-returns trigger as $$
-declare
-  is_first bool;
-  is_admin_email bool;
-  role_id_var uuid;
-begin
-  select not exists (select 1 from public.profiles) into is_first;
-  is_admin_email := (new.email = 'bllacrr@gmail.com');
-  
-  -- Rol belirleme
-  if (is_first or is_admin_email) then
-    select id into role_id_var from public.roles where name = 'admin' limit 1;
-  else
-    select id into role_id_var from public.roles where name = 'member' limit 1;
-  end if;
-  
-  insert into public.profiles (id, email, status, role_id)
-  values (
-    new.id, 
-    new.email, 
-    case when (is_first or is_admin_email) then 'approved' else 'pending' end, 
-    role_id_var
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- 13. Mevcut Kullanıcıları Profile Senkronize Etme ve İlkini Admin Yapma
-insert into public.profiles (id, email, status, role_id)
-select id, email, 'approved', (select id from public.roles where name = 'admin' limit 1) 
-from auth.users
-on conflict (id) do nothing;
-
-update public.profiles
-set status = 'approved',
-    role_id = (select id from public.roles where name = 'admin' limit 1)
-where id in (select id from public.profiles order by created_at asc limit 1)
-   or email = 'bllacrr@gmail.com';
-
--- 14. Storage Güvenlik Politikaları
-insert into storage.buckets (id, name, public)
-values ('traveller-photos', 'traveller-photos', false)
-on conflict (id) do nothing;
-
-drop policy if exists "Users can read their own photos" on storage.objects;
-create policy "Users can read their own photos" on storage.objects
-  for select using (bucket_id = 'traveller-photos' and (storage.foldername(name))[1] = auth.uid()::text and public.is_approved_user(auth.uid()));
-
-drop policy if exists "Users can upload their own photos" on storage.objects;
-create policy "Users can upload their own photos" on storage.objects
-  for insert with check (bucket_id = 'traveller-photos' and (storage.foldername(name))[1] = auth.uid()::text and public.is_approved_user(auth.uid()));
-
-drop policy if exists "Users can delete their own photos" on storage.objects;
-create policy "Users can delete their own photos" on storage.objects
-  for delete using (bucket_id = 'traveller-photos' and (storage.foldername(name))[1] = auth.uid()::text and public.is_approved_user(auth.uid()));
-
--- 15. Paylaşılan Rotalar Tablosu (Kısa Link & Misafir Erişimi)
-create table if not exists public.shared_routes (
-  id text primary key,
-  user_id uuid references auth.users,
-  trip_name text not null,
-  pin_hash text,
-  places jsonb not null default '[]'::jsonb,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
-alter table public.shared_routes enable row level security;
-
-drop policy if exists "Anyone can read shared routes" on public.shared_routes;
-create policy "Anyone can read shared routes" on public.shared_routes
-  for select using (true);
-
-drop policy if exists "Authenticated users can create shared routes" on public.shared_routes;
-create policy "Authenticated users can create shared routes" on public.shared_routes
-  for insert with check (auth.uid() = user_id or auth.uid() is not null);
-
-drop policy if exists "Users can update own shared routes" on public.shared_routes;
-create policy "Users can update own shared routes" on public.shared_routes
-  for update using (auth.uid() = user_id);
-
-drop policy if exists "Users can delete own shared routes" on public.shared_routes;
-create policy "Users can delete own shared routes" on public.shared_routes
-  for delete using (auth.uid() = user_id);
--- 16. Bilet & Rezervasyonlar Tablosu (Uçuş, Otel, Müze Biletleri)
-create table if not exists public.reservations (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null,
-  trip_id uuid references trips on delete cascade,
-  type text not null default 'other',
-  title text not null,
-  provider text,
-  pnr text,
-  start_datetime text,
-  end_datetime text,
-  location text,
-  notes text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
-alter table public.reservations enable row level security;
-
-drop policy if exists "Users can manage own reservations" on public.reservations;
-create policy "Users can manage own reservations" on public.reservations
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
--- 17. Herkese Açık Blog Yazıları Tablosu (CMS)
-create table if not exists public.blog_posts (
-  id uuid default uuid_generate_v4() primary key,
-  slug text not null unique,
-  title text not null,
-  summary text,
-  content text not null,
-  cover_image_url text,
-  category text default 'Şehir Rehberi' not null,
-  tags text[] default '{}',
-  author_name text default 'TravellerMobi Editör',
-  author_id uuid references auth.users,
-  status text default 'draft' not null,
-  is_featured boolean default false not null,
-  read_time_minutes integer default 3,
-  view_count integer default 0 not null,
-  published_at timestamp with time zone,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
-alter table public.blog_posts enable row level security;
-
-drop policy if exists "Public can read published blog posts" on public.blog_posts;
-create policy "Public can read published blog posts" on public.blog_posts
-  for select using (status = 'published' or public.is_admin_user(auth.uid()));
-
-drop policy if exists "Only admins can manage blog posts" on public.blog_posts;
-create policy "Only admins can manage blog posts" on public.blog_posts
-  for all using (public.is_admin_user(auth.uid())) with check (public.is_admin_user(auth.uid()));
-
-create or replace function public.increment_blog_view(p_slug text)
-returns void as $$
-begin
-  update public.blog_posts
-  set view_count = coalesce(view_count, 0) + 1
-  where slug = p_slug and status = 'published';
-end;
-$$ language plpgsql security definer;
-
--- 18. Herkese Açık Blog Kapak Görselleri Storage Bucket (Public)
-insert into storage.buckets (id, name, public)
-values ('public-content', 'public-content', true)
-on conflict (id) do update set public = true;
-
-drop policy if exists "Anyone can view public content images" on storage.objects;
-create policy "Anyone can view public content images" on storage.objects
-  for select using (bucket_id = 'public-content');
-
-drop policy if exists "Only admins can upload public content images" on storage.objects;
-create policy "Only admins can upload public content images" on storage.objects
-  for insert with check (bucket_id = 'public-content' and public.is_admin_user(auth.uid()));
-
-drop policy if exists "Only admins can delete public content images" on storage.objects;
-create policy "Only admins can delete public content images" on storage.objects
-  for delete using (bucket_id = 'public-content' and public.is_admin_user(auth.uid()));
-
--- 19. Otomatik Seyahat Haber Kaynakları Tablosu (Özel RSS)
-create table if not exists public.news_sources (
-  id uuid default uuid_generate_v4() primary key,
-  name text not null,
-  rss_url text not null,
-  category text default 'Seyahat' not null,
-  is_enabled boolean default true not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
-alter table public.news_sources enable row level security;
-
-drop policy if exists "Anyone can read enabled news sources" on public.news_sources;
-create policy "Anyone can read enabled news sources" on public.news_sources
-  for select using (is_enabled = true or public.is_admin_user(auth.uid()));
-
-drop policy if exists "Only admins can manage news sources" on public.news_sources;
-create policy "Only admins can manage news sources" on public.news_sources
-  for all using (public.is_admin_user(auth.uid())) with check (public.is_admin_user(auth.uid()));
-
--- 20. Ziyaretçi Trafiği, Okuma Derinliği, Arama & Üye Eşleştirme Analitiği (Sıkı Admin RLS)
-create table if not exists public.site_visitors (
-  visitor_id text primary key,
-  user_id uuid references auth.users on delete set null,
-  user_email text,
-  first_seen_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  last_seen_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  visit_count integer default 1 not null,
-  first_referrer text,
-  first_referrer_domain text,
-  first_landing_page text,
-  last_page text,
-  first_utm_source text,
-  first_utm_medium text,
-  first_utm_campaign text,
-  device_type text,
-  os text,
-  browser text,
-  language text,
-  screen_resolution text,
-  timezone text,
-  country text,
-  city text,
-  region text,
-  is_pwa boolean default false,
-  clicked_auth boolean default false,
-  max_scroll_depth integer default 0,
-  total_read_seconds integer default 0
-);
-
-alter table public.site_visitors add column if not exists clicked_auth boolean default false;
-alter table public.site_visitors add column if not exists max_scroll_depth integer default 0;
-alter table public.site_visitors add column if not exists total_read_seconds integer default 0;
-
-create table if not exists public.site_events (
-  id uuid default uuid_generate_v4() primary key,
-  visitor_id text references public.site_visitors(visitor_id) on delete cascade not null,
-  session_id text,
-  user_id uuid references auth.users on delete set null,
-  event_type text default 'page_view' not null,
-  page_path text,
-  post_slug text,
-  post_title text,
-  referrer_domain text,
-  country text,
-  city text,
-  device_type text,
-  scroll_depth integer,
-  duration_seconds integer,
-  search_query text,
-  search_results_count integer,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
-alter table public.site_events add column if not exists scroll_depth integer;
-alter table public.site_events add column if not exists duration_seconds integer;
-alter table public.site_events add column if not exists search_query text;
-alter table public.site_events add column if not exists search_results_count integer;
-
-alter table public.site_visitors enable row level security;
-alter table public.site_events enable row level security;
-
--- Sadece yönetici okuyabilir; doğrudan tablo yazma yetkisi kapalıdır (yalnızca kontrollü RPC üzerinden)
-revoke insert, update, delete on public.site_visitors, public.site_events from anon, authenticated;
-
-drop policy if exists "Only admins can read site visitors" on public.site_visitors;
-create policy "Only admins can read site visitors" on public.site_visitors
-  for select using (public.is_admin_user(auth.uid()));
-
-drop policy if exists "Only admins can read site events" on public.site_events;
-create policy "Only admins can read site events" on public.site_events
-  for select using (public.is_admin_user(auth.uid()));
-
-create or replace function public.record_site_visit(
-  p_visitor_id text,
-  p_session_id text default null,
-  p_event_type text default 'page_view',
-  p_page_path text default '#explore',
-  p_post_slug text default null,
-  p_post_title text default null,
-  p_referrer text default null,
-  p_referrer_domain text default null,
-  p_utm_source text default null,
-  p_utm_medium text default null,
-  p_utm_campaign text default null,
-  p_device_type text default null,
-  p_os text default null,
-  p_browser text default null,
-  p_language text default null,
-  p_screen_resolution text default null,
-  p_timezone text default null,
-  p_country text default null,
-  p_city text default null,
-  p_region text default null,
-  p_is_pwa boolean default false,
-  p_user_id uuid default null,
-  p_user_email text default null,
-  p_scroll_depth integer default null,
-  p_duration_seconds integer default null,
-  p_search_query text default null,
-  p_search_results_count integer default null
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_auth_uid uuid := auth.uid();
-  v_safe_email text := null;
-  v_is_auth_click boolean := (p_event_type = 'auth_cta_click' or coalesce(p_page_path, '') like '#auth%');
-  v_safe_scroll integer := case when p_scroll_depth is not null then least(greatest(p_scroll_depth, 0), 100) else null end;
-  v_safe_dur integer := case when p_duration_seconds is not null then least(greatest(p_duration_seconds, 0), 3600) else null end;
-begin
-  if p_visitor_id is null or length(trim(p_visitor_id)) &lt; 6 then
-    return;
-  end if;
-
-  if v_auth_uid is not null then
-    select email into v_safe_email from public.profiles where id = v_auth_uid limit 1;
-    v_safe_email := coalesce(v_safe_email, p_user_email);
-  end if;
-
-  insert into public.site_visitors (
-    visitor_id, user_id, user_email, first_seen_at, last_seen_at, visit_count,
-    first_referrer, first_referrer_domain, first_landing_page, last_page,
-    first_utm_source, first_utm_medium, first_utm_campaign,
-    device_type, os, browser, language, screen_resolution, timezone,
-    country, city, region, is_pwa, clicked_auth, max_scroll_depth, total_read_seconds
-  ) values (
-    p_visitor_id, v_auth_uid, v_safe_email, timezone('utc'::text, now()), timezone('utc'::text, now()), 1,
-    p_referrer, p_referrer_domain, p_page_path, p_page_path,
-    p_utm_source, p_utm_medium, p_utm_campaign,
-    p_device_type, p_os, p_browser, p_language, p_screen_resolution, p_timezone,
-    p_country, p_city, p_region, coalesce(p_is_pwa, false),
-    v_is_auth_click, coalesce(v_safe_scroll, 0), coalesce(v_safe_dur, 0)
-  )
-  on conflict (visitor_id) do update set
-    last_seen_at = timezone('utc'::text, now()),
-    visit_count = public.site_visitors.visit_count + case when p_event_type in ('page_view', 'post_view') then 1 else 0 end,
-    last_page = coalesce(p_page_path, public.site_visitors.last_page),
-    user_id = coalesce(v_auth_uid, public.site_visitors.user_id),
-    user_email = coalesce(v_safe_email, public.site_visitors.user_email),
-    device_type = coalesce(p_device_type, public.site_visitors.device_type),
-    os = coalesce(p_os, public.site_visitors.os),
-    browser = coalesce(p_browser, public.site_visitors.browser),
-    country = coalesce(p_country, public.site_visitors.country),
-    city = coalesce(p_city, public.site_visitors.city),
-    region = coalesce(p_region, public.site_visitors.region),
-    is_pwa = coalesce(p_is_pwa, public.site_visitors.is_pwa),
-    clicked_auth = (public.site_visitors.clicked_auth or v_is_auth_click),
-    max_scroll_depth = greatest(coalesce(public.site_visitors.max_scroll_depth, 0), coalesce(v_safe_scroll, 0)),
-    total_read_seconds = coalesce(public.site_visitors.total_read_seconds, 0) + coalesce(v_safe_dur, 0);
-
-  insert into public.site_events (
-    visitor_id, session_id, user_id, event_type, page_path, post_slug, post_title,
-    referrer_domain, country, city, device_type,
-    scroll_depth, duration_seconds, search_query, search_results_count
-  ) values (
-    p_visitor_id, p_session_id, v_auth_uid, coalesce(p_event_type, 'page_view'),
-    p_page_path, p_post_slug, p_post_title, p_referrer_domain, p_country, p_city, p_device_type,
-    v_safe_scroll, v_safe_dur, p_search_query, p_search_results_count
-  );
-end;
-$$;
-
-create or replace function public.link_visitor_to_user(
-  p_visitor_id text,
-  p_user_id uuid,
-  p_user_email text default null
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_auth_uid uuid := auth.uid();
-  v_safe_email text;
-begin
-  if v_auth_uid is null or v_auth_uid &lt;&gt; p_user_id then
-    raise exception 'Unauthorized visitor link attempt';
-  end if;
-
-  select email into v_safe_email from public.profiles where id = v_auth_uid limit 1;
-  v_safe_email := coalesce(v_safe_email, p_user_email);
-
-  update public.site_visitors
-  set user_id = v_auth_uid,
-      user_email = coalesce(v_safe_email, user_email),
-      last_seen_at = timezone('utc'::text, now())
-  where visitor_id = p_visitor_id;
-
-  update public.site_events
-  set user_id = v_auth_uid
-  where visitor_id = p_visitor_id and user_id is null;
-end;
-$$;
-
--- 21. İlk Özgün Blog Yazısı (Keşfet Başlangıç İçeriği)
-insert into public.blog_posts (
-  slug, title, summary, content, cover_image_url, category, tags,
-  author_name, status, is_featured, read_time_minutes, published_at
-) values (
-  'belgradda-48-saat-knez-mihailovanin-disina-cikmak',
-  'Belgrad''da 48 Saat: Knez Mihailova''yı Hızlı Geçip Şehrin Asıl Sokaklarına İnmek',
-  'Hafta sonu vizesiz kaçamak için Belgrad''a giden herkesin düştüğü küçük tuzaklar, nakit dinar meselesi ve Dorćol''dan Zemun''a uzanan iki günlük yürüyüş notları.',
-  'Cuma akşamı İstanbul''dan uçağa binip bir buçuk saat sonra Nikola Tesla Havalimanı''na inince insanın kafasında hep aynı soru oluyor: iki günde ne yetişir, neye hiç vakit kaybetmemeli? Ben ilk gidişimde klasik listeyi açıp neredeyse bütün cumartesi gününü Knez Mihailova çevresinde eritmiştim. İkinci gidişimde haritayı biraz yana kaydırınca şehrin bambaşka bir ritmi olduğunu fark ettim.
-
-## Havalimanından Merkeze İnerken İlk Küçük Tuzak
-
-Valizi alıp çıkış kapısına yürüdüğünüzde hemen önünüzde bekleyen taksiciler oluyor. Çoğuyla pazarlık yapmak yerine içerideki resmi **Taxi Info** bankosundan gideceğiniz bölgeye göre sabit fiyat fişi almak çok daha rahat. O fişi şoföre verdiğinizde taksimetre sürprizi yaşamıyorsunuz.
-
-Eğer tek başınaysanız ve bavulunuz ağırca değilse A1 minibüsü Slavija Meydanı''na kadar gidiyor. Burada önemli bir detay: minibüste kart geçmiyor, elinizde mutlaka bozuk Sırp Dinarı (RSD) olması lazım. Havalimanındaki ilk döviz bürosunda kur biraz düşük oluyor, o yüzden sadece ulaşım ve ilk kahve için ufak bir miktar bozdurup geri kalanını şehir merkezindeki *Menjačnica* tabelalı yerlerde halletmek epey fark ettiriyor.
-
-## Cumartesi Sabahı: Knez Mihailova''yı Erken Bitirip Dorćol''a Sapmak
-
-Knez Mihailova güzel cadde ama saat 11''den sonra İstiklal''in kalabalık halinden pek farkı kalmıyor. Sabah 08.30-09.00 gibi sakinliğinde boydan boya yürüyüp doğrudan **Kalemegdan** surlarına çıkmak en mantıklısı. Tuna ile Sava''nın birleştiği noktaya sabah serinliğinde bakıp kahvenizi orada değil, hemen aşağı inerek **Dorćol** mahallesinde için.
-
-Dorćol''un ağaçlı ara sokakları (özellikle Strahinjića Bana ve çevresi) şehrin en keyifli bölgesi. Burada üçüncü nesil kahvecilerle 40 yıllık mahalle fırınları yan yana duruyor. Bir *pekara*ya girip sıcak peynirli börek (*burek sa sirom*) yanına da bir bardak içilebilir yoğurt alırsanız öğlene kadar tok kalıyorsunuz; üstelik iki üç euro civarına.
-
-&gt; Küçük not: Belgrad''da birçok yerel mekanın içinde hâlâ sigara içiliyor. Duman hassasiyetiniz varsa kapıdan girmeden "non-smoking" bölümü olup olmadığını sormakta fayda var.
-
-## Akşam Yemeği: Skadarlija Yerine Bir Sokak Ötesi
-
-Skadarlija''nın taşlı sokağı fotoğraf çekmek için güzel ama akşam oturduğunuzda masaya gelen hesapla yediğiniz etin kalitesi her zaman örtüşmüyor. Sokağı bir tur gezip canlı müziğin havasını aldıktan sonra, birkaç dakikalık yürüme mesafesindeki daha yerel *kafana*lara geçmek çok daha iyi sonuç veriyor.
-
-Sipariş verirken porsiyonları hafife almayın. Bir tabak *ćevapi* ya da *pljeskavica* yanında *kajmak* (bizim kaymağa benzeyen ama tuzlu, hafif ekşi harika bir sos) ve *šopska* salatası söylediğinizde iki kişi bile zor bitirebiliyor. Masaya gelen ekmek ve mezelerin fiyatını hesaba dahil etmeyi unutmayın; çoğu yerde kişi başı ufak bir kuver ekleniyor.
-
-## Pazar Günü: Köprüyü Geçip Zemun''da Yavaşlamak
-
-İkinci günü mutlaka nehrin karşı yakasındaki **Zemun**''a ayırın. Merkezden otobüsle 15-20 dakika sürüyor ama yürümeyi seviyorsanız hava güzelse Sava kıyısından yürümek de ayrı bir keyif. Zemun eskiden Avusturya-Macaristan sınırında kaldığı için mimarisi Belgrad merkezinden tamamen farklı; tek katlı pastel evler, dar arnavutkaldırımları ve bambaşka bir sakinlik var.
-
-- Sabah **Zemun Pazarı**''na uğrayıp mevsim meyvesi ve yerel peynir bakın.
-- Ardından biraz terleyerek **Gardoš Kulesi**''ne çıkın; kırmızı kiremitli çatılar ve Tuna manzarası Kalemegdan''dan bile daha samimi duruyor.
-- Dönüşte nehir kenarındaki yürüyüş yolunda kuğuların hemen yanında oturan yerel kahvecilerden birinde mola verin.
-
-## Dönmeden Önce Aklımda Kalan 3 Pratik Şey
-
-- **İnternet:** Sırbistan AB dolaşımına dahil değil, operatör paketleri pahalıya gelebiliyor. Uçaktan inmeden eSIM kurmak ya da şehirde A1/Yettel ön ödemeli turist hattı almak çok rahatlatıyor.
-- **Yürüyüş Ayakkabısı:** Özellikle Kalemegdan, Skadarlija ve Zemun''da eski taş yollar çok; şık ama ince tabanlı ayakkabılar ikinci gün pişman ediyor.
-- **Kart ve Nakit Dengesi:** Kafe ve restoranların çoğunda temassız kart sorunsuz çalışıyor ama fırınlar, pazarlar ve bazı küçük kafanalar hâlâ sadece nakit kabul ediyor.
-
-Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir kahve masasında bir saat oyalanıp ara sokaklarda kaybolunca gerçekten tadı çıkıyor.',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Panorama_Belgrad.jpg/1280px-Panorama_Belgrad.jpg',
-  'Şehir Rehberi',
-  array['belgrad', 'vizesiz', 'hafta-sonu', 'balkanlar', 'rota'],
-  'TravellerMobi Editör',
-  'published',
-  true,
-  4,
-  timezone('utc'::text, now())
-) on conflict (slug) do nothing;
-                            </pre>
-                            <button id="btn-copy-sql" class="btn btn-secondary btn-sm"><i data-lucide="copy"></i> Kodu Kopyala</button>
-
-                            <h3 class="margin-top-30">📁 Supabase Storage (Fotoğraf Saklama) Kurulumu</h3>
-                            <p>Fotoğraflarınızı bulutta saklamak için Supabase panelinizden <strong>Storage</strong> kısmına girin. <strong>New bucket</strong> diyerek adı tam olarak <code>traveller-photos</code> olan <strong>Private</strong> (güvenli/kapalı erişimli) bir klasör oluşturun. Supabase'deki veritabanı izinlerinin uygulanabilmesi için yukarıdaki SQL kodunu SQL Editör'de çalıştırmanız yeterlidir!</p>
                         </div>
                     </div>
                 </section>
@@ -2847,7 +2228,7 @@ Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir 
             </a>
             <a href="#trips" class="mobile-nav-item" id="m-nav-trips">
                 <i data-lucide="compass"></i>
-                <span>Rotalar</span>
+                <span>Seyahatler</span>
             </a>
             <a href="#places" class="mobile-nav-item" id="m-nav-places">
                 <i data-lucide="map-pin"></i>
@@ -2855,7 +2236,7 @@ Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir 
             </a>
             <a href="#expenses" class="mobile-nav-item" id="m-nav-expenses">
                 <i data-lucide="wallet"></i>
-                <span>Masraf</span>
+                <span>Masraflar</span>
             </a>
             <a href="#journal" class="mobile-nav-item" id="m-nav-journal">
                 <i data-lucide="camera"></i>
@@ -2954,13 +2335,37 @@ Belgrad, aceleyle "şunu da gördüm" diye tik atılacak bir şehir değil. Bir 
         </form>
     </aside>
 
-    <!-- Subtle Privacy / Analytics Notice Banner -->
-    <div id="privacy-notice-banner" class="privacy-notice-banner glass hidden" role="dialog" aria-label="Gizlilik Bilgilendirmesi">
+    <!-- KVKK Explicit Opt-In Privacy & Cookie Consent Banner -->
+    <div id="privacy-notice-banner" class="privacy-notice-banner glass hidden" role="dialog" aria-label="Gizlilik ve Çerez Tercihi">
         <div class="privacy-notice-text">
             <i data-lucide="shield"></i>
-            <span>İçeriklerimizi ve seyahat deneyiminizi geliştirmek için anonim cihaz/trafik istatistikleri kullanılır.</span>
+            <span>
+                Zorunlu oturum/çevrimdışı depolamanın yanında; açık rızanızla içerik ve üyelik deneyimini geliştirmek için cihaz, şehir/ülke ve kullanım analitiği tutabiliriz.
+                <a href="#privacy" data-open-legal="privacy" style="text-decoration:underline; font-weight:600; color:inherit;">Gizlilik & KVKK</a> ·
+                <a href="#cookies" data-open-legal="cookies" style="text-decoration:underline; font-weight:600; color:inherit;">Çerez Politikası</a>
+            </span>
         </div>
-        <button type="button" id="btn-accept-privacy-notice" class="btn btn-primary btn-sm">Anladım</button>
+        <div class="privacy-notice-actions">
+            <button type="button" id="btn-reject-privacy-notice" class="btn btn-secondary btn-sm">Sadece Zorunlu</button>
+            <button type="button" id="btn-accept-privacy-notice" class="btn btn-primary btn-sm">Analitiği Kabul Et</button>
+        </div>
+    </div>
+
+    <!-- Legal, KVKK Privacy Policy, Cookie Policy, Terms & About Modal -->
+    <div id="modal-legal-doc" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title">
+        <div class="modal-content glass" style="max-width: 680px;">
+            <div class="modal-header">
+                <h2 id="legal-modal-title" style="font-size: 18px; margin: 0;">Gizlilik Politikası ve KVKK</h2>
+                <button type="button" class="btn-close-modal" id="btn-close-legal-modal" aria-label="Kapat">&times;</button>
+            </div>
+            <div class="legal-modal-tabs">
+                <button type="button" class="filter-pill" data-legal-tab="privacy">Gizlilik & KVKK</button>
+                <button type="button" class="filter-pill" data-legal-tab="cookies">Çerez Politikası</button>
+                <button type="button" class="filter-pill" data-legal-tab="terms">Kullanım Şartları</button>
+                <button type="button" class="filter-pill" data-legal-tab="about">Hakkımızda</button>
+            </div>
+            <div id="legal-modal-body" class="legal-modal-body"></div>
+        </div>
     </div>
 
     <!-- Floating Back-to-Top Button for Long Pages -->

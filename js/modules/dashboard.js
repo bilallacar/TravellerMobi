@@ -88,9 +88,18 @@ export function renderDashboard() {
     }
 
     const baseCur = config.defaultCurrency;
+    const expenseToBase = (exp) => {
+        const amt = Number(exp.amount) || 0;
+        if (exp.currency === baseCur) return amt;
+        if (typeof exp.fx_rate === 'number' && exp.fx_rate > 0 && exp.fx_base_currency === baseCur) {
+            return amt * exp.fx_rate;
+        }
+        return convertCurrency(amt, exp.currency, baseCur);
+    };
+
     let globalTotalExpense = 0;
     state.expensesList.forEach(e => {
-        globalTotalExpense += convertCurrency(e.amount, e.currency, baseCur);
+        globalTotalExpense += expenseToBase(e);
     });
 
     const globalMemoriesCount = state.memoriesList.length;
@@ -114,7 +123,7 @@ export function renderDashboard() {
         const tripExpenses = state.expensesList.filter(e => e.trip_id === activeTrip.id);
         
         tripExpenses.forEach(e => {
-            activeTripExpenseInBase += convertCurrency(e.amount, e.currency, baseCur);
+            activeTripExpenseInBase += expenseToBase(e);
         });
 
         document.getElementById('dash-active-trip').textContent = activeTrip.name;
@@ -155,7 +164,15 @@ export function renderDashboard() {
     // Render Places / Route Preview on Dashboard
     const placesSummaryEl = document.getElementById('dash-places-summary');
     if (placesSummaryEl) {
-        if (!activeTrip || state.placesList.length === 0) {
+        if (!activeTrip) {
+            placesSummaryEl.innerHTML = `
+                <div class="dash-empty-places" style="padding:24px 18px; text-align:center; background:rgba(99,102,241,0.05); border-radius:12px; border:1px dashed var(--border-color);">
+                    <strong style="display:block; font-size:15px; margin-bottom:6px;">İlk seyahatinizi oluşturmaya hazır mısınız?</strong>
+                    <p class="text-muted" style="margin:0 0 14px 0; font-size:13px;">Rota mekanlarınızı haritada işaretleyin, bütçenizi belirleyin ve anılarınızı tek yerde toplayın.</p>
+                    <a href="#trips" class="btn btn-primary btn-sm">+ İlk Seyahati Oluştur</a>
+                </div>
+            `;
+        } else if (state.placesList.length === 0) {
             placesSummaryEl.innerHTML = `
                 <div class="dash-empty-places" style="padding:20px; text-align:center; background:rgba(255,255,255,0.02); border-radius:10px; border:1px dashed var(--border-color);">
                     <p class="text-muted" style="margin:0 0 10px 0; font-size:13px;">Bu seyahat için henüz gezilecek yer veya otel eklenmedi.</p>

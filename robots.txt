@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/admin-blog-agent
+
+Sitemap: https://travellermobi.vercel.app/sitemap.xml
