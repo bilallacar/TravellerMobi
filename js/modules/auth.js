@@ -208,8 +208,8 @@ export function initAuthEvents() {
                 showToast('Girdiğiniz şifreler birbiriyle eşleşmiyor!', 'danger');
                 return;
             }
-            if (p1.length < 6) {
-                showToast('Şifreniz en az 6 karakter olmalıdır.', 'warning');
+            if (p1.length < 8) {
+                showToast('Şifreniz en az 8 karakter olmalıdır.', 'warning');
                 return;
             }
 
@@ -218,10 +218,12 @@ export function initAuthEvents() {
 
             try {
                 await db.updateUserPassword(p1);
-                showToast('Şifreniz başarıyla güncellendi! Giriş yapılıyor...', 'success');
+                showToast('Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...', 'success');
                 if (modalResetPassword) modalResetPassword.classList.add('hidden');
                 resetForm.reset();
-                window.location.hash = '#dashboard';
+                // Strip ?auth_flow=recovery from query string BEFORE routing so modal never re-opens
+                window.history.replaceState({}, document.title, window.location.pathname + '#dashboard');
+                window.dispatchEvent(new Event('hashchange'));
             } catch (err) {
                 console.error("Password update error:", err);
                 showToast(err.message || 'Şifre güncellenemedi', 'danger');
