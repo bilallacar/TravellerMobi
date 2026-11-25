@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/admin-blog-agent
 
-Sitemap: https://travellermobi.vercel.app/sitemap.xml
+Sitemap: https://traveller-mobi.vercel.app/sitemap.xml

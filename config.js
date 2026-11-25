@@ -3,7 +3,7 @@
 export const config = {
     supabaseUrl: 'https://pbfriozhmtyspfzgnkkq.supabase.co',
     supabaseKey: 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM',
-    appPublicUrl: 'https://travellermobi.vercel.app',
+    appPublicUrl: 'https://traveller-mobi.vercel.app',
     defaultCurrency: localStorage.getItem('default_currency') || 'TRY',
     theme: localStorage.getItem('theme') || 'light',
     geminiApiKey: localStorage.getItem('gemini_api_key') || '',

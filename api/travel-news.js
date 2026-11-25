@@ -286,7 +286,7 @@ async function fetchSingleFeed(feedMeta, customBlockedList) {
         const response = await fetch(feedMeta.url, {
             signal: controller.signal,
             headers: {
-                'User-Agent': 'TravellerMobi-NewsBot/1.1 (+https://travellermobi.vercel.app)',
+                'User-Agent': 'TravellerMobi-NewsBot/1.1 (+https://traveller-mobi.vercel.app)',
                 'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml'
             }
         });

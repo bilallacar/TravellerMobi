@@ -2,7 +2,7 @@
 
 const DEFAULT_SUPABASE_URL = 'https://pbfriozhmtyspfzgnkkq.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM';
-const SITE_URL = (process.env.SITE_URL || 'https://travellermobi.vercel.app').replace(/\/+$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://traveller-mobi.vercel.app').replace(/\/+$/, '');
 
 function escapeHtml(str) {
     return String(str || '')

@@ -32,9 +32,9 @@ Yurt içi ve yurt dışı seyahatlerinizde mekanlarınızı haritada işaretleyi
 
 ### 2. Supabase Authentication URL Ayarları (OTP / E-posta Onay Linki İçin Zorunlu)
 E-posta onay ve şifre sıfırlama bağlantılarının doğru adrese yönlenmesi için **Supabase Dashboard → Authentication → URL Configuration** bölümünden:
-- **Site URL:** `https://travellermobi.vercel.app` (veya kendi alan adınız)
+- **Site URL:** `https://traveller-mobi.vercel.app` (veya kendi alan adınız)
 - **Redirect URLs:**
-  - `https://travellermobi.vercel.app/**`
+  - `https://traveller-mobi.vercel.app/**`
   - `http://localhost:8000/**` (yalnızca yerel test gerekiyorsa)
 
 ### 3. Yerel Çalıştırma

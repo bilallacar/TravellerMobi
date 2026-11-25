@@ -101,7 +101,7 @@ export function hasInternet() {
  * Returns a Promise that resolves with the Supabase client.
  */
 function getAuthRedirectUrl(flow = '') {
-    const publicBase = (config.appPublicUrl || 'https://travellermobi.vercel.app').replace(/\/+$/, '');
+    const publicBase = (config.appPublicUrl || 'https://traveller-mobi.vercel.app').replace(/\/+$/, '');
     let baseUrl = publicBase;
     if (typeof window !== 'undefined' && window.location) {
         const { protocol, hostname, origin } = window.location;
