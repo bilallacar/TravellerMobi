@@ -344,6 +344,7 @@
                             <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a>
                             <a href="#cookies" data-open-legal="cookies">Çerez Politikası</a>
                             <a href="#terms" data-open-legal="terms">Kullanım Şartları</a>
+                            <a href="#consent" data-open-consent-modal="true">Çerez Tercihleri</a>
                         </div>
                     </footer>
                 </section>
@@ -2342,16 +2343,86 @@
             <strong>Gizlilik & Çerez Tercihi</strong>
         </div>
         <p class="privacy-notice-desc">
-            Zorunlu oturum ve çevrimdışı depolamaya ek olarak; yalnızca açık rızanızla kullanım, şehir/ülke ve üyelik deneyimi analitiği tutuyoruz.
-        </p>
-        <div class="privacy-notice-links">
-            <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a>
-            <span>·</span>
+            Zorunlu oturum ve çevrimdışı depolamaya ek olarak; yalnızca açık rızanızla içerik ve deneyim analitiği kullanıyoruz.
+            <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a> ·
             <a href="#cookies" data-open-legal="cookies">Çerez Politikası</a>
-        </div>
-        <div class="privacy-notice-actions">
+        </p>
+        <div class="privacy-notice-actions privacy-notice-actions-3">
+            <button type="button" id="btn-customize-privacy-notice" class="btn btn-secondary btn-sm">Tercihleri Özelleştir</button>
             <button type="button" id="btn-reject-privacy-notice" class="btn btn-secondary btn-sm">Sadece Zorunlu</button>
-            <button type="button" id="btn-accept-privacy-notice" class="btn btn-primary btn-sm">Analitiği Kabul Et</button>
+            <button type="button" id="btn-accept-privacy-notice" class="btn btn-primary btn-sm">Tümünü Kabul Et</button>
+        </div>
+    </div>
+
+    <!-- KVKK Preference Center Modal ("İzin Tercihlerini Özelleştir") -->
+    <div id="modal-consent-preferences" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="consent-modal-title">
+        <div class="modal-content glass consent-modal-card">
+            <div class="modal-header consent-modal-header">
+                <h2 id="consent-modal-title" style="font-size: 18px; margin: 0;">İzin Tercihlerini Özelleştir</h2>
+                <button type="button" class="btn-close-modal" id="btn-close-consent-modal" aria-label="Kapat">&times;</button>
+            </div>
+
+            <div class="consent-modal-intro">
+                Sitemizde kullanılan çerezler ve yerel depolama verileri işlevlerine göre kategorilere ayrılmıştır. Aşağıda her bir kategori hakkında detaylı bilgi alabilir ve hangi tercihlere izin vereceğinizi belirleyebilirsiniz. Dilediğiniz zaman bu tercihleri güncelleyebilirsiniz.
+            </div>
+
+            <div class="consent-category-list">
+                <!-- Category 1: Strictly Necessary -->
+                <div class="consent-category-card">
+                    <div class="consent-category-top">
+                        <div class="consent-category-title">
+                            <strong>Zorunlu</strong>
+                            <span class="consent-always-active">Her Zaman Aktif</span>
+                        </div>
+                        <p class="consent-category-desc">
+                            Uygulamanın güvenli ve düzgün çalışabilmesi için zorunlu olan oturum ve yerel depolama verileridir. Giriş oturumu, tema/para birimi seçimi, güvenlik doğrulamaları ve çevrimdışı çalışma önbelleği bu sayede sağlanır. Bu kategori kapatılamaz.
+                        </p>
+                        <details class="consent-category-details">
+                            <summary>Kullanılan verileri gör</summary>
+                            <ul>
+                                <li><strong>Oturum Belirteci:</strong> Supabase Auth giriş oturumu (çıkışta silinir).</li>
+                                <li><strong>Çevrimdışı Önbellek:</strong> İnternet yokken erişim için seyahat, mekan ve masraf kopyaları (çıkışta temizlenir).</li>
+                                <li><strong>Uygulama Tercihleri:</strong> Açık/koyu tema, ana para birimi ve gizlilik tercihi kaydı.</li>
+                            </ul>
+                        </details>
+                    </div>
+                </div>
+
+                <!-- Category 2: Analytics & Product Experience -->
+                <div class="consent-category-card">
+                    <div class="consent-category-top">
+                        <div class="consent-category-title">
+                            <strong>Analitik ve Kullanım İstatistikleri</strong>
+                            <label class="consent-switch" aria-label="Analitik iznini aç veya kapat">
+                                <input type="checkbox" id="consent-toggle-analytics">
+                                <span class="consent-switch-slider"></span>
+                            </label>
+                        </div>
+                        <p class="consent-category-desc">
+                            Ziyaretçilerin platformu nasıl kullandığını anlamamıza yardımcı olur. Hangi blog yazılarının okunduğu, okuma süresi, site içi aramalar, cihaz/tarayıcı türü, sunucu başlığından yaklaşık şehir/ülke ve giriş yapıldığında üyelik yolculuğu istatistikleri yalnızca bu izin açıksa toplanır.
+                        </p>
+                        <details class="consent-category-details">
+                            <summary>Detayları gör</summary>
+                            <ul>
+                                <li><strong>Konum Bilgisi:</strong> Üçüncü taraf IP servisi kullanılmaz; yalnızca Vercel sunucu başlığıyla yaklaşık şehir/ülke okunur.</li>
+                                <li><strong>Üyelik Eşleştirmesi:</strong> Yalnızca bu izin açıkken ve oturum açtığınızda ziyaretçi kimliği hesap yolculuğuyla ilişkilendirilir.</li>
+                                <li><strong>Reklam Yoktur:</strong> TravellerMobi'de üçüncü taraf reklam veya yeniden pazarlama çerezi kullanılmaz.</li>
+                            </ul>
+                        </details>
+                    </div>
+                </div>
+            </div>
+
+            <div class="consent-modal-legal-row">
+                <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK Aydınlatma Metni</a>
+                <span>·</span>
+                <a href="#cookies" data-open-legal="cookies">Çerez Politikası</a>
+            </div>
+
+            <div class="consent-modal-footer">
+                <button type="button" id="btn-consent-save-prefs" class="btn btn-secondary">Tercihlerimi Kaydet</button>
+                <button type="button" id="btn-consent-accept-all" class="btn btn-primary">Tümünü Kabul Et</button>
+            </div>
         </div>
     </div>
 

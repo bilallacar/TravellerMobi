@@ -492,33 +492,82 @@ export async function identifyVisitor(userId, email) {
     } catch (_) {}
 }
 
+export function openConsentPreferencesModal() {
+    const modal = document.getElementById('modal-consent-preferences');
+    const toggle = document.getElementById('consent-toggle-analytics');
+    if (!modal) return;
+    if (toggle) toggle.checked = hasAnalyticsConsent();
+    modal.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+}
+
+export function closeConsentPreferencesModal() {
+    const modal = document.getElementById('modal-consent-preferences');
+    if (modal) modal.classList.add('hidden');
+}
+
 export function initPrivacyNotice() {
     const banner = document.getElementById('privacy-notice-banner');
     const acceptBtn = document.getElementById('btn-accept-privacy-notice');
     const rejectBtn = document.getElementById('btn-reject-privacy-notice');
-    if (!banner || !acceptBtn) return;
+    const customizeBtn = document.getElementById('btn-customize-privacy-notice');
+    const modal = document.getElementById('modal-consent-preferences');
+    const closeModalBtn = document.getElementById('btn-close-consent-modal');
+    const savePrefsBtn = document.getElementById('btn-consent-save-prefs');
+    const acceptAllModalBtn = document.getElementById('btn-consent-accept-all');
+    const analyticsToggle = document.getElementById('consent-toggle-analytics');
 
-    const currentConsent = getAnalyticsConsent();
-    if (currentConsent === 'unset') {
-        banner.classList.remove('hidden');
-    } else {
-        banner.classList.add('hidden');
+    const applyChoice = (granted) => {
+        setAnalyticsConsent(granted ? 'granted' : 'denied');
+        if (banner) banner.classList.add('hidden');
+        closeConsentPreferencesModal();
+        const settingsToggle = document.getElementById('settings-analytics-consent-toggle');
+        if (settingsToggle) settingsToggle.checked = granted;
+
+        if (granted) {
+            trackPageView(window.location.hash || '#explore');
+            if (state.activeUser?.id) {
+                identifyVisitor(state.activeUser.id, state.activeUser.email);
+            }
+        }
+    };
+
+    if (banner) {
+        const currentConsent = getAnalyticsConsent();
+        if (currentConsent === 'unset') {
+            banner.classList.remove('hidden');
+        } else {
+            banner.classList.add('hidden');
+        }
     }
 
-    acceptBtn.addEventListener('click', () => {
-        setAnalyticsConsent('granted');
-        banner.classList.add('hidden');
-        // Track current page once explicit consent is granted
-        trackPageView(window.location.hash || '#explore');
-        if (state.activeUser?.id) {
-            identifyVisitor(state.activeUser.id, state.activeUser.email);
-        }
-    });
+    if (acceptBtn) acceptBtn.addEventListener('click', () => applyChoice(true));
+    if (rejectBtn) rejectBtn.addEventListener('click', () => applyChoice(false));
+    if (customizeBtn) customizeBtn.addEventListener('click', () => openConsentPreferencesModal());
 
-    if (rejectBtn) {
-        rejectBtn.addEventListener('click', () => {
-            setAnalyticsConsent('denied');
-            banner.classList.add('hidden');
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeConsentPreferencesModal);
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeConsentPreferencesModal();
         });
     }
+    if (savePrefsBtn) {
+        savePrefsBtn.addEventListener('click', () => {
+            applyChoice(!!analyticsToggle?.checked);
+        });
+    }
+    if (acceptAllModalBtn) {
+        acceptAllModalBtn.addEventListener('click', () => {
+            if (analyticsToggle) analyticsToggle.checked = true;
+            applyChoice(true);
+        });
+    }
+
+    // Delegated trigger for any "Çerez Tercihleri" link across footer/settings
+    document.addEventListener('click', (e) => {
+        const trigger = e.target.closest('[data-open-consent-modal]');
+        if (!trigger) return;
+        e.preventDefault();
+        openConsentPreferencesModal();
+    });
 }

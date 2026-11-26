@@ -8256,11 +8256,28 @@ body.dark-theme .ai-fab {
     text-underline-offset: 2px;
 }
 
+.privacy-notice-desc a {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .privacy-notice-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     margin-top: 2px;
+}
+
+.privacy-notice-actions.privacy-notice-actions-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.privacy-notice-actions.privacy-notice-actions-3 #btn-customize-privacy-notice {
+    grid-column: 1 / -1;
 }
 
 .privacy-notice-actions .btn {
@@ -8271,6 +8288,163 @@ body.dark-theme .ai-fab {
     white-space: nowrap;
 }
 
+/* KVKK Preference Center Modal ("İzin Tercihlerini Özelleştir") */
+.consent-modal-card {
+    max-width: 580px !important;
+    padding: 22px 24px !important;
+}
+
+.consent-modal-intro {
+    margin: 14px 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: rgba(100, 116, 139, 0.08);
+    border: 1px solid var(--border-color);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+.consent-category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 48vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.consent-category-card {
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+
+.consent-category-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.consent-category-title strong {
+    font-size: 14.5px;
+    color: var(--text-primary);
+}
+
+.consent-always-active {
+    font-size: 12px;
+    font-weight: 700;
+    color: #16a34a;
+    white-space: nowrap;
+}
+
+.consent-category-desc {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+.consent-category-details {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.consent-category-details > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-primary);
+    user-select: none;
+}
+
+.consent-category-details ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    line-height: 1.55;
+}
+
+.consent-category-details li {
+    margin-bottom: 4px;
+}
+
+/* iOS-style Toggle Switch */
+.consent-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.consent-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.consent-switch-slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(148, 163, 184, 0.45);
+    border-radius: 999px;
+    transition: background 0.2s ease;
+}
+
+.consent-switch-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+    transition: transform 0.2s ease;
+}
+
+.consent-switch input:checked + .consent-switch-slider {
+    background: var(--color-primary);
+}
+
+.consent-switch input:checked + .consent-switch-slider::before {
+    transform: translateX(20px);
+}
+
+.consent-modal-legal-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.consent-modal-legal-row a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.consent-modal-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.consent-modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 14px;
+    font-weight: 600;
+}
+
 @media (max-width: 640px) {
     .privacy-notice-banner {
         left: 12px;
@@ -8279,6 +8453,14 @@ body.dark-theme .ai-fab {
         width: auto;
         max-width: none;
         padding: 14px 15px;
+    }
+
+    .consent-modal-card {
+        padding: 18px 16px !important;
+    }
+
+    .consent-modal-footer {
+        grid-template-columns: 1fr;
     }
 }
 
