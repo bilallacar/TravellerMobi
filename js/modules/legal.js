@@ -23,8 +23,9 @@ const LEGAL_DOCS = {
                 <li><strong>Harita ve Döviz Servisleri:</strong> Harita katmanları (Esri), adres arama (OpenStreetMap Nominatim), hava durumu (Open-Meteo) ve döviz kurları (open.er-api / Frankfurter) yalnızca ilgili ekran kullanıldığında sorgulanır.</li>
             </ul>
 
-            <h4>3. Haklarınız ve Veri Silme</h4>
-            <p>KVKK madde 11 uyarınca verilerinize erişme, düzeltme, dışa aktarma ve silme hakkına sahipsiniz. İstediğiniz zaman <strong>Ayarlar → Veri Yedekleme</strong> bölümünden tüm kayıtlarınızı JSON olarak indirebilir, <strong>Ayarlar → Gizlilik Tercihi</strong> bölümünden analitik rızanızı geri çekebilir ve <strong>Ayarlar → Hesabı Kalıcı Sil</strong> seçeneğiyle hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz.</p>
+            <h4>3. Saklama Süresi, Haklarınız ve Veri Silme</h4>
+            <p>Hesap ve seyahat verileriniz hesabınız aktif olduğu sürece; açık rızaya bağlı analitik kayıtları ise en fazla <strong>12 ay</strong> süreyle saklanır. KVKK madde 11 uyarınca <strong>Ayarlar → Veri Yedekleme</strong> bölümünden tüm kayıtlarınızı JSON olarak indirebilir, <strong>Çerez Tercihleri</strong> / <strong>Ayarlar</strong> üzerinden analitik rızanızı geri çekebilir ve <strong>Ayarlar → Hesabı Kalıcı Sil</strong> seçeneğiyle hesabınızı, tüm kayıtlarınızı, fotoğraflarınızı ve analitik kimlik eşleştirmelerinizi kalıcı olarak silebilirsiniz.</p>
+            <p>Ayrıca bu metinlere doğrudan <a href="/gizlilik" target="_blank" rel="noopener">/gizlilik</a>, <a href="/cerez-politikasi" target="_blank" rel="noopener">/cerez-politikasi</a>, <a href="/kullanim-sartlari" target="_blank" rel="noopener">/kullanim-sartlari</a> ve <a href="/hakkimizda" target="_blank" rel="noopener">/hakkimizda</a> adreslerinden de ulaşabilirsiniz.</p>
         `
     },
     cookies: {

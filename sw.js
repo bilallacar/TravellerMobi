@@ -1,6 +1,6 @@
 // sw.js - Service Worker for TravellerMobi PWA
 
-const CACHE_NAME = 'travellermobi-v1.5.3';
+const CACHE_NAME = 'travellermobi-v1.6.0';
 
 const STATIC_ASSETS = [
     './',
@@ -36,6 +36,18 @@ const STATIC_ASSETS = [
     './js/modules/legal.js'
 ];
 
+// Server-rendered & dynamic paths that must NEVER be hijacked by the SPA shell
+const BYPASS_PREFIXES = [
+    '/api/',
+    '/blog/',
+    '/gizlilik',
+    '/cerez-politikasi',
+    '/kullanim-sartlari',
+    '/hakkimizda',
+    '/sitemap.xml',
+    '/robots.txt'
+];
+
 // Install: Pre-cache static shell assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -47,7 +59,7 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Activate: Clean up old cache versions
+// Activate: Clean up old cache versions immediately
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
@@ -62,37 +74,49 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch: Stale-While-Revalidate for app assets; Network-First for API/Supabase calls
+// Fetch:
+// - Bypass cross-origin, non-GET, APIs, and SSR blog/legal pages completely
+// - Network-First for SPA HTML navigation (so security/UI updates arrive immediately)
+// - Stale-While-Revalidate for static JS/CSS/icons
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
 
-    // Bypass caching for cross-origin assets, non-GET requests, serverless APIs, or backend/rate endpoints
-    if (request.method !== 'GET' ||
+    if (
+        request.method !== 'GET' ||
         url.origin !== self.location.origin ||
-        url.pathname.startsWith('/api/')) {
+        BYPASS_PREFIXES.some(prefix => url.pathname === prefix || url.pathname.startsWith(prefix))
+    ) {
         return;
     }
 
+    // Network-First for HTML document navigation
+    if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+        event.respondWith(
+            fetch(request)
+                .then((networkResponse) => {
+                    if (networkResponse && networkResponse.status === 200) {
+                        const clone = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', clone));
+                    }
+                    return networkResponse;
+                })
+                .catch(() => caches.match('./index.html'))
+        );
+        return;
+    }
+
+    // Stale-While-Revalidate for static assets
     event.respondWith(
         caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
-            // Fetch from network in background to update cache
             const fetchPromise = fetch(request).then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200) {
                     const responseToCache = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, responseToCache);
-                    });
+                    caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
                 }
                 return networkResponse;
-            }).catch(() => {
-                // If offline and request is for page navigation, fallback to index.html
-                if (request.mode === 'navigate') {
-                    return caches.match('./index.html');
-                }
-            });
+            }).catch(() => cachedResponse);
 
-            // Return cached response immediately if available, otherwise wait for network
             return cachedResponse || fetchPromise;
         })
     );

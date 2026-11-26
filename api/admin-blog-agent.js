@@ -118,6 +118,7 @@ async function requestGeminiJson({ apiKey, model, prompt }) {
 export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
 
     if (req.method !== 'POST') {
         return res.status(405).json({ ok: false, error: 'Method not allowed' });

@@ -9,12 +9,32 @@
     {
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
+    },
+    {
+      "source": "/gizlilik",
+      "destination": "/api/legal-page?page=privacy"
+    },
+    {
+      "source": "/cerez-politikasi",
+      "destination": "/api/legal-page?page=cookies"
+    },
+    {
+      "source": "/kullanim-sartlari",
+      "destination": "/api/legal-page?page=terms"
+    },
+    {
+      "source": "/hakkimizda",
+      "destination": "/api/legal-page?page=about"
     }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"

@@ -1,30 +1,31 @@
 {
-  "name": "TravellerMobi - Şehir Rehberi & Gezi Asistanı",
+  "id": "/",
+  "lang": "tr",
+  "name": "TravellerMobi - Şehir Rehberi & Gezi Günlüğü",
   "short_name": "TravellerMobi",
   "description": "Günlük hayatınızda ve seyahatlerinizde mekanlarınızı kaydedin, rotanızı çizin, bütçenizi ve anılarınızı yönetin.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "categories": ["travel", "lifestyle", "navigation"],
   "shortcuts": [
     {
       "name": "Buradayım (Mekan Ekle)",
       "short_name": "Buradayım",
-      "url": "./index.html?checkin=1#places",
+      "url": "./?checkin=1#places",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Masraflar",
-      "short_name": "Masraf",
-      "url": "./index.html#expenses",
+      "short_name": "Masraflar",
+      "url": "./#expenses",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "share_target": {
-    "action": "./index.html#places",
+    "action": "./#places",
     "method": "GET",
     "params": {
       "title": "share_title",
@@ -36,23 +37,20 @@
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     },
     {
       "src": "icons/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

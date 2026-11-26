@@ -3,6 +3,7 @@
 const DEFAULT_SUPABASE_URL = 'https://pbfriozhmtyspfzgnkkq.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_cum_MND2ebOFOb2dmVJpnw_f5gDUUHM';
 const SITE_URL = (process.env.SITE_URL || 'https://traveller-mobi.vercel.app').replace(/\/+$/, '');
+const LEGAL_LASTMOD = '2026-11-26';
 
 function escapeXml(str) {
     return String(str || '')
@@ -20,14 +21,8 @@ export default async function handler(req, res) {
     const supabaseUrl = (process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || DEFAULT_SUPABASE_ANON_KEY;
 
-    const urls = [
-        {
-            loc: `${SITE_URL}/`,
-            lastmod: new Date().toISOString().slice(0, 10),
-            changefreq: 'daily',
-            priority: '1.0'
-        }
-    ];
+    const postUrls = [];
+    let latestPostDate = LEGAL_LASTMOD;
 
     try {
         const postsRes = await fetch(
@@ -44,25 +39,31 @@ export default async function handler(req, res) {
             if (Array.isArray(rows)) {
                 for (const post of rows) {
                     if (!post?.slug) continue;
-                    const lastmod = String(post.updated_at || post.published_at || new Date().toISOString()).slice(0, 10);
-                    urls.push({
+                    const lastmod = String(post.updated_at || post.published_at || LEGAL_LASTMOD).slice(0, 10);
+                    if (lastmod > latestPostDate) latestPostDate = lastmod;
+                    postUrls.push({
                         loc: `${SITE_URL}/blog/${encodeURIComponent(post.slug)}`,
-                        lastmod,
-                        changefreq: 'weekly',
-                        priority: '0.8'
+                        lastmod
                     });
                 }
             }
         }
     } catch (_) {}
 
+    const urls = [
+        { loc: `${SITE_URL}/`, lastmod: latestPostDate },
+        ...postUrls,
+        { loc: `${SITE_URL}/gizlilik`, lastmod: LEGAL_LASTMOD },
+        { loc: `${SITE_URL}/cerez-politikasi`, lastmod: LEGAL_LASTMOD },
+        { loc: `${SITE_URL}/kullanim-sartlari`, lastmod: LEGAL_LASTMOD },
+        { loc: `${SITE_URL}/hakkimizda`, lastmod: LEGAL_LASTMOD }
+    ];
+
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url>
     <loc>${escapeXml(u.loc)}</loc>
     <lastmod>${escapeXml(u.lastmod)}</lastmod>
-    <changefreq>${u.changefreq}</changefreq>
-    <priority>${u.priority}</priority>
   </url>`).join('\n')}
 </urlset>`;
 

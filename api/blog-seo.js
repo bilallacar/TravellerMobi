@@ -184,12 +184,15 @@ export default async function handler(req, res) {
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta property="og:image" content="${escapeHtml(safeCover)}">
+  <meta property="og:image:alt" content="${escapeHtml(post.title)}">
+  <meta property="article:author" content="${escapeHtml(author)}">
   <meta property="article:published_time" content="${escapeHtml(pubIso)}">
   <meta property="article:modified_time" content="${escapeHtml(modIso)}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(post.title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(safeCover)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(post.title)}">
   <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -236,7 +239,7 @@ export default async function handler(req, res) {
       <a href="/#explore" class="brand">TravellerMobi</a>
       <div class="nav-actions">
         <a href="/#explore" class="btn">Tüm Yazılar &amp; Haberler</a>
-        <a href="/#auth?tab=register" class="btn btn-primary">Ücretsiz Kayıt Ol</a>
+        <a href="/#auth?tab=register" class="btn btn-primary">Üyelik Başvurusu</a>
       </div>
     </div>
   </header>
@@ -268,9 +271,10 @@ export default async function handler(req, res) {
   <footer>
     <span>© ${new Date().getFullYear()} TravellerMobi</span>
     <a href="/#explore">Keşfet</a>
-    <a href="/#privacy">Gizlilik &amp; KVKK</a>
-    <a href="/#terms">Kullanım Şartları</a>
-    <a href="/#about">Hakkımızda</a>
+    <a href="/gizlilik">Gizlilik &amp; KVKK</a>
+    <a href="/cerez-politikasi">Çerez Politikası</a>
+    <a href="/kullanim-sartlari">Kullanım Şartları</a>
+    <a href="/hakkimizda">Hakkımızda</a>
   </footer>
 </body>
 </html>`);

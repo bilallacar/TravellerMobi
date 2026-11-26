@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>TravellerMobi - Şehir Rehberi & Gezi Günlüğü</title>
     <meta name="description" content="Günlük hayatınızda ve seyahatlerinizde mekanlarınızı kaydedin, rotanızı çizin, bütçenizi ve anılarınızı yönetin. Çevrimdışı desteğiyle her an yanınızda.">
+    <link rel="canonical" href="https://traveller-mobi.vercel.app/">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="tr_TR">
+    <meta property="og:site_name" content="TravellerMobi">
+    <meta property="og:title" content="TravellerMobi - Şehir Rehberi & Gezi Günlüğü">
+    <meta property="og:description" content="Mekanlarınızı haritada işaretleyin, rotanızı çizin, grup masraflarını bölüşün, anılarınızı çevrimdışı yönetin ve güncel seyahat rehberlerini keşfedin.">
+    <meta property="og:url" content="https://traveller-mobi.vercel.app/">
+    <meta property="og:image" content="https://traveller-mobi.vercel.app/icons/icon-512.png">
+    <meta property="og:image:alt" content="TravellerMobi - Şehir Rehberi ve Gezi Günlüğü">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="TravellerMobi - Şehir Rehberi & Gezi Günlüğü">
+    <meta name="twitter:description" content="Harita & rota planlama, grup masraf bölüşümü, çevrimdışı anı günlüğü ve şehir rehberleri.">
+    <meta name="twitter:image" content="https://traveller-mobi.vercel.app/icons/icon-512.png">
     <!-- PWA Web App Manifest & App Icons -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
@@ -188,6 +201,9 @@
                                     </div>
                                 </div>
                                 <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-block">Giriş Yap</button>
+                                <p class="text-xs text-muted" style="margin:10px 0 0; text-align:center; line-height:1.45;">
+                                    Yeni üyelikler e-posta doğrulamasının ardından yönetici onayı ile aktif edilir.
+                                </p>
                             </form>
                         </div>
 
@@ -218,11 +234,11 @@
                                 <span>Üye olmadan Blog & Seyahat Haberlerini Keşfet</span>
                             </a>
                             <div class="auth-legal-links">
-                                <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a>
+                                <a href="/gizlilik" data-open-legal="privacy">Gizlilik & KVKK</a>
                                 <span>·</span>
-                                <a href="#terms" data-open-legal="terms">Kullanım Şartları</a>
+                                <a href="/kullanim-sartlari" data-open-legal="terms">Kullanım Şartları</a>
                                 <span>·</span>
-                                <a href="#about" data-open-legal="about">Hakkımızda</a>
+                                <a href="/hakkimizda" data-open-legal="about">Hakkımızda</a>
                             </div>
                         </div>
                     </div>
@@ -340,10 +356,10 @@
                     <footer class="public-legal-footer">
                         <span>TravellerMobi</span>
                         <div class="public-legal-links">
-                            <a href="#about" data-open-legal="about">Hakkımızda & İletişim</a>
-                            <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a>
-                            <a href="#cookies" data-open-legal="cookies">Çerez Politikası</a>
-                            <a href="#terms" data-open-legal="terms">Kullanım Şartları</a>
+                            <a href="/hakkimizda" data-open-legal="about">Hakkımızda & İletişim</a>
+                            <a href="/gizlilik" data-open-legal="privacy">Gizlilik & KVKK</a>
+                            <a href="/cerez-politikasi" data-open-legal="cookies">Çerez Politikası</a>
+                            <a href="/kullanim-sartlari" data-open-legal="terms">Kullanım Şartları</a>
                             <a href="#consent" data-open-consent-modal="true">Çerez Tercihleri</a>
                         </div>
                     </footer>
@@ -1616,17 +1632,17 @@
                                 <input type="checkbox" id="settings-analytics-consent-toggle" style="width:18px; height:18px;">
                             </label>
                             <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:12.5px;">
-                                <a href="#privacy" data-open-legal="privacy" style="color:var(--color-primary);">Gizlilik & KVKK Metni</a>
-                                <a href="#cookies" data-open-legal="cookies" style="color:var(--color-primary);">Çerez Politikası</a>
-                                <a href="#terms" data-open-legal="terms" style="color:var(--color-primary);">Kullanım Şartları</a>
-                                <a href="#about" data-open-legal="about" style="color:var(--color-primary);">Hakkımızda</a>
+                                <a href="/gizlilik" data-open-legal="privacy" style="color:var(--color-primary);">Gizlilik & KVKK Metni</a>
+                                <a href="/cerez-politikasi" data-open-legal="cookies" style="color:var(--color-primary);">Çerez Politikası</a>
+                                <a href="/kullanim-sartlari" data-open-legal="terms" style="color:var(--color-primary);">Kullanım Şartları</a>
+                                <a href="/hakkimizda" data-open-legal="about" style="color:var(--color-primary);">Hakkımızda</a>
                             </div>
                         </div>
 
                         <!-- Permanent Account Deletion Card (KVKK Right to Erasure) -->
                         <div class="card glass settings-danger-card" id="settings-delete-account-card">
                             <h3 style="color:var(--color-danger);"><i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Hesabı ve Verileri Kalıcı Sil</h3>
-                            <p class="text-sm text-muted" style="margin: 8px 0 12px;">KVKK kapsamında hesabınızı, tüm seyahat, masraf, mekan, anı, rezervasyon ve fotoğraf verilerinizi kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz.</p>
+                            <p class="text-sm text-muted" style="margin: 8px 0 12px;">KVKK kapsamında hesabınızı; tüm seyahat, masraf, mekan, anı, rezervasyon, fotoğraf verilerinizi ve analitik/ziyaretçi kayıtlarındaki üye eşleştirmelerinizi kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz.</p>
                             <form id="settings-delete-account-form" class="settings-form">
                                 <div class="form-group">
                                     <label for="settings-delete-confirm-input">Onaylamak için <strong>SİL</strong> yazın</label>
@@ -2013,9 +2029,9 @@
 
                         <div class="card glass margin-top-20">
                             <h3 style="margin-bottom:8px;">Engellenen Haber Kaynakları</h3>
-                            <p class="text-xs text-muted" style="margin-bottom:12px;">Görmek istemediğiniz bir haber sitesinin adını ekleyin (veya yukarıdaki önizlemede "Kaynağı Engelle"ye tıklayın). <code>Rudaw</code> vb. kaynaklar varsayılan olarak zaten engellidir.</p>
+                            <p class="text-xs text-muted" style="margin-bottom:12px;">Akışta görmek istemediğiniz konu dışı veya düşük kaliteli kaynak adlarını ekleyebilirsiniz (veya yukarıdaki önizlemede "Kaynağı Engelle" butonunu kullanabilirsiniz).</p>
                             <form id="admin-block-source-form" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-                                <input type="text" id="block-source-name" class="text-input" style="flex:1; min-width:200px; margin:0;" required placeholder="Örn: Rudaw veya kaynak adı...">
+                                <input type="text" id="block-source-name" class="text-input" style="flex:1; min-width:200px; margin:0;" required placeholder="Örn: kaynak adı...">
                                 <button type="submit" class="btn btn-secondary">Kaynağı Engelle</button>
                             </form>
                             <div id="admin-blocked-sources-list" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
@@ -2344,8 +2360,8 @@
         </div>
         <p class="privacy-notice-desc">
             Zorunlu oturum ve çevrimdışı depolamaya ek olarak; yalnızca açık rızanızla içerik ve deneyim analitiği kullanıyoruz.
-            <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK</a> ·
-            <a href="#cookies" data-open-legal="cookies">Çerez Politikası</a>
+            <a href="/gizlilik" data-open-legal="privacy">Gizlilik & KVKK</a> ·
+            <a href="/cerez-politikasi" data-open-legal="cookies">Çerez Politikası</a>
         </p>
         <div class="privacy-notice-actions privacy-notice-actions-3">
             <button type="button" id="btn-customize-privacy-notice" class="btn btn-secondary btn-sm">Tercihleri Özelleştir</button>
@@ -2414,9 +2430,9 @@
             </div>
 
             <div class="consent-modal-legal-row">
-                <a href="#privacy" data-open-legal="privacy">Gizlilik & KVKK Aydınlatma Metni</a>
+                <a href="/gizlilik" data-open-legal="privacy">Gizlilik & KVKK Aydınlatma Metni</a>
                 <span>·</span>
-                <a href="#cookies" data-open-legal="cookies">Çerez Politikası</a>
+                <a href="/cerez-politikasi" data-open-legal="cookies">Çerez Politikası</a>
             </div>
 
             <div class="consent-modal-footer">
